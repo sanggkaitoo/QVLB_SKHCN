@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+dist/
+build/
+
+# Env
+.env
+
+# Data (không push lên git)
+data/
+*.pdf
+*.docx
+*.doc
+*.xlsx
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Models cache (bge-m3, reranker)
+.cache/
+models/

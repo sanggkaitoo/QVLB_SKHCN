@@ -1,0 +1,40 @@
+# --- Core ---
+python-dotenv==1.0.1
+pydantic==2.7.4
+pyyaml==6.0.1
+loguru==0.7.2
+
+# --- Web API ---
+fastapi==0.111.0
+uvicorn==0.30.1
+
+# --- Vector store (Query API / RRF cần >= 1.10) ---
+qdrant-client==1.12.1
+
+# --- Quan hệ / system-of-record ---
+psycopg2-binary==2.9.9
+
+# --- Embedding + rerank (bge-m3: dense + sparse) ---
+FlagEmbedding==1.2.10
+sentence-transformers==3.0.1
+torch  # CPU build
+
+# --- Trích xuất văn bản ---
+PyMuPDF==1.24.5
+python-docx==1.1.2
+pandas==2.2.2
+openpyxl==3.1.3
+pytesseract==0.3.10
+pdf2image==1.17.0
+Pillow==10.3.0
+
+# --- Tách từ tiếng Việt (cải thiện BM25/sparse) ---
+pyvi==0.1.1
+
+# --- LLM (OpenAI-compatible: OpenRouter / Gemini) ---
+openai>=1.40.0
+httpx>=0.27.0
+
+# --- RPA (giữ nguyên từ bản cũ, để crawler chạy) ---
+playwright==1.44.0
+watchdog==4.0.1

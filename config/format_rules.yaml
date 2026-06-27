@@ -1,0 +1,25 @@
+# Quy định trình bày theo Nghị định 30/2020/NĐ-CP (Phụ lục I).
+# Anh chỉnh tại đây; bộ kiểm tra đọc file này, không hard-code.
+
+font:
+  allowed: ["Times New Roman"]
+
+body_size_pt:        # cỡ chữ phần nội dung
+  allowed: [13, 14]
+
+# Lề trang (cm). NĐ30: trên 20-25mm, dưới 20-25mm, trái 30-35mm, phải 15-20mm.
+margins_cm:
+  top:    {min: 2.0, max: 2.5}
+  bottom: {min: 2.0, max: 2.5}
+  left:   {min: 3.0, max: 3.5}
+  right:  {min: 1.5, max: 2.0}
+
+paragraph:
+  line_spacing_max: 1.5      # giãn dòng không vượt 1.5
+  first_line_indent_cm: {min: 1.0, max: 1.27}   # lùi đầu dòng 1-1.27cm
+
+page:
+  size: A4                   # 21.0 x 29.7 cm
+
+# bỏ qua đoạn rỗng / chỉ chứa khoảng trắng khi kiểm tra
+skip_empty_paragraphs: true

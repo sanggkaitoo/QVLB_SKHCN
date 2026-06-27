@@ -1,0 +1,25 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.12.1
+    container_name: qlvb_qdrant
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6333:6333"
+    volumes:
+      - ./data/qdrant:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY:-changeme_qdrant_key}
+
+  postgres:
+    image: postgres:16
+    container_name: qlvb_postgres
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      - POSTGRES_USER=${PG_USER:-qlvb}
+      - POSTGRES_PASSWORD=${PG_PASSWORD:-changeme_pg}
+      - POSTGRES_DB=${PG_DB:-qlvb}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
