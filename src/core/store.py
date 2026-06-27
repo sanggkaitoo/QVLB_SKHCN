@@ -62,7 +62,7 @@ def insert_document(meta: dict) -> int:
     cols = ("so_ky_hieu", "ngay_ban_hanh", "loai_vb", "viet_tat_loai", "huong",
             "co_quan_ban_hanh",
             "nguoi_ky", "chuc_vu_nguoi_ky", "trich_yeu", "file_name", "file_path",
-            "chu_truong", "linh_vuc", "chuyen_de"
+            "chu_truong", "linh_vuc", "chuyen_de",
             "full_text", "source_url", "sha256", "extract_method", "n_chunks", "raw_meta")
     vals = [meta.get(c) for c in cols]
     with pg() as c, c.cursor() as cur:
