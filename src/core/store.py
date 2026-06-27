@@ -5,7 +5,7 @@ import psycopg2
 import psycopg2.extras
 from qdrant_client import QdrantClient
 from qdrant_client import models as qm
-from . import config
+from src.core import config
 
 # ----------------------------- Qdrant --------------------------------
 _q = QdrantClient(host=config.QDRANT_HOST, port=config.QDRANT_PORT,
@@ -95,3 +95,44 @@ def find_doc_by_soky(so_ky_hieu: str):
             "ORDER BY similarity(so_ky_hieu, %s) DESC LIMIT 3",
             (so_ky_hieu, so_ky_hieu))
         return cur.fetchall()
+
+def get_system_stats() -> dict:
+    """Lấy thống kê tổng quan từ Postgres và Qdrant cho trang Admin."""
+    stats = {
+        "total_docs": 0, "total_vectors": 0,
+        "by_loai": [], "by_huong": [], "tags": []
+    }
+    
+    # 1. Thống kê từ Postgres
+    try:
+        with pg() as c, c.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+            # Tổng số văn bản
+            cur.execute("SELECT COUNT(*) FROM documents")
+            stats["total_docs"] = cur.fetchone()[0]
+            
+            # Phân loại theo loại văn bản
+            cur.execute("SELECT loai_vb, COUNT(*) as cnt FROM documents WHERE loai_vb IS NOT NULL GROUP BY loai_vb ORDER BY cnt DESC")
+            stats["by_loai"] = [dict(r) for r in cur.fetchall()]
+            
+            # Phân loại theo hướng (Đến / Đi)
+            cur.execute("SELECT huong, COUNT(*) as cnt FROM documents WHERE huong IS NOT NULL GROUP BY huong")
+            stats["by_huong"] = [dict(r) for r in cur.fetchall()]
+            
+            # Đếm các Tag chuyên đề phổ biến
+            cur.execute("""
+                SELECT unnest(chuyen_de) as tag, COUNT(*) as cnt 
+                FROM documents 
+                GROUP BY tag ORDER BY cnt DESC LIMIT 10
+            """)
+            stats["tags"] = [dict(r) for r in cur.fetchall()]
+    except Exception as e:
+        print(f"Lỗi đọc DB Postgres: {e}")
+
+    # 2. Thống kê từ Qdrant
+    try:
+        collection_info = _q.get_collection(config.QDRANT_COLLECTION)
+        stats["total_vectors"] = collection_info.points_count
+    except Exception as e:
+        print(f"Lỗi đọc Qdrant: {e}")
+
+    return stats

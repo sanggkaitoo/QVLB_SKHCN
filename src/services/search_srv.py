@@ -2,7 +2,7 @@
 Nâng cấp so với bản cũ: thêm keyword (sparse), rerank, trích nguồn số ký hiệu.
 """
 from qdrant_client import models as qm
-from . import embedder, store, llm, config
+from src.core import embedder, store, llm, config
 
 _SYS = """Bạn là trợ lý pháp lý của Sở Khoa học và Công nghệ.
 QUY TẮC:

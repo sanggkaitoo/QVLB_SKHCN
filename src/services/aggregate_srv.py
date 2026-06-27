@@ -7,7 +7,8 @@ Luồng:
   3. map: mỗi văn bản -> LLM rẻ trích {found, value, evidence}
   4. reduce: code cộng + trả bảng minh chứng
 """
-from . import llm, store, search, config
+from src.core import llm, store, config
+from src.services import search_srv as search
 
 _PLAN_SYS = "Phân tích câu hỏi tổng hợp của chuyên viên nhà nước thành kế hoạch truy vấn."
 _PLAN_FMT = """Trả JSON:

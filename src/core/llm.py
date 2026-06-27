@@ -7,7 +7,7 @@ Hai hàm chính:
 import json
 import re
 from openai import OpenAI
-from . import config
+from src.core import config
 
 _client = OpenAI(base_url=config.LLM_BASE_URL, api_key=config.LLM_API_KEY)
 

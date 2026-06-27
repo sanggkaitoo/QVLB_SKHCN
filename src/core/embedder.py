@@ -3,7 +3,7 @@ Bản cũ chỉ dùng dense -> bỏ phí khả năng tìm theo từ khóa của 
 """
 from functools import lru_cache
 from FlagEmbedding import BGEM3FlagModel, FlagReranker
-from . import config
+from src.core import config
 
 
 @lru_cache(maxsize=1)

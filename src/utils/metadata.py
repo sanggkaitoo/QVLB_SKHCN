@@ -4,7 +4,7 @@
 """
 import re
 import datetime as dt
-from . import llm, config
+from src.core import llm, config
 
 # 29 loại văn bản hành chính theo Nghị định 30/2020/NĐ-CP (Điều 7)
 # Mã loại dùng viết tắt NĐ30 để gọn + dễ lọc.

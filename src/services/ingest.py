@@ -7,7 +7,8 @@ import uuid
 import shutil
 import hashlib
 from qdrant_client import models as qm
-from . import config, extract, metadata, embedder, store
+from src.core import config, embedder, store
+from src.utils import extract, metadata
 
 
 def split_text(text: str, size: int, overlap: int,

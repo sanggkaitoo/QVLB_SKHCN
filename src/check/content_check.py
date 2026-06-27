@@ -5,7 +5,9 @@
      từ kho (RAG), bắt buộc dẫn nguồn, không bịa.
 """
 import re
-from .. import extract, store, search, llm, config
+from src.core import store, llm, config
+from src.utils import extract
+from src.services import search_srv as search
 
 # "Căn cứ <Loại> số 57-NQ/TW ngày 22/12/2024 ..."
 _CANCU_RE = re.compile(r"Căn cứ[^;\n]*", re.IGNORECASE)
