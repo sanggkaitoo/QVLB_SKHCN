@@ -37,3 +37,7 @@ LLM_SMART = os.getenv("LLM_SMART", "google/gemini-2.5-pro")        # kiểm tra 
 # --- Chunking ---
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", 1000))
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", 200))
+
+# --- Admin Auth ---
+ADMIN_USER = os.getenv("ADMIN_USER", "admin")
+ADMIN_PASS = os.getenv("ADMIN_PASS", "matkhau123")
