@@ -1,699 +1,1894 @@
 <!DOCTYPE html>
 <html lang="vi" data-theme="dark">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Trục Văn thư — Sở Khoa học và Công nghệ Lào Cai</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<style>
-:root[data-theme="dark"] {
-  --ink:#0B1018; --surface:#121A26; --surface-2:#18222F; --raised:#1F2A39;
-  --line:rgba(255,255,255,.08); --line-strong:rgba(255,255,255,.14);
-  --text:#E8EDF4; --muted:#8A99AD; --faint:#5B6A7D;
-  --azure:#3B9EFF; --azure-deep:#1E6FE0; --azure-soft:rgba(59,158,255,.12);
-  --seal:#E0463B; --seal-soft:rgba(224,70,59,.12);
-  --amber:#E8A93B; --emerald:#35C28A;
-  --r:14px; --r-sm:9px;
-  --shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 18px 40px -24px rgba(0,0,0,.7);
-  --bg-gradient: radial-gradient(1100px 700px at 82% -10%, rgba(59,158,255,.10), transparent 60%), radial-gradient(900px 600px at -8% 108%, rgba(224,70,59,.07), transparent 55%), var(--ink);
-}
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Trục Văn thư — Sở Khoa học và Công nghệ Lào Cai</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link
+            rel="preconnect"
+            href="https://fonts.gstatic.com"
+            crossorigin="crossorigin">
+        <link
+            href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+            rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+        <style>
+            :root[data-theme="dark"] {
+                --ink: #0B1018;
+                --surface: #121A26;
+                --surface-2: #18222F;
+                --raised: #1F2A39;
+                --line: rgba(255,255,255,.08);
+                --line-strong: rgba(255,255,255,.14);
+                --text: #E8EDF4;
+                --muted: #8A99AD;
+                --faint: #5B6A7D;
+                --azure: #3B9EFF;
+                --azure-deep: #1E6FE0;
+                --azure-soft: rgba(59,158,255,.12);
+                --seal: #E0463B;
+                --seal-soft: rgba(224,70,59,.12);
+                --amber: #E8A93B;
+                --emerald: #35C28A;
+                --r: 14px;
+                --r-sm: 9px;
+                --shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 18px 40px -24px rgba(0,0,0,.7);
+                --bg-gradient: radial-gradient(1100px 700px at 82% -10%, rgba(59,158,255,.10), transparent 60%), radial-gradient(900px 600px at -8% 108%, rgba(224,70,59,.07), transparent 55%), var(--ink);
+            }
 
-:root[data-theme="light"] {
-  --ink:#F8FAFC; --surface:#FFFFFF; --surface-2:#F1F5F9; --raised:#E2E8F0;
-  --line:rgba(0,0,0,.08); --line-strong:rgba(0,0,0,.15);
-  --text:#0F172A; --muted:#475569; --faint:#64748B;
-  --azure:#0284C7; --azure-deep:#0369A1; --azure-soft:rgba(2, 132, 199, .12);
-  --seal:#DC2626; --seal-soft:rgba(220, 38, 38, .12);
-  --amber:#D97706; --emerald:#059669;
-  --r:14px; --r-sm:9px;
-  --shadow:0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --bg-gradient: var(--ink);
-}
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%}
-body {
-  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
-  background: var(--bg-gradient);
-  color: var(--text); 
-  line-height: 1.55; 
-  -webkit-font-smoothing: antialiased;
-  display: flex; min-height: 100vh;
-  transition: background 0.3s, color 0.3s;
-}
-.mono{font-family:'JetBrains Mono',monospace;font-variant-ligatures:none}
+            :root[data-theme="light"] {
+                --ink: #F8FAFC;
+                --surface: #FFFFFF;
+                --surface-2: #F1F5F9;
+                --raised: #E2E8F0;
+                --line: rgba(0,0,0,.08);
+                --line-strong: rgba(0,0,0,.15);
+                --text: #0F172A;
+                --muted: #475569;
+                --faint: #64748B;
+                --azure: #0284C7;
+                --azure-deep: #0369A1;
+                --azure-soft: rgba(2, 132, 199, .12);
+                --seal: #DC2626;
+                --seal-soft: rgba(220, 38, 38, .12);
+                --amber: #D97706;
+                --emerald: #059669;
+                --r: 14px;
+                --r-sm: 9px;
+                --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+                --bg-gradient: var(--ink);
+            }
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body,
+            html {
+                height: 100%;
+            }
+            body {
+                font-family: 'Be Vietnam Pro', system-ui, sans-serif;
+                background: var(--bg-gradient);
+                color: var(--text);
+                line-height: 1.55;
+                -webkit-font-smoothing: antialiased;
+                display: flex;
+                min-height: 100vh;
+                transition: background 0.3s, color 0.3s;
+            }
+            .mono {
+                font-family: 'JetBrains Mono',monospace;
+                font-variant-ligatures: none;
+            }
 
-/* ============ DARK/LIGHT TOGGLE ============ */
-.theme-toggle { 
-  background: var(--surface-2); 
-  border: 1px solid var(--line); 
-  color: var(--text); 
-  padding: 10px 16px; 
-  border-radius: var(--r-sm); 
-  cursor: pointer; 
-  font-size: 13px; 
-  font-weight: 600; 
-  display: flex; 
-  align-items: center; 
-  justify-content: center;
-  gap: 8px; 
-  transition: all 0.2s;
-  width: 100%;
-}
-.theme-toggle:hover { 
-  border-color: var(--azure); 
-  color: var(--azure);
-}
+            /* ============ DARK/LIGHT TOGGLE ============ */
+            .theme-toggle {
+                background: var(--surface-2);
+                border: 1px solid var(--line);
+                color: var(--text);
+                padding: 10px 16px;
+                border-radius: var(--r-sm);
+                cursor: pointer;
+                font-size: 13px;
+                font-weight: 600;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                transition: all 0.2s;
+                width: 100%;
+            }
+            .theme-toggle:hover {
+                border-color: var(--azure);
+                color: var(--azure);
+            }
 
-/* ============ SIDEBAR RAIL ============ */
-.rail{
-  width:248px; flex:0 0 248px; border-right:1px solid var(--line);
-  background:linear-gradient(180deg,rgba(255,255,255,.02),transparent 30%);
-  display:flex; flex-direction:column; padding:22px 16px; gap:26px;
-  position:sticky; top:0; height:100vh;
-}
-.brand{display:flex;gap:12px;align-items:center;padding:0 6px}
-.seal{width:46px;height:46px;flex:0 0 46px;filter:drop-shadow(0 2px 6px rgba(224,70,59,.35))}
-.brand h1{font-size:15px;font-weight:700;letter-spacing:.2px;line-height:1.25}
-.brand .sub{font-size:11px;color:var(--muted);font-weight:500}
-.nav{display:flex;flex-direction:column;gap:4px}
-.nav-label{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);padding:0 10px 6px;font-weight:600}
-.tab{
-  display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:var(--r-sm);
-  color:var(--muted);cursor:pointer;font-size:14px;font-weight:500;border:1px solid transparent;
-  position:relative;transition:background .18s,color .18s,border-color .18s;
-}
-.tab:hover{color:var(--text);background:var(--surface)}
-.tab.active{color:var(--text);background:var(--surface-2);border-color:var(--line-strong)}
-.tab.active::before{content:"";position:absolute;left:-16px;top:50%;transform:translateY(-50%);
-  width:3px;height:20px;border-radius:0 3px 3px 0;background:var(--azure);box-shadow:0 0 12px var(--azure)}
-.tab svg{width:18px;height:18px;flex:0 0 18px;opacity:.9}
-.rail .spacer{flex:1}
-.telemetry{border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:7px}
-.tel-row{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted)}
-.dot{width:7px;height:7px;border-radius:50%;background:var(--emerald);box-shadow:0 0 8px var(--emerald)}
-.dot.warn{background:var(--amber);box-shadow:0 0 8px var(--amber)}
-.tel-row .mono{margin-left:auto;color:var(--faint);font-size:11px}
+            /* ============ SIDEBAR RAIL ============ */
+            .rail {
+                width: 248px;
+                flex: 0 0 248px;
+                border-right: 1px solid var(--line);
+                background: linear-gradient(180deg,rgba(255,255,255,.02),transparent 30%);
+                display: flex;
+                flex-direction: column;
+                padding: 22px 16px;
+                gap: 26px;
+                position: sticky;
+                top: 0;
+                height: 100vh;
+            }
+            .brand {
+                display: flex;
+                gap: 12px;
+                align-items: center;
+                padding: 0 6px;
+            }
+            .seal {
+                width: 46px;
+                height: 46px;
+                flex: 0 0 46px;
+                filter:drop-shadow(0 2px 6px rgba(224,70,59,.35));
+            }
+            .brand h1 {
+                font-size: 15px;
+                font-weight: 700;
+                letter-spacing: 0.2px;
+                line-height: 1.25;
+            }
+            .brand .sub {
+                font-size: 11px;
+                color: var(--muted);
+                font-weight: 500;
+            }
+            .nav {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+            .nav-label {
+                font-size: 10.5px;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                color: var(--faint);
+                padding: 0 10px 6px;
+                font-weight: 600;
+            }
+            .tab {
+                display: flex;
+                align-items: center;
+                gap: 11px;
+                padding: 11px 12px;
+                border-radius: var(--r-sm);
+                color: var(--muted);
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 500;
+                border: 1px solid transparent;
+                position: relative;
+                transition: background 0.18s,color 0.18s,border-color 0.18s;
+            }
+            .tab:hover {
+                color: var(--text);
+                background: var(--surface);
+            }
+            .tab.active {
+                color: var(--text);
+                background: var(--surface-2);
+                border-color: var(--line-strong);
+            }
+            .tab.active::before {
+                content: "";
+                position: absolute;
+                left: -16px;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 3px;
+                height: 20px;
+                border-radius: 0 3px 3px 0;
+                background: var(--azure);
+                box-shadow: 0 0 12px var(--azure);
+            }
+            .tab svg {
+                width: 18px;
+                height: 18px;
+                flex: 0 0 18px;
+                opacity: 0.9;
+            }
+            .rail .spacer {
+                flex: 1;
+            }
+            .telemetry {
+                border-top: 1px solid var(--line);
+                padding-top: 14px;
+                display: flex;
+                flex-direction: column;
+                gap: 7px;
+            }
+            .tel-row {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 11.5px;
+                color: var(--muted);
+            }
+            .dot {
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: var(--emerald);
+                box-shadow: 0 0 8px var(--emerald);
+            }
+            .dot.warn {
+                background: var(--amber);
+                box-shadow: 0 0 8px var(--amber);
+            }
+            .tel-row .mono {
+                margin-left: auto;
+                color: var(--faint);
+                font-size: 11px;
+            }
 
-/* ============ MAIN ============ */
-.main{flex:1;min-width:0;display:flex;flex-direction:column;position:relative;overflow:hidden}
-.watermark{position:fixed;right:-90px;bottom:-90px;width:420px;height:420px;opacity:.025;pointer-events:none;z-index:0}
-.topbar{
-  padding:20px 34px;border-bottom:1px solid var(--line);display:flex;align-items:flex-end;gap:16px;
-  background:linear-gradient(180deg,rgba(255,255,255,.015),transparent);z-index:2;
-}
-.topbar .eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--azure);font-weight:600}
-.topbar h2{font-size:21px;font-weight:600;margin-top:3px}
-.topbar p{font-size:13px;color:var(--muted);margin-top:2px;max-width:560px}
-.demo-badge{margin-left:auto;align-self:center;display:none;align-items:center;gap:7px;
-  font-size:11.5px;color:var(--amber);background:rgba(232,169,59,.1);border:1px solid rgba(232,169,59,.3);
-  padding:6px 11px;border-radius:99px;font-weight:500}
-.demo-badge.on{display:flex}
-.panel-wrap{flex:1;overflow-y:auto;padding:30px 34px 60px;z-index:1}
-.panel{display:none;animation:rise .4s cubic-bezier(.2,.7,.2,1)}
-.panel.active{display:block}
-@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+            /* ============ MAIN ============ */
+            .main {
+                flex: 1;
+                min-width: 0;
+                display: flex;
+                flex-direction: column;
+                position: relative;
+                overflow: hidden;
+            }
+            .watermark {
+                position: fixed;
+                right: -90px;
+                bottom: -90px;
+                width: 420px;
+                height: 420px;
+                opacity: 0.025;
+                pointer-events: none;
+                z-index: 0;
+            }
+            .topbar {
+                padding: 20px 34px;
+                border-bottom: 1px solid var(--line);
+                display: flex;
+                align-items: flex-end;
+                gap: 16px;
+                background: linear-gradient(180deg,rgba(255,255,255,.015),transparent);
+                z-index: 2;
+            }
+            .topbar .eyebrow {
+                font-size: 11px;
+                letter-spacing: 0.16em;
+                text-transform: uppercase;
+                color: var(--azure);
+                font-weight: 600;
+            }
+            .topbar h2 {
+                font-size: 21px;
+                font-weight: 600;
+                margin-top: 3px;
+            }
+            .topbar p {
+                font-size: 13px;
+                color: var(--muted);
+                margin-top: 2px;
+                max-width: 560px;
+            }
+            .demo-badge {
+                margin-left: auto;
+                align-self: center;
+                display: none;
+                align-items: center;
+                gap: 7px;
+                font-size: 11.5px;
+                color: var(--amber);
+                background: rgba(232,169,59,.1);
+                border: 1px solid rgba(232,169,59,.3);
+                padding: 6px 11px;
+                border-radius: 99px;
+                font-weight: 500;
+            }
+            .demo-badge.on {
+                display: flex;
+            }
+            .panel-wrap {
+                flex: 1;
+                overflow-y: auto;
+                padding: 30px 34px 60px;
+                z-index: 1;
+            }
+            .panel {
+                display: none;
+                animation: rise 0.4s cubic-bezier(.2,.7,.2,1);
+            }
+            .panel.active {
+                display: block;
+            }
+            @keyframes rise {
+                from {
+                    opacity: 0;
+                    transform: translateY(10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: none;
+                }
+            }
 
-/* ---- query bar ---- */
-.qbar{display:flex;gap:10px;background:var(--surface);border:1px solid var(--line-strong);
-  border-radius:var(--r);padding:8px;box-shadow:var(--shadow);transition:border-color .2s,box-shadow .2s}
-.qbar:focus-within{border-color:var(--azure);box-shadow:0 0 0 4px var(--azure-soft),var(--shadow)}
-.qbar input{flex:1;background:transparent;border:0;outline:0;color:var(--text);font-size:15.5px;
-  padding:11px 12px;font-family:inherit}
-.qbar input::placeholder{color:var(--faint)}
-.btn{background:var(--azure);color:#04101f;border:0;border-radius:var(--r-sm);padding:0 22px;
-  font-weight:600;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:8px;
-  font-family:inherit;transition:background .18s,transform .08s}
-.btn:hover{background:#5aade5}.btn:active{transform:scale(.97)}
-.btn:disabled{background:var(--raised);color:var(--faint);cursor:not-allowed}
-.btn svg{width:16px;height:16px}
-.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center}
-.chips .lbl{font-size:12px;color:var(--faint);margin-right:2px}
-.chip{font-size:12.5px;color:var(--muted);background:var(--surface);border:1px solid var(--line);
-  padding:6px 13px;border-radius:99px;cursor:pointer;transition:all .15s;font-weight:500}
-.chip:hover{color:var(--text);border-color:var(--line-strong)}
-.chip.on{color:var(--azure);background:var(--azure-soft);border-color:rgba(59,158,255,.4)}
-.chip-select{font-size:12.5px;color:var(--muted);background:var(--surface);border:1px solid var(--line);
-  padding:6px 10px;border-radius:99px;cursor:pointer;font-weight:500;font-family:inherit;
-  appearance:none;-webkit-appearance:none;outline:0;transition:all .15s}
-.chip-select:hover{color:var(--text);border-color:var(--line-strong)}
-.chip-select:focus{border-color:var(--azure)}
-.chip-select.on{color:var(--azure);background:var(--azure-soft);border-color:rgba(59,158,255,.4)}
-.chip-select option{background:var(--surface-2);color:var(--text)}
+            /* ---- query bar & filters ---- */
+            .qbar {
+                display: flex;
+                gap: 10px;
+                background: var(--surface);
+                border: 1px solid var(--line-strong);
+                border-radius: var(--r);
+                padding: 8px;
+                box-shadow: var(--shadow);
+                transition: border-color 0.2s,box-shadow 0.2s;
+            }
+            .qbar:focus-within {
+                border-color: var(--azure);
+                box-shadow: 0 0 0 4px var(--azure-soft),var(--shadow);
+            }
+            .qbar input {
+                flex: 1;
+                background: transparent;
+                border: 0;
+                outline: 0;
+                color: var(--text);
+                font-size: 15.5px;
+                padding: 11px 12px;
+                font-family: inherit;
+            }
+            .qbar input::placeholder {
+                color: var(--faint);
+            }
 
-/* ---- search layout ---- */
-.split{display:grid;grid-template-columns:1fr 332px;gap:22px;margin-top:26px;align-items:start}
-.answer{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
-  padding:26px 28px;min-height:180px;box-shadow:var(--shadow)}
-.answer .ph{color:var(--faint);font-size:14.5px}
-.answer h1,.answer h2,.answer h3{font-size:17px;margin:14px 0 8px;font-weight:600}
-.answer p{margin:10px 0;font-size:15px}
-.answer ul,.answer ol{margin:10px 0 10px 22px}.answer li{margin:5px 0;font-size:15px}
-.answer strong{color:#fff;font-weight:600}
-.answer code{font-family:'JetBrains Mono',monospace;font-size:13px;background:var(--surface-2);
-  padding:1px 6px;border-radius:5px;color:var(--azure)}
-.caret{display:inline-block;width:8px;height:18px;background:var(--azure);vertical-align:-3px;
-  margin-left:2px;animation:blink 1s steps(2) infinite}
-@keyframes blink{50%{opacity:0}}
-.aside h3{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);
-  margin-bottom:12px;font-weight:600}
-.src{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);
-  padding:14px 15px;margin-bottom:11px;transition:border-color .18s,transform .18s;cursor:default}
-.src:hover{border-color:var(--line-strong);transform:translateX(-2px)}
-.src .meta{display:flex;align-items:center;gap:8px;margin-bottom:7px}
-.src .tag{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--azure);
-  background:var(--azure-soft);padding:2px 8px;border-radius:5px;font-weight:500}
-.src .score{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--faint)}
-.src .bar{height:3px;background:var(--surface-2);border-radius:3px;overflow:hidden;margin-bottom:8px}
-.src .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--azure-deep),var(--azure))}
-.src .txt{font-size:12.5px;color:var(--muted);line-height:1.5;display:-webkit-box;
-  -webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+            .filters-wrap {
+                display: flex;
+                flex-direction: column;
+                gap: 14px;
+                margin-top: 20px;
+            }
+            .filter-row {
+                display: flex;
+                align-items: flex-start;
+                gap: 12px;
+            }
+            .filter-row .lbl {
+                font-size: 13px;
+                color: var(--faint);
+                min-width: 70px;
+                padding-top: 5px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
+            .chip-group {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                flex: 1;
+            }
+            .chip {
+                font-size: 12.5px;
+                color: var(--muted);
+                background: var(--surface);
+                border: 1px solid var(--line);
+                padding: 6px 13px;
+                border-radius: 99px;
+                cursor: pointer;
+                transition: all 0.15s;
+                font-weight: 500;
+                user-select: none;
+            }
+            .chip:hover {
+                color: var(--text);
+                border-color: var(--line-strong);
+            }
+            .chip.on {
+                color: var(--azure);
+                background: var(--azure-soft);
+                border-color: rgba(59,158,255,.4);
+            }
+            .chip-select {
+                font-size: 12.5px;
+                color: var(--muted);
+                background: var(--surface);
+                border: 1px solid var(--line);
+                padding: 6px 10px;
+                border-radius: 99px;
+                cursor: pointer;
+                font-weight: 500;
+                font-family: inherit;
+                appearance: none;
+                -webkit-appearance: none;
+                outline: 0;
+                transition: all 0.15s;
+            }
+            .chip-select:hover {
+                color: var(--text);
+                border-color: var(--line-strong);
+            }
+            .chip-select:focus {
+                border-color: var(--azure);
+            }
+            .chip-select.on {
+                color: var(--azure);
+                background: var(--azure-soft);
+                border-color: rgba(59,158,255,.4);
+            }
+            .chip-select option {
+                background: var(--surface-2);
+                color: var(--text);
+            }
 
-/* ---- aggregate ---- */
-.agg-total{display:flex;align-items:flex-end;gap:20px;background:var(--surface);
-  border:1px solid var(--line);border-radius:var(--r);padding:26px 30px;margin-top:26px;
-  box-shadow:var(--shadow);position:relative;overflow:hidden}
-.agg-total::after{content:"";position:absolute;right:0;top:0;width:200px;height:100%;
-  background:radial-gradient(circle at 90% 0,var(--azure-soft),transparent 70%)}
-.agg-num{font-family:'JetBrains Mono',monospace;font-size:58px;font-weight:600;line-height:1;
-  color:#fff;letter-spacing:-1px}
-.agg-meta{padding-bottom:8px}
-.agg-meta .m1{font-size:15px;color:var(--text);font-weight:500;max-width:380px}
-.agg-meta .m2{font-size:12.5px;color:var(--muted);margin-top:6px}
-.agg-stats{margin-left:auto;display:flex;gap:26px;padding-bottom:6px;z-index:1}
-.agg-stats div{text-align:right}
-.agg-stats .n{font-family:'JetBrains Mono',monospace;font-size:20px;color:var(--text);font-weight:500}
-.agg-stats .l{font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em}
-table.evid{width:100%;border-collapse:collapse;margin-top:22px;background:var(--surface);
-  border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
-table.evid th{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);
-  text-align:left;padding:13px 16px;border-bottom:1px solid var(--line);font-weight:600}
-table.evid td{padding:13px 16px;border-bottom:1px solid var(--line);font-size:13.5px;vertical-align:top}
-table.evid tr:last-child td{border-bottom:0}
-table.evid tr:hover td{background:rgba(255,255,255,.015)}
-.evid .ky{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--azure);white-space:nowrap}
-.evid .val{font-family:'JetBrains Mono',monospace;font-weight:600;color:#fff}
-.evid .ev{color:var(--muted);font-size:12.5px;font-style:italic}
+            /* ---- search layout ---- */
+            .split {
+                display: grid;
+                grid-template-columns: 1fr 332px;
+                gap: 22px;
+                margin-top: 26px;
+                align-items: start;
+            }
+            .answer {
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: var(--r);
+                padding: 26px 28px;
+                min-height: 180px;
+                box-shadow: var(--shadow);
+            }
+            .answer .ph {
+                color: var(--faint);
+                font-size: 14.5px;
+            }
+            .answer h1,
+            .answer h2,
+            .answer h3 {
+                font-size: 17px;
+                margin: 14px 0 8px;
+                font-weight: 600;
+            }
+            .answer p {
+                margin: 10px 0;
+                font-size: 15px;
+            }
+            .answer ol,
+            .answer ul {
+                margin: 10px 0 10px 22px;
+            }
+            .answer li {
+                margin: 5px 0;
+                font-size: 15px;
+            }
+            .answer strong {
+                color: #fff;
+                font-weight: 600;
+            }
+            .answer code {
+                font-family: 'JetBrains Mono',monospace;
+                font-size: 13px;
+                background: var(--surface-2);
+                padding: 1px 6px;
+                border-radius: 5px;
+                color: var(--azure);
+            }
+            .caret {
+                display: inline-block;
+                width: 8px;
+                height: 18px;
+                background: var(--azure);
+                vertical-align: -3px;
+                margin-left: 2px;
+                animation: blink 1s steps(2) infinite;
+            }
+            @keyframes blink {
+                50% {
+                    opacity: 0;
+                }
+            }
+            .aside h3 {
+                font-size: 11px;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                color: var(--faint);
+                margin-bottom: 12px;
+                font-weight: 600;
+            }
+            .src {
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: var(--r-sm);
+                padding: 14px 15px;
+                margin-bottom: 11px;
+                transition: border-color 0.18s,transform 0.18s;
+                cursor: default;
+            }
+            .src:hover {
+                border-color: var(--line-strong);
+                transform: translateX(-2px);
+            }
+            .src .meta {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 7px;
+            }
+            .src .tag {
+                font-family: 'JetBrains Mono',monospace;
+                font-size: 11.5px;
+                color: var(--azure);
+                background: var(--azure-soft);
+                padding: 2px 8px;
+                border-radius: 5px;
+                font-weight: 500;
+            }
+            .src .score {
+                margin-left: auto;
+                font-family: 'JetBrains Mono',monospace;
+                font-size: 11px;
+                color: var(--faint);
+            }
+            .src .bar {
+                height: 3px;
+                background: var(--surface-2);
+                border-radius: 3px;
+                overflow: hidden;
+                margin-bottom: 8px;
+            }
+            .src .bar i {
+                display: block;
+                height: 100%;
+                background: linear-gradient(90deg,var(--azure-deep),var(--azure));
+            }
+            .src .txt {
+                font-size: 12.5px;
+                color: var(--muted);
+                line-height: 1.5;
+                display: -webkit-box;
+                -webkit-line-clamp: 3;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
 
-/* ---- check ---- */
-.subtabs{display:flex;gap:6px;margin-top:24px;background:var(--surface);border:1px solid var(--line);
-  border-radius:99px;padding:5px;width:max-content}
-.subtab{padding:8px 20px;border-radius:99px;font-size:13.5px;color:var(--muted);cursor:pointer;
-  font-weight:500;transition:all .18s}
-.subtab.active{background:var(--azure);color:#04101f;font-weight:600}
-.drop{margin-top:20px;border:1.5px dashed var(--line-strong);border-radius:var(--r);
-  padding:46px 24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface)}
-.drop:hover,.drop.over{border-color:var(--azure);background:var(--azure-soft)}
-.drop svg{width:38px;height:38px;color:var(--azure);margin-bottom:12px}
-.drop .t{font-size:15px;font-weight:500}
-.drop .s{font-size:12.5px;color:var(--muted);margin-top:5px}
-.drop .file{margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--azure)}
-.verdict{display:flex;align-items:center;gap:13px;margin-top:24px;padding:16px 20px;border-radius:var(--r);
-  font-weight:500;border:1px solid}
-.verdict.ok{background:rgba(53,194,138,.08);border-color:rgba(53,194,138,.3);color:var(--emerald)}
-.verdict.bad{background:var(--seal-soft);border-color:rgba(224,70,59,.3);color:#f08a82}
-.verdict .vn{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:600}
-.diag{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--faint);
-  border-radius:var(--r-sm);padding:14px 17px;margin-top:11px;display:flex;gap:14px;align-items:flex-start}
-.diag.sev-crit{border-left-color:var(--seal)} .diag.sev-warn{border-left-color:var(--amber)}
-.diag.sev-info{border-left-color:var(--azure)}
-.sev-pill{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
-  padding:3px 9px;border-radius:5px;white-space:nowrap;margin-top:1px}
-.sev-crit .sev-pill{background:var(--seal-soft);color:#f08a82}
-.sev-warn .sev-pill{background:rgba(232,169,59,.12);color:var(--amber)}
-.sev-info .sev-pill{background:var(--azure-soft);color:var(--azure)}
-.diag .body{flex:1;min-width:0}
-.diag .body .loc{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--faint);margin-bottom:3px}
-.diag .body .q{font-size:14px;color:var(--text);font-weight:500}
-.diag .body .q em{color:var(--muted);font-style:italic;font-weight:400}
-.diag .body .fix{font-size:13px;color:var(--muted);margin-top:5px}
-.diag .body .fix b{color:var(--emerald);font-weight:500}
-.diag .nums{text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap}
-.diag .nums .bad{color:#f08a82}.diag .nums .good{color:var(--emerald)}
-.section-h{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);
-  font-weight:600;margin:28px 0 4px;display:flex;align-items:center;gap:10px}
-.section-h::after{content:"";flex:1;height:1px;background:var(--line)}
-.cc{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);
-  padding:13px 16px;margin-top:10px}
-.cc .head{display:flex;align-items:center;gap:10px;font-size:13.5px}
-.cc .head .ky{font-family:'JetBrains Mono',monospace;color:var(--azure);font-size:12.5px}
-.badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;margin-left:auto}
-.badge.found{background:rgba(53,194,138,.12);color:var(--emerald)}
-.badge.miss{background:var(--seal-soft);color:#f08a82}
-.cc .ref{font-size:12.5px;color:var(--muted);margin-top:6px}
+            /* ---- aggregate ---- */
+            .agg-total {
+                display: flex;
+                align-items: flex-end;
+                gap: 20px;
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: var(--r);
+                padding: 26px 30px;
+                margin-top: 26px;
+                box-shadow: var(--shadow);
+                position: relative;
+                overflow: hidden;
+            }
+            .agg-total::after {
+                content: "";
+                position: absolute;
+                right: 0;
+                top: 0;
+                width: 200px;
+                height: 100%;
+                background: radial-gradient(circle at 90% 0,var(--azure-soft),transparent 70%);
+            }
+            .agg-num {
+                font-family: 'JetBrains Mono',monospace;
+                font-size: 58px;
+                font-weight: 600;
+                line-height: 1;
+                color: #fff;
+                letter-spacing: -1px;
+            }
+            .agg-meta {
+                padding-bottom: 8px;
+            }
+            .agg-meta .m1 {
+                font-size: 15px;
+                color: var(--text);
+                font-weight: 500;
+                max-width: 380px;
+            }
+            .agg-meta .m2 {
+                font-size: 12.5px;
+                color: var(--muted);
+                margin-top: 6px;
+            }
+            .agg-stats {
+                margin-left: auto;
+                display: flex;
+                gap: 26px;
+                padding-bottom: 6px;
+                z-index: 1;
+            }
+            .agg-stats div {
+                text-align: right;
+            }
+            .agg-stats .n {
+                font-family: 'JetBrains Mono',monospace;
+                font-size: 20px;
+                color: var(--text);
+                font-weight: 500;
+            }
+            .agg-stats .l {
+                font-size: 11px;
+                color: var(--faint);
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+            }
+            table.evid {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 22px;
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: var(--r);
+                overflow: hidden;
+            }
+            table.evid th {
+                font-size: 11px;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: var(--faint);
+                text-align: left;
+                padding: 13px 16px;
+                border-bottom: 1px solid var(--line);
+                font-weight: 600;
+            }
+            table.evid td {
+                padding: 13px 16px;
+                border-bottom: 1px solid var(--line);
+                font-size: 13.5px;
+                vertical-align: top;
+            }
+            table.evid tr:last-child td {
+                border-bottom: 0;
+            }
+            table.evid tr:hover td {
+                background: rgba(255,255,255,.015);
+            }
+            .evid .ky {
+                font-family: 'JetBrains Mono',monospace;
+                font-size: 12.5px;
+                color: var(--azure);
+                white-space: nowrap;
+            }
+            .evid .val {
+                font-family: 'JetBrains Mono',monospace;
+                font-weight: 600;
+                color: #fff;
+            }
+            .evid .ev {
+                color: var(--muted);
+                font-size: 12.5px;
+                font-style: italic;
+            }
 
-/* ---- shared states ---- */
-.empty{text-align:center;color:var(--faint);padding:54px 20px;font-size:14px}
-.empty svg{width:40px;height:40px;opacity:.4;margin-bottom:12px}
-.shimmer{height:14px;border-radius:6px;background:linear-gradient(90deg,var(--surface-2) 25%,var(--raised) 37%,var(--surface-2) 63%);
-  background-size:400% 100%;animation:sh 1.3s ease infinite;margin:9px 0}
-@keyframes sh{0%{background-position:100% 0}100%{background-position:-100% 0}}
-.spin{width:15px;height:15px;border:2px solid rgba(4,16,31,.3);border-top-color:#04101f;border-radius:50%;animation:rot .7s linear infinite}
-@keyframes rot{to{transform:rotate(360deg)}}
+            /* ---- check ---- */
+            .subtabs {
+                display: flex;
+                gap: 6px;
+                margin-top: 24px;
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: 99px;
+                padding: 5px;
+                width: max-content;
+            }
+            .subtab {
+                padding: 8px 20px;
+                border-radius: 99px;
+                font-size: 13.5px;
+                color: var(--muted);
+                cursor: pointer;
+                font-weight: 500;
+                transition: all 0.18s;
+            }
+            .subtab.active {
+                background: var(--azure);
+                color: #04101f;
+                font-weight: 600;
+            }
+            .drop {
+                margin-top: 20px;
+                border: 1.5px dashed var(--line-strong);
+                border-radius: var(--r);
+                padding: 46px 24px;
+                text-align: center;
+                cursor: pointer;
+                transition: all 0.2s;
+                background: var(--surface);
+            }
+            .drop.over,
+            .drop:hover {
+                border-color: var(--azure);
+                background: var(--azure-soft);
+            }
+            .drop svg {
+                width: 38px;
+                height: 38px;
+                color: var(--azure);
+                margin-bottom: 12px;
+            }
+            .drop .t {
+                font-size: 15px;
+                font-weight: 500;
+            }
+            .drop .s {
+                font-size: 12.5px;
+                color: var(--muted);
+                margin-top: 5px;
+            }
+            .drop .file {
+                margin-top: 12px;
+                font-family: 'JetBrains Mono',monospace;
+                font-size: 12.5px;
+                color: var(--azure);
+            }
+            .verdict {
+                display: flex;
+                align-items: center;
+                gap: 13px;
+                margin-top: 24px;
+                padding: 16px 20px;
+                border-radius: var(--r);
+                font-weight: 500;
+                border: 1px solid;
+            }
+            .verdict.ok {
+                background: rgba(53,194,138,.08);
+                border-color: rgba(53,194,138,.3);
+                color: var(--emerald);
+            }
+            .verdict.bad {
+                background: var(--seal-soft);
+                border-color: rgba(224,70,59,.3);
+                color: #f08a82;
+            }
+            .verdict .vn {
+                font-family: 'JetBrains Mono',monospace;
+                font-size: 24px;
+                font-weight: 600;
+            }
+            .diag {
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-left: 3px solid var(--faint);
+                border-radius: var(--r-sm);
+                padding: 14px 17px;
+                margin-top: 11px;
+                display: flex;
+                gap: 14px;
+                align-items: flex-start;
+            }
+            .diag.sev-crit {
+                border-left-color: var(--seal);
+            }
+            .diag.sev-warn {
+                border-left-color: var(--amber);
+            }
+            .diag.sev-info {
+                border-left-color: var(--azure);
+            }
+            .sev-pill {
+                font-size: 10.5px;
+                font-weight: 600;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                padding: 3px 9px;
+                border-radius: 5px;
+                white-space: nowrap;
+                margin-top: 1px;
+            }
+            .sev-crit .sev-pill {
+                background: var(--seal-soft);
+                color: #f08a82;
+            }
+            .sev-warn .sev-pill {
+                background: rgba(232,169,59,.12);
+                color: var(--amber);
+            }
+            .sev-info .sev-pill {
+                background: var(--azure-soft);
+                color: var(--azure);
+            }
+            .diag .body {
+                flex: 1;
+                min-width: 0;
+            }
+            .diag .body .loc {
+                font-family: 'JetBrains Mono',monospace;
+                font-size: 11.5px;
+                color: var(--faint);
+                margin-bottom: 3px;
+            }
+            .diag .body .q {
+                font-size: 14px;
+                color: var(--text);
+                font-weight: 500;
+            }
+            .diag .body .q em {
+                color: var(--muted);
+                font-style: italic;
+                font-weight: 400;
+            }
+            .diag .body .fix {
+                font-size: 13px;
+                color: var(--muted);
+                margin-top: 5px;
+            }
+            .diag .body .fix b {
+                color: var(--emerald);
+                font-weight: 500;
+            }
+            .diag .nums {
+                text-align: right;
+                font-family: 'JetBrains Mono',monospace;
+                font-size: 12px;
+                white-space: nowrap;
+            }
+            .diag .nums .bad {
+                color: #f08a82;
+            }
+            .diag .nums .good {
+                color: var(--emerald);
+            }
+            .section-h {
+                font-size: 11px;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                color: var(--faint);
+                font-weight: 600;
+                margin: 28px 0 4px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .section-h::after {
+                content: "";
+                flex: 1;
+                height: 1px;
+                background: var(--line);
+            }
+            .cc {
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: var(--r-sm);
+                padding: 13px 16px;
+                margin-top: 10px;
+            }
+            .cc .head {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-size: 13.5px;
+            }
+            .cc .head .ky {
+                font-family: 'JetBrains Mono',monospace;
+                color: var(--azure);
+                font-size: 12.5px;
+            }
+            .badge {
+                font-size: 11px;
+                font-weight: 600;
+                padding: 3px 10px;
+                border-radius: 99px;
+                margin-left: auto;
+            }
+            .badge.found {
+                background: rgba(53,194,138,.12);
+                color: var(--emerald);
+            }
+            .badge.miss {
+                background: var(--seal-soft);
+                color: #f08a82;
+            }
+            .cc .ref {
+                font-size: 12.5px;
+                color: var(--muted);
+                margin-top: 6px;
+            }
 
-/* ---- responsive ---- */
-@media(max-width:920px){
-  body{flex-direction:column}
-  .rail{width:100%;height:auto;flex-direction:row;position:sticky;top:0;align-items:center;
-    padding:12px 16px;gap:14px;overflow-x:auto;z-index:5;backdrop-filter:blur(8px);background:rgba(11,16,24,.85)}
-  .brand{flex:0 0 auto}.brand h1,.brand .sub{display:none}
-  .nav{flex-direction:row;gap:4px}.nav-label,.rail .spacer,.telemetry{display:none}
-  .tab.active::before{display:none}.tab span{display:none}.tab{padding:10px}
-  .split{grid-template-columns:1fr}.topbar,.panel-wrap{padding-left:18px;padding-right:18px}
-  .agg-total{flex-wrap:wrap}.agg-stats{margin-left:0;width:100%;justify-content:flex-start}
-  table.evid .ev{display:none}
-}
-@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-:focus-visible{outline:2px solid var(--azure);outline-offset:2px}
-::-webkit-scrollbar{width:11px;height:11px}::-webkit-scrollbar-thumb{background:var(--raised);border-radius:99px;border:3px solid var(--ink)}
-</style>
-</head>
-<body>
+            /* ---- shared states ---- */
+            .empty {
+                text-align: center;
+                color: var(--faint);
+                padding: 54px 20px;
+                font-size: 14px;
+            }
+            .empty svg {
+                width: 40px;
+                height: 40px;
+                opacity: 0.4;
+                margin-bottom: 12px;
+            }
+            .shimmer {
+                height: 14px;
+                border-radius: 6px;
+                background: linear-gradient(90deg,var(--surface-2) 25%,var(--raised) 37%,var(--surface-2) 63%);
+                background-size: 400% 100%;
+                animation: sh 1.3s ease infinite;
+                margin: 9px 0;
+            }
+            @keyframes sh {
+                0% {
+                    background-position: 100% 0;
+                }
+                100% {
+                    background-position: -100% 0;
+                }
+            }
+            .spin {
+                width: 15px;
+                height: 15px;
+                border: 2px solid rgba(4,16,31,.3);
+                border-top-color: #04101f;
+                border-radius: 50%;
+                animation: rot 0.7s linear infinite;
+            }
+            @keyframes rot {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
 
-<!-- SVG seal definition (signature element) -->
-<svg width="0" height="0" style="position:absolute"><defs>
-  <g id="sealmark">
-    <circle cx="50" cy="50" r="47" fill="none" stroke="#E0463B" stroke-width="2"/>
-    <circle cx="50" cy="50" r="40" fill="none" stroke="#E0463B" stroke-width="1"/>
-    <path id="ring" d="M50,50 m-33,0 a33,33 0 1,1 66,0 a33,33 0 1,1 -66,0" fill="none"/>
-    <text fill="#E0463B" font-family="'Be Vietnam Pro',sans-serif" font-size="7.4" font-weight="600" letter-spacing="1.2">
-      <textPath href="#ring" startOffset="0">SỞ KHOA HỌC VÀ CÔNG NGHỆ · TỈNH LÀO CAI ·</textPath>
-    </text>
-    <polygon points="50,37 53.5,47.2 64.3,47.4 55.7,53.9 58.8,64.1 50,58 41.2,64.1 44.3,53.9 35.7,47.4 46.5,47.2"
-      fill="#E0463B"/>
-  </g>
-</defs></svg>
-<svg class="watermark" viewBox="0 0 100 100"><use href="#sealmark"/></svg>
+            /* ---- responsive ---- */
+            @media(max-width:920px) {
+                body {
+                    flex-direction: column;
+                }
+                .rail {
+                    width: 100%;
+                    height: auto;
+                    flex-direction: row;
+                    position: sticky;
+                    top: 0;
+                    align-items: center;
+                    padding: 12px 16px;
+                    gap: 14px;
+                    overflow-x: auto;
+                    z-index: 5;
+                    backdrop-filter:blur(8px);
+                    background: rgba(11,16,24,.85);
+                }
+                .brand {
+                    flex: 0 0 auto;
+                }
+                .brand .sub,
+                .brand h1 {
+                    display: none;
+                }
+                .nav {
+                    flex-direction: row;
+                    gap: 4px;
+                }
+                .nav-label,
+                .rail .spacer,
+                .telemetry {
+                    display: none;
+                }
+                .tab.active::before {
+                    display: none;
+                }
+                .tab span {
+                    display: none;
+                }
+                .tab {
+                    padding: 10px;
+                }
+                .split {
+                    grid-template-columns: 1fr;
+                }
+                .panel-wrap,
+                .topbar {
+                    padding-left: 18px;
+                    padding-right: 18px;
+                }
+                .agg-total {
+                    flex-wrap: wrap;
+                }
+                .agg-stats {
+                    margin-left: 0;
+                    width: 100%;
+                    justify-content: flex-start;
+                }
+                table.evid .ev {
+                    display: none;
+                }
+            }
+            @media(prefers-reduced-motion:reduce) {
+                * {
+                    animation: none!important;
+                    transition: none!important;
+                }
+            }
+            :focus-visible {
+                outline: 2px solid var(--azure);
+                outline-offset: 2px;
+            }
+            ::-webkit-scrollbar {
+                width: 11px;
+                height: 11px;
+            }
+            ::-webkit-scrollbar-thumb {
+                background: var(--raised);
+                border-radius: 99px;
+                border: 3px solid var(--ink);
+            }
+        </style>
+    </head>
+    <body>
 
-<!-- ============ SIDEBAR ============ -->
-<aside class="rail">
-  <div class="brand">
-    <svg class="seal" viewBox="0 0 100 100"><use href="#sealmark"/></svg>
-    <div><h1>Trục Văn thư</h1><div class="sub">Trợ lý văn bản · KH&CN</div></div>
-  </div>
-  <nav class="nav">
-    <div class="nav-label">Nghiệp vụ</div>
-    <div class="tab active" data-tab="search">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <span>Tra cứu văn bản</span></div>
-    <div class="tab" data-tab="agg">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
-      <span>Tổng hợp số liệu</span></div>
-    <div class="tab" data-tab="check">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 5-3.5 7.5-8.5 9C7.5 19.5 4 17 4 12V6l8-3 8 3z"/></svg>
-      <span>Kiểm tra dự thảo</span></div>
-  </nav>
-  <div class="spacer"></div>
+        <!-- SVG seal definition (signature element) -->
+        <svg width="0" height="0" style="position:absolute">
+            <defs>
+                <g id="sealmark">
+                    <circle cx="50" cy="50" r="47" fill="none" stroke="#E0463B" stroke-width="2"/>
+                    <circle cx="50" cy="50" r="40" fill="none" stroke="#E0463B" stroke-width="1"/>
+                    <path
+                        id="ring"
+                        d="M50,50 m-33,0 a33,33 0 1,1 66,0 a33,33 0 1,1 -66,0"
+                        fill="none"/>
+                    <text
+                        fill="#E0463B"
+                        font-family="'Be Vietnam Pro',sans-serif"
+                        font-size="7.4"
+                        font-weight="600"
+                        letter-spacing="1.2">
+                        <textpath href="#ring" startoffset="0">SỞ KHOA HỌC VÀ CÔNG NGHỆ · TỈNH LÀO CAI ·</textpath>
+                    </text>
+                    <polygon
+                        points="50,37 53.5,47.2 64.3,47.4 55.7,53.9 58.8,64.1 50,58 41.2,64.1 44.3,53.9 35.7,47.4 46.5,47.2"
+                        fill="#E0463B"/>
+                </g>
+            </defs>
+        </svg>
+        <svg class="watermark" viewbox="0 0 100 100"><use href="#sealmark"/></svg>
 
-  
+        <!-- ============ SIDEBAR ============ -->
+        <aside class="rail">
+            <div class="brand">
+                <svg class="seal" viewbox="0 0 100 100"><use href="#sealmark"/></svg>
+                <div>
+                    <h1>Trục Văn thư</h1>
+                    <div class="sub">Trợ lý văn bản · KH&CN</div>
+                </div>
+            </div>
+            <nav class="nav">
+                <div class="nav-label">Nghiệp vụ</div>
+                <div class="tab active" data-tab="search">
+                    <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                    <span>Tra cứu văn bản</span></div>
+                <div class="tab" data-tab="agg">
+                    <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+                    <span>Tổng hợp số liệu</span></div>
+                <div class="tab" data-tab="check">
+                    <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 5-3.5 7.5-8.5 9C7.5 19.5 4 17 4 12V6l8-3 8 3z"/></svg>
+                    <span>Kiểm tra dự thảo</span></div>
+            </nav>
+            <div class="spacer"></div>
 
-  <div class="telemetry">
-    <div class="tel-row"><span class="dot" id="d-q"></span>Vector · Qdrant<span class="mono" id="s-q">—</span></div>
-    <div class="tel-row"><span class="dot" id="d-p"></span>CSDL · Postgres<span class="mono" id="s-p">—</span></div>
-    <div class="tel-row"><span class="dot" id="d-l"></span>Mô hình · LLM<span class="mono" id="s-l">—</span></div>
-  </div>
-</aside>
+            <div class="telemetry">
+                <div class="tel-row">
+                    <span class="dot" id="d-q"></span>Vector · Qdrant<span class="mono" id="s-q">—</span></div>
+                <div class="tel-row">
+                    <span class="dot" id="d-p"></span>CSDL · Postgres<span class="mono" id="s-p">—</span></div>
+                <div class="tel-row">
+                    <span class="dot" id="d-l"></span>Mô hình · LLM<span class="mono" id="s-l">—</span></div>
+            </div>
+        </aside>
 
-<!-- ============ MAIN ============ -->
-<main class="main">
-  <div class="topbar">
-    <div id="hd">
-      <div class="eyebrow">Tra cứu</div>
-      <h2>Tìm trong toàn bộ kho văn bản</h2>
-      <p>Tìm theo từ khóa hoặc ý nghĩa trên văn bản đi và đến. Mọi câu trả lời đều dẫn nguồn số ký hiệu.</p>
-    </div>
-    <div class="demo-badge" id="demo" style="margin-left:auto;"><span class="dot warn"></span>Chế độ xem thử</div>
-  </div>
+        <!-- ============ MAIN ============ -->
+        <main class="main">
+            <div class="topbar">
+                <div id="hd">
+                    <div class="eyebrow">Tra cứu</div>
+                    <h2>Tìm trong toàn bộ kho văn bản</h2>
+                    <p>Tìm theo từ khóa hoặc ý nghĩa trên văn bản đi và đến. Mọi câu trả lời đều dẫn
+                        nguồn số ký hiệu.</p>
+                </div>
+                <div class="demo-badge" id="demo" style="margin-left:auto;">
+                    <span class="dot warn"></span>Chế độ xem thử</div>
+            </div>
 
-  <div class="panel-wrap">
-    <!-- ---- SEARCH ---- -->
-    <section class="panel active" id="p-search">
-      <div class="qbar">
-        <input id="q-search" placeholder="Ví dụ: tiến độ triển khai Đề án 06 trong các báo cáo quý..." autocomplete="off">
-        <button class="btn" id="b-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Tra cứu</button>
-      </div>
-      <div class="chips">
-        <span class="lbl">Hướng:</span>
-        <span class="chip" data-f="huong" data-v="den">Văn bản đến</span>
-        <span class="chip" data-f="huong" data-v="di">Văn bản đi</span>
-        <span class="lbl" style="margin-left:12px">Loại:</span>
-        <span class="chip" data-f="loai_vb" data-v="cong_van">Công văn</span>
-        <span class="chip" data-f="loai_vb" data-v="ke_hoach">Kế hoạch</span>
-        <span class="chip" data-f="loai_vb" data-v="bao_cao">Báo cáo</span>
-        <span class="chip" data-f="loai_vb" data-v="quyet_dinh">Quyết định</span>
-        <span class="chip" data-f="loai_vb" data-v="to_trinh">Tờ trình</span>
-        <span class="chip" data-f="loai_vb" data-v="thong_bao">Thông báo</span>
-        <span class="chip" data-f="loai_vb" data-v="nghi_quyet">Nghị quyết</span>
-        <span class="chip" data-f="loai_vb" data-v="chuong_trinh">Chương trình</span>
-        <span class="chip" data-f="loai_vb" data-v="de_an">Đề án</span>
-        <span class="chip" data-f="loai_vb" data-v="chi_thi">Chỉ thị</span>
-        <span class="lbl" style="margin-left:12px">Lĩnh vực:</span>
-        <span class="chip" data-f="linh_vuc" data-v="cds">Chuyển đổi số</span>
-        <span class="chip" data-f="linh_vuc" data-v="khoa_hoc">Khoa học</span>
-        <span class="chip" data-f="linh_vuc" data-v="cong_nghe">Công nghệ</span>
-        <span class="chip" data-f="linh_vuc" data-v="dmst">ĐMST</span>
-        <span class="chip" data-f="linh_vuc" data-v="tdđlcl">TC-ĐL-CL</span>
-        <span class="chip" data-f="linh_vuc" data-v="bcvt">Bưu chính VT</span>
-        <select class="chip-select" id="more-loai">
-          <option value="">Loại khác ▾</option>
-          <option value="quy_che">Quy chế</option>
-          <option value="quy_dinh">Quy định</option>
-          <option value="thong_cao">Thông cáo</option>
-          <option value="huong_dan">Hướng dẫn</option>
-          <option value="phuong_an">Phương án</option>
-          <option value="du_an">Dự án</option>
-          <option value="bien_ban">Biên bản</option>
-          <option value="hop_dong">Hợp đồng</option>
-          <option value="cong_dien">Công điện</option>
-          <option value="ban_ghi_nho">Bản ghi nhớ</option>
-          <option value="ban_thoa_thuan">Bản thỏa thuận</option>
-          <option value="giay_uy_quyen">Giấy ủy quyền</option>
-          <option value="giay_moi">Giấy mời</option>
-          <option value="giay_gioi_thieu">Giấy giới thiệu</option>
-          <option value="giay_nghi_phep">Giấy nghỉ phép</option>
-          <option value="phieu_gui">Phiếu gửi</option>
-          <option value="phieu_chuyen">Phiếu chuyển</option>
-          <option value="phieu_bao">Phiếu báo</option>
-          <option value="thu_cong">Thư công</option>
-        </select>
-      </div>
-      <div class="split">
-        <div class="answer" id="answer"><div class="ph">Nhập câu hỏi để bắt đầu. Trợ lý chỉ trả lời dựa trên văn bản trong kho, kèm trích dẫn số ký hiệu — không suy đoán.</div></div>
-        <div class="aside"><h3>Nguồn trích dẫn</h3><div id="sources"><div class="empty" style="padding:30px 10px">Nguồn sẽ hiện ở đây sau khi tra cứu.</div></div></div>
-      </div>
-    </section>
+            <div class="panel-wrap">
+                <!-- ---- SEARCH ---- -->
+                <section class="panel active" id="p-search">
+                    <div class="qbar">
+                        <input
+                            id="q-search"
+                            placeholder="Ví dụ: tiến độ triển khai Đề án 06 trong các báo cáo quý..."
+                            autocomplete="off">
+                        <button class="btn" id="b-search">
+                            <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Tra cứu</button>
+                    </div>
+                    <div class="filters-wrap">
+                        <div class="filter-row">
+                            <div class="lbl">Hướng:</div>
+                            <div class="chip-group">
+                                <span class="chip" data-f="huong" data-v="den">Văn bản đến</span>
+                                <span class="chip" data-f="huong" data-v="di">Văn bản đi</span>
+                            </div>
+                        </div>
 
-    <!-- ---- AGGREGATE ---- -->
-    <section class="panel" id="p-agg">
-      <div class="qbar">
-        <input id="q-agg" placeholder="Ví dụ: tổng số buổi tập huấn chuyển đổi số trong tất cả báo cáo của các xã..." autocomplete="off">
-        <button class="btn" id="b-agg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Tổng hợp</button>
-      </div>
-      <p style="font-size:12.5px;color:var(--faint);margin-top:12px">Hệ thống trích số liệu từ <em>từng</em> văn bản rồi cộng lại — luôn kèm minh chứng, không để mô hình tự tính tổng.</p>
-      <div id="agg-out"><div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><div>Đặt một câu hỏi đếm/cộng để tổng hợp trên nhiều văn bản.</div></div></div>
-    </section>
+                        <div class="filter-row">
+                            <div class="lbl">Loại:</div>
+                            <div class="chip-group">
+                                <span class="chip" data-f="loai_vb" data-v="cong_van">Công văn</span>
+                                <span class="chip" data-f="loai_vb" data-v="ke_hoach">Kế hoạch</span>
+                                <span class="chip" data-f="loai_vb" data-v="bao_cao">Báo cáo</span>
+                                <span class="chip" data-f="loai_vb" data-v="quyet_dinh">Quyết định</span>
+                                <span class="chip" data-f="loai_vb" data-v="to_trinh">Tờ trình</span>
+                                <span class="chip" data-f="loai_vb" data-v="thong_bao">Thông báo</span>
+                                <span class="chip" data-f="loai_vb" data-v="nghi_quyet">Nghị quyết</span>
+                                <span class="chip" data-f="loai_vb" data-v="chuong_trinh">Chương trình</span>
+                                <span class="chip" data-f="loai_vb" data-v="de_an">Đề án</span>
+                                <span class="chip" data-f="loai_vb" data-v="chi_thi">Chỉ thị</span>
+                                <select class="chip-select" id="more-loai">
+                                    <option value="">Loại khác ▾</option>
+                                    <option value="quy_che">Quy chế</option>
+                                    <option value="quy_dinh">Quy định</option>
+                                    <option value="thong_cao">Thông cáo</option>
+                                    <option value="huong_dan">Hướng dẫn</option>
+                                    <option value="phuong_an">Phương án</option>
+                                    <option value="du_an">Dự án</option>
+                                    <option value="bien_ban">Biên bản</option>
+                                    <option value="hop_dong">Hợp đồng</option>
+                                    <option value="cong_dien">Công điện</option>
+                                    <option value="ban_ghi_nho">Bản ghi nhớ</option>
+                                    <option value="ban_thoa_thuan">Bản thỏa thuận</option>
+                                    <option value="giay_uy_quyen">Giấy ủy quyền</option>
+                                    <option value="giay_moi">Giấy mời</option>
+                                    <option value="giay_gioi_thieu">Giấy giới thiệu</option>
+                                    <option value="giay_nghi_phep">Giấy nghỉ phép</option>
+                                    <option value="phieu_gui">Phiếu gửi</option>
+                                    <option value="phieu_chuyen">Phiếu chuyển</option>
+                                    <option value="phieu_bao">Phiếu báo</option>
+                                    <option value="thu_cong">Thư công</option>
+                                </select>
+                            </div>
+                        </div>
 
-    <!-- ---- CHECK ---- -->
-    <section class="panel" id="p-check">
-      <div class="subtabs">
-        <div class="subtab active" data-sub="format">Định dạng (NĐ 30/2020)</div>
-        <div class="subtab" data-sub="content">Nội dung &amp; căn cứ</div>
-      </div>
-      <div class="drop" id="drop">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 16V4m0 0 4 4m-4-4L8 8"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
-        <div class="t">Kéo thả hoặc chọn dự thảo (.docx)</div>
-        <div class="s" id="drop-sub">Kiểm tra font, cỡ chữ, lề, giãn dòng theo Nghị định 30/2020</div>
-        <div class="file" id="drop-file"></div>
-        <input type="file" id="file" accept=".docx,.doc" hidden>
-      </div>
-      <div id="check-out"></div>
-    </section>
-  </div>
-</main>
+                        <div class="filter-row">
+                            <div class="lbl">Lĩnh vực:</div>
+                            <div class="chip-group">
+                                <span class="chip" data-f="linh_vuc" data-v="cds">Chuyển đổi số</span>
+                                <span class="chip" data-f="linh_vuc" data-v="khoa_hoc">Khoa học</span>
+                                <span class="chip" data-f="linh_vuc" data-v="cong_nghe">Công nghệ</span>
+                                <span class="chip" data-f="linh_vuc" data-v="dmst">ĐMST</span>
+                                <span class="chip" data-f="linh_vuc" data-v="tdđlcl">TC-ĐL-CL</span>
+                                <span class="chip" data-f="linh_vuc" data-v="bcvt">Bưu chính VT</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="split">
+                        <div class="answer" id="answer">
+                            <div class="ph">Nhập câu hỏi để bắt đầu. Trợ lý chỉ trả lời dựa trên văn bản
+                                trong kho, kèm trích dẫn số ký hiệu — không suy đoán.</div>
+                        </div>
+                        <div class="aside">
+                            <h3>Nguồn trích dẫn</h3>
+                            <div id="sources">
+                                <div class="empty" style="padding:30px 10px">Nguồn sẽ hiện ở đây sau khi tra cứu.</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
 
-<script>
-const API = ""; // cùng origin khi FastAPI phục vụ file này
-let DEMO = false;
-const $ = s => document.querySelector(s);
-const esc = s => (s??"").toString().replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+                <!-- ---- AGGREGATE ---- -->
+                <section class="panel" id="p-agg">
+                    <div class="qbar">
+                        <input
+                            id="q-agg"
+                            placeholder="Ví dụ: tổng số buổi tập huấn chuyển đổi số trong tất cả báo cáo của các xã..."
+                            autocomplete="off">
+                        <button class="btn" id="b-agg">
+                            <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Tổng hợp</button>
+                    </div>
+                    <p style="font-size:12.5px;color:var(--faint);margin-top:12px">Hệ thống trích số liệu từ
+                        <em>từng</em>
+                        văn bản rồi cộng lại — luôn kèm minh chứng, không để mô hình tự tính tổng.</p>
+                    <div id="agg-out">
+                        <div class="empty">
+                            <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+                            <div>Đặt một câu hỏi đếm/cộng để tổng hợp trên nhiều văn bản.</div>
+                        </div>
+                    </div>
+                </section>
 
-/* ---------- light / dark mode toggle ---------- */
-function toggleTheme() {
-  const root = document.documentElement;
-  const btn = document.getElementById('themeBtn');
-  const icon = document.getElementById('themeIcon');
-  
-  if (root.getAttribute('data-theme') === 'dark') {
-    root.setAttribute('data-theme', 'light');
-    icon.innerText = '🌙';
-    btn.innerHTML = `<span id="themeIcon">🌙</span> Giao diện Tối`;
-  } else {
-    root.setAttribute('data-theme', 'dark');
-    icon.innerText = '☀️';
-    btn.innerHTML = `<span id="themeIcon">☀️</span> Giao diện Sáng`;
-  }
-}
+                <!-- ---- CHECK ---- -->
+                <section class="panel" id="p-check">
+                    <div class="subtabs">
+                        <div class="subtab active" data-sub="format">Định dạng (NĐ 30/2020)</div>
+                        <div class="subtab" data-sub="content">Nội dung &amp; căn cứ</div>
+                    </div>
+                    <div class="drop" id="drop">
+                        <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 16V4m0 0 4 4m-4-4L8 8"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                        <div class="t">Kéo thả hoặc chọn dự thảo (.docx)</div>
+                        <div class="s" id="drop-sub">Kiểm tra font, cỡ chữ, lề, giãn dòng theo Nghị định 30/2020</div>
+                        <div class="file" id="drop-file"></div>
+                        <input type="file" id="file" accept=".docx,.doc" hidden="hidden">
+                    </div>
+                    <div id="check-out"></div>
+                </section>
+            </div>
+        </main>
 
-/* ---------- health / telemetry ---------- */
-async function health(){
-  try{
-    const r = await fetch(API+"/api/health");
-    const j = await r.json();
-    if(!r.ok || !j.ok) throw 0;
-    setTel(true);
-  }catch{ DEMO=true; $("#demo").classList.add("on"); setTel(false); }
-}
-function setTel(ok){
-  const v = ok ? ["6333","5432","gemini"] : ["xem thử","xem thử","xem thử"];
-  ["q","p","l"].forEach((k,i)=>{ $("#s-"+k).textContent=v[i];
-    $("#d-"+k).classList.toggle("warn",!ok); });
-}
+        <script>
+            const API = ""; // cùng origin khi FastAPI phục vụ file này
+            let DEMO = false;
+            const $ = s => document.querySelector(s);
+            const esc = s => (s ?? "")
+                .toString()
+                .replace(/[&<>]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;"}[c]));
 
-/* ---------- tabs ---------- */
-const HEAD = {
-  search:["Tra cứu","Tìm trong toàn bộ kho văn bản","Tìm theo từ khóa hoặc ý nghĩa trên văn bản đi và đến. Mọi câu trả lời đều dẫn nguồn số ký hiệu."],
-  agg:["Tổng hợp","Cộng số liệu trên nhiều văn bản","Đặt một câu hỏi đếm hoặc cộng; hệ thống quét từng văn bản và trả về tổng kèm minh chứng."],
-  check:["Kiểm tra","Rà soát dự thảo trước khi trình ký","Đối chiếu thể thức theo Nghị định 30/2020 và kiểm tra căn cứ, chính tả, tính logic của nội dung."]
-};
-document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
-  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
-  t.classList.add("active");
-  const k=t.dataset.tab;
-  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
-  $("#p-"+(k==="search"?"search":k)).classList.add("active");
-  const [e,h,p]=HEAD[k]; $("#hd").innerHTML=`<div class="eyebrow">${e}</div><h2>${h}</h2><p>${p}</p>`;
-});
+            /* ---------- light / dark mode toggle ---------- */
+            function toggleTheme() {
+                const root = document.documentElement;
+                const btn = document.getElementById('themeBtn');
+                const icon = document.getElementById('themeIcon');
 
-/* ---------- SEARCH (stream + demo) ---------- */
-const filters={};
-document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{
-  const f=c.dataset.f, v=c.dataset.v;
-  document.querySelectorAll(`.chip[data-f="${f}"]`).forEach(x=>{if(x!==c)x.classList.remove("on")});
-  c.classList.toggle("on");
-  if(c.classList.contains("on")){ filters[f]=v; }
-  else{ delete filters[f]; }
-  // deselect dropdown if a loai_vb chip is clicked
-  if(f==="loai_vb"){ const sel=$("#more-loai"); sel.value=""; sel.classList.remove("on"); }
-});
-// dropdown for extra loai_vb types
-const moreLoai=$("#more-loai");
-if(moreLoai) moreLoai.onchange=()=>{
-  const v=moreLoai.value;
-  document.querySelectorAll('.chip[data-f="loai_vb"]').forEach(x=>x.classList.remove("on"));
-  if(v){ filters.loai_vb=v; moreLoai.classList.add("on"); }
-  else{ delete filters.loai_vb; moreLoai.classList.remove("on"); }
-};
-$("#b-search").onclick=runSearch;
-$("#q-search").onkeydown=e=>{if(e.key==="Enter")runSearch()};
+                if (root.getAttribute('data-theme') === 'dark') {
+                    root.setAttribute('data-theme', 'light');
+                    icon.innerText = '🌙';
+                    btn.innerHTML = `<span id="themeIcon">🌙</span> Giao diện Tối`;
+                } else {
+                    root.setAttribute('data-theme', 'dark');
+                    icon.innerText = '☀️';
+                    btn.innerHTML = `<span id="themeIcon">☀️</span> Giao diện Sáng`;
+                }
+            }
 
-async function runSearch(){
-  const q=$("#q-search").value.trim(); if(!q)return;
-  const ans=$("#answer"), src=$("#sources"), btn=$("#b-search");
-  btn.disabled=true; btn.innerHTML='<span class="spin"></span>Đang tra…';
-  ans.innerHTML='<div class="shimmer" style="width:90%"></div><div class="shimmer" style="width:80%"></div><div class="shimmer" style="width:95%"></div><div class="shimmer" style="width:60%"></div>';
-  src.innerHTML='';
-  try{
-    if(DEMO){ await demoSearch(q,ans,src); }
-    else{
-      const url=new URL(API+"/api/search_stream",location.origin);
-      url.searchParams.set("q",q);
-      if(filters.loai_vb)url.searchParams.set("loai_vb",filters.loai_vb);
-      if(filters.huong)url.searchParams.set("huong",filters.huong);
-      const r=await fetch(url); const rd=r.body.getReader(); const dec=new TextDecoder();
-      let buf="",started=false,md="";
-      ans.innerHTML="";
-      while(true){
-        const {done,value}=await rd.read(); if(done)break;
-        buf+=dec.decode(value,{stream:true});
-        if(!started){
-          const m=buf.match(/\[SOURCES\](.*?)\[\/SOURCES\]/s);
-          if(m){ renderSources(JSON.parse(m[1]||"[]"),src); buf=buf.slice(m.index+m[0].length); started=true; }
-          else continue;
-        }
-        md+=buf; buf="";
-        ans.innerHTML=marked.parse(md)+'<span class="caret"></span>';
-      }
-      ans.innerHTML=marked.parse(md);
-    }
-  }catch(e){ ans.innerHTML='<div class="ph">Không tra cứu được. Kiểm tra kết nối tới máy chủ rồi thử lại.</div>'; }
-  btn.disabled=false; btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Tra cứu';
-}
-function renderSources(list,el){
-  if(!list||!list.length){el.innerHTML='<div class="empty" style="padding:30px 10px">Không có nguồn phù hợp.</div>';return;}
-  el.innerHTML=list.map(s=>{
-    const m=s.metadata||{}, sc=Math.round((s.score??0.7)*100);
-    return `<div class="src"><div class="meta"><span class="tag">${esc(m.so_ky_hieu||"?")}</span>
-      <span class="score">${esc(m.ngay_ban_hanh||"")}</span></div>
+            /* ---------- health / telemetry ---------- */
+            async function health() {
+                try {
+                    const r = await fetch(API + "/api/health");
+                    const j = await r.json();
+                    if (!r.ok || !j.ok) 
+                        throw 0;
+                    setTel(true);
+                } catch  {
+                    DEMO = true;
+                    $("#demo")
+                        .classList
+                        .add("on");
+                    setTel(false);
+                }
+            }
+            function setTel(ok) {
+                const v = ok
+                    ? ["6333", "5432", "gemini"]
+                    : ["xem thử", "xem thử", "xem thử"];
+                ["q", "p", "l"].forEach((k, i) => {
+                    $("#s-" + k).textContent = v[i];
+                    $("#d-" + k)
+                        .classList
+                        .toggle("warn", !ok);
+                });
+            }
+
+            /* ---------- tabs ---------- */
+            const HEAD = {
+                search: [
+                    "Tra cứu", "Tìm trong toàn bộ kho văn bản", "Tìm theo từ khóa hoặc ý nghĩa trên văn bản đi và đến. Mọi câu trả lời đều dẫn " +
+                            "nguồn số ký hiệu."
+                ],
+                agg: [
+                    "Tổng hợp", "Cộng số liệu trên nhiều văn bản", "Đặt một câu hỏi đếm hoặc cộng; hệ thống quét từng văn bản và trả về tổng kèm m" +
+                            "inh chứng."
+                ],
+                check: [
+                    "Kiểm tra", "Rà soát dự thảo trước khi trình ký", "Đối chiếu thể thức theo Nghị định 30/2020 và kiểm tra căn cứ, chính tả, tính l" +
+                            "ogic của nội dung."
+                ]
+            };
+            document
+                .querySelectorAll(".tab")
+                .forEach(t => t.onclick = () => {
+                    document
+                        .querySelectorAll(".tab")
+                        .forEach(x => x.classList.remove("active"));
+                    t
+                        .classList
+                        .add("active");
+                    const k = t.dataset.tab;
+                    document
+                        .querySelectorAll(".panel")
+                        .forEach(p => p.classList.remove("active"));
+                    $("#p-" + (
+                        k === "search"
+                            ? "search"
+                            : k
+                    ))
+                        .classList
+                        .add("active");
+                    const [e, h, p] = HEAD[k];
+                    $("#hd").innerHTML = `<div class="eyebrow">${e}</div><h2>${h}</h2><p>${p}</p>`;
+                });
+
+            /* ---------- SEARCH (stream + demo) ---------- */
+            const filters = {
+                huong: [],
+                loai_vb: [],
+                linh_vuc: []
+            };
+
+            document
+                .querySelectorAll(".chip")
+                .forEach(c => c.onclick = () => {
+                    const f = c.dataset.f,
+                        v = c.dataset.v;
+
+                    c
+                        .classList
+                        .toggle("on");
+                    if (c.classList.contains("on")) {
+                        if (!filters[f].includes(v)) 
+                            filters[f].push(v);
+                        }
+                    else {
+                        filters[f] = filters[f].filter(item => item !== v);
+                    }
+                });
+
+            // Xử lý Select Dropdown kết hợp với mảng
+            let lastLoaiSelect = "";
+            const moreLoai = $("#more-loai");
+            if (moreLoai) 
+                moreLoai.onchange = () => {
+                    const v = moreLoai.value;
+
+                    // Rút lại lựa chọn cũ khỏi mảng (nếu có)
+                    if (lastLoaiSelect) {
+                        filters.loai_vb = filters
+                            .loai_vb
+                            .filter(item => item !== lastLoaiSelect);
+                    }
+
+                    if (v) {
+                        filters
+                            .loai_vb
+                            .push(v);
+                        moreLoai
+                            .classList
+                            .add("on");
+                        lastLoaiSelect = v;
+                    } else {
+                        moreLoai
+                            .classList
+                            .remove("on");
+                        lastLoaiSelect = "";
+                    }
+                };
+            
+            $("#b-search").onclick = runSearch;
+            $("#q-search").onkeydown = e => {
+                if (e.key === "Enter") 
+                    runSearch()
+            };
+
+            async function runSearch() {
+                const q = $("#q-search")
+                    .value
+                    .trim();
+                if (!q) 
+                    return;
+                const ans = $("#answer"),
+                    src = $("#sources"),
+                    btn = $("#b-search");
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spin"></span>Đang tra…';
+                ans.innerHTML = '<div class="shimmer" style="width:90%"></div><div class="shimmer" style="width' +
+                        ':80%"></div><div class="shimmer" style="width:95%"></div><div class="shimmer" ' +
+                        'style="width:60%"></div>';
+                src.innerHTML = '';
+
+                try {
+                    if (DEMO) {
+                        await demoSearch(q, ans, src);
+                    } else {
+                        const url = new URL(API + "/api/search_stream", location.origin);
+                        url
+                            .searchParams
+                            .set("q", q);
+
+                        // Truyền mảng về Server dưới dạng chuỗi phân tách bằng dấu phẩy Ví dụ:
+                        // loai_vb=cong_van,ke_hoach,bao_cao
+                        Object
+                            .keys(filters)
+                            .forEach(k => {
+                                if (filters[k].length > 0) {
+                                    url
+                                        .searchParams
+                                        .set(k, filters[k].join(","));
+                                }
+                            });
+
+                        const r = await fetch(url);
+                        const rd = r
+                            .body
+                            .getReader();
+                        const dec = new TextDecoder();
+                        let buf = "",
+                            started = false,
+                            md = "";
+                        ans.innerHTML = "";
+                        while (true) {
+                            const {done, value} = await rd.read();
+                            if (done) 
+                                break;
+                            buf += dec.decode(value, {stream: true});
+                            if (!started) {
+                                const m = buf.match(/\[SOURCES\](.*?)\[\/SOURCES\]/s);
+                                if (m) {
+                                    renderSources(JSON.parse(m[1] || "[]"), src);
+                                    buf = buf.slice(m.index + m[0].length);
+                                    started = true;
+                                } else 
+                                    continue;
+                                }
+                            md += buf;
+                            buf = "";
+                            ans.innerHTML = marked.parse(md) + '<span class="caret"></span>';
+                        }
+                        ans.innerHTML = marked.parse(md);
+                    }
+                } catch (e) {
+                    ans.innerHTML = '<div class="ph">Không tra cứu được. Kiểm tra kết nối tới máy chủ rồi thử lại.<' +
+                            '/div>';
+                }
+                btn.disabled = false;
+                btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">' +
+                        '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Tra cứu';
+            }
+            function renderSources(list, el) {
+                if (!list || !list.length) {
+                    el.innerHTML = '<div class="empty" style="padding:30px 10px">Không có nguồn phù hợp.</div>';
+                    return;
+                }
+                el.innerHTML = list
+                    .map(s => {
+                        const m = s.metadata || {},
+                            sc = Math.round((s.score ?? 0.7) * 100);
+                        return `<div class="src"><div class="meta"><span class="tag">${esc(
+                            m.so_ky_hieu || "?"
+                        )}</span>
+      <span class="score">${esc(m.ngay_ban_hanh || "")}</span></div>
       <div class="bar"><i style="width:${sc}%"></i></div>
-      <div class="txt">${esc((s.text||"").slice(0,260))}</div></div>`;
-  }).join("");
-}
+      <div class="txt">${esc(
+                            (s.text || "").slice(0, 260)
+                        )}</div></div>`;
+                    })
+                    .join("");
+            }
 
-/* ---------- AGGREGATE (+ count-up) ---------- */
-$("#b-agg").onclick=runAgg;
-$("#q-agg").onkeydown=e=>{if(e.key==="Enter")runAgg()};
-async function runAgg(){
-  const q=$("#q-agg").value.trim(); if(!q)return;
-  const out=$("#agg-out"), btn=$("#b-agg");
-  btn.disabled=true; btn.innerHTML='<span class="spin"></span>Đang quét…';
-  out.innerHTML='<div class="agg-total" style="margin-top:26px"><div class="shimmer" style="width:120px;height:50px"></div></div>';
-  try{
-    const data = DEMO ? demoAgg(q)
-      : await (await fetch(API+"/api/aggregate?q="+encodeURIComponent(q))).json();
-    renderAgg(data,out);
-  }catch{ out.innerHTML='<div class="empty">Không tổng hợp được. Kiểm tra kết nối máy chủ.</div>'; }
-  btn.disabled=false; btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Tổng hợp';
-}
-function renderAgg(d,out){
-  const rows=(d.evidence||[]).map(r=>`<tr>
-    <td><span class="ky">${esc(r.so_ky_hieu||"?")}</span></td>
-    <td class="mono" style="color:var(--muted);font-size:12.5px">${esc(r.ngay_ban_hanh||"")}</td>
-    <td><span class="val">${esc(String(r.value??""))}</span> <span style="color:var(--faint);font-size:12px">${esc(r.unit||"")}</span></td>
-    <td class="ev">${esc(r.evidence||"")}</td></tr>`).join("");
-  out.innerHTML=`
+            /* ---------- AGGREGATE (+ count-up) ---------- */
+            $("#b-agg").onclick = runAgg;
+            $("#q-agg").onkeydown = e => {
+                if (e.key === "Enter") 
+                    runAgg()
+            };
+            async function runAgg() {
+                const q = $("#q-agg")
+                    .value
+                    .trim();
+                if (!q) 
+                    return;
+                const out = $("#agg-out"),
+                    btn = $("#b-agg");
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spin"></span>Đang quét…';
+                out.innerHTML = '<div class="agg-total" style="margin-top:26px"><div class="shimmer" style="wid' +
+                        'th:120px;height:50px"></div></div>';
+                try {
+                    const data = DEMO
+                        ? demoAgg(q)
+                        : await(await fetch(
+                            API + "/api/aggregate?q=" + encodeURIComponent(q)
+                        )).json();
+                    renderAgg(data, out);
+                } catch  {
+                    out.innerHTML = '<div class="empty">Không tổng hợp được. Kiểm tra kết nối máy chủ.</div>';
+                }
+                btn.disabled = false;
+                btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">' +
+                        '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Tổng hợp';
+            }
+            function renderAgg(d, out) {
+                const rows = (d.evidence || [])
+                    .map(
+                        r => `<tr>
+    <td><span class="ky">${esc(r.so_ky_hieu || "?")}</span></td>
+    <td class="mono" style="color:var(--muted);font-size:12.5px">${esc(r.ngay_ban_hanh || "")}</td>
+    <td><span class="val">${esc(String(r.value ?? ""))}</span> <span style="color:var(--faint);font-size:12px">${esc(r.unit || "")}</span></td>
+    <td class="ev">${esc(r.evidence || "")}</td></tr>`
+                    )
+                    .join("");
+                out.innerHTML = `
     <div class="agg-total">
-      <div class="agg-num" id="cu" data-t="${d.total||0}">0</div>
-      <div class="agg-meta"><div class="m1">${esc(d.metric||d.question||"")}</div>
-        <div class="m2">Phép ${d.agg==="count"?"đếm":"cộng"} trên ${d.n_docs_matched||0} văn bản có nêu số liệu</div></div>
+      <div class="agg-num" id="cu" data-t="${d.total || 0}">0</div>
+      <div class="agg-meta"><div class="m1">${esc(
+                    d.metric || d.question || ""
+                )}</div>
+        <div class="m2">Phép ${d.agg === "count"
+                    ? "đếm"
+                    : "cộng"} trên ${d.n_docs_matched || 0} văn bản có nêu số liệu</div></div>
       <div class="agg-stats">
-        <div><div class="n">${d.n_docs_scanned||0}</div><div class="l">Đã quét</div></div>
-        <div><div class="n">${d.n_docs_matched||0}</div><div class="l">Có số liệu</div></div>
+        <div><div class="n">${d.n_docs_scanned || 0}</div><div class="l">Đã quét</div></div>
+        <div><div class="n">${d.n_docs_matched || 0}</div><div class="l">Có số liệu</div></div>
       </div>
     </div>
     <div class="section-h">Minh chứng từng văn bản</div>
     <table class="evid"><thead><tr><th>Số ký hiệu</th><th>Ngày</th><th>Giá trị</th><th>Trích dẫn nguồn</th></tr></thead>
-    <tbody>${rows||'<tr><td colspan="4" style="color:var(--faint)">Không văn bản nào nêu số liệu này.</td></tr>'}</tbody></table>`;
-  countUp($("#cu"));
-}
-function countUp(el){
-  const t=parseFloat(el.dataset.t)||0; const dur=750; const st=performance.now();
-  const fmt=n=> Number.isInteger(t)? Math.round(n).toLocaleString("vi") : n.toFixed(1);
-  (function f(now){const p=Math.min(1,(now-st)/dur);const e=1-Math.pow(1-p,3);
-    el.textContent=fmt(t*e); if(p<1)requestAnimationFrame(f);})(st);
-}
+    <tbody>${rows || '<tr><td colspan="4" style="color:var(--faint)">Không văn bản nào nêu số liệu n' +
+                            'ày.</td></tr>'}</tbody></table>`;
+                countUp($("#cu"));
+            }
+            function countUp(el) {
+                const t = parseFloat(el.dataset.t) || 0;
+                const dur = 750;
+                const st = performance.now();
+                const fmt = n => Number.isInteger(t)
+                    ? Math
+                        .round(n)
+                        .toLocaleString("vi")
+                    : n.toFixed(1);
+                (function f(now) {
+                    const p = Math.min(1, (now - st) / dur);
+                    const e = 1 - Math.pow(1 - p, 3);
+                    el.textContent = fmt(t * e);
+                    if (p < 1) 
+                        requestAnimationFrame(f);
+                    }
+                )(st);
+            }
 
-/* ---------- CHECK ---------- */
-let SUB="format";
-document.querySelectorAll(".subtab").forEach(s=>s.onclick=()=>{
-  document.querySelectorAll(".subtab").forEach(x=>x.classList.remove("active"));
-  s.classList.add("active"); SUB=s.dataset.sub;
-  $("#drop-sub").textContent = SUB==="format"
-    ? "Kiểm tra font, cỡ chữ, lề, giãn dòng theo Nghị định 30/2020"
-    : "Đối chiếu căn cứ pháp lý, rà soát chính tả và tính logic của nội dung";
-  $("#check-out").innerHTML="";
-});
-const drop=$("#drop"), file=$("#file");
-drop.onclick=()=>file.click();
-drop.ondragover=e=>{e.preventDefault();drop.classList.add("over")};
-drop.ondragleave=()=>drop.classList.remove("over");
-drop.ondrop=e=>{e.preventDefault();drop.classList.remove("over");if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0])};
-file.onchange=()=>{if(file.files[0])handleFile(file.files[0])};
+            /* ---------- CHECK ---------- */
+            let SUB = "format";
+            document
+                .querySelectorAll(".subtab")
+                .forEach(s => s.onclick = () => {
+                    document
+                        .querySelectorAll(".subtab")
+                        .forEach(x => x.classList.remove("active"));
+                    s
+                        .classList
+                        .add("active");
+                    SUB = s.dataset.sub;
+                    $("#drop-sub").textContent = SUB === "format"
+                        ? "Kiểm tra font, cỡ chữ, lề, giãn dòng theo Nghị định 30/2020"
+                        : "Đối chiếu căn cứ pháp lý, rà soát chính tả và tính logic của nội dung";
+                    $("#check-out").innerHTML = "";
+                });
+            const drop = $("#drop"),
+                file = $("#file");
+            drop.onclick = () => file.click();
+            drop.ondragover = e => {
+                e.preventDefault();
+                drop
+                    .classList
+                    .add("over")
+            };
+            drop.ondragleave = () => drop
+                .classList
+                .remove("over");
+            drop.ondrop = e => {
+                e.preventDefault();
+                drop
+                    .classList
+                    .remove("over");
+                if (e.dataTransfer.files[0]) 
+                    handleFile(e.dataTransfer.files[0])
+            };
+            file.onchange = () => {
+                if (file.files[0]) 
+                    handleFile(file.files[0])
+            };
 
-async function handleFile(f){
-  $("#drop-file").textContent="📄 "+f.name;
-  const out=$("#check-out");
-  out.innerHTML='<div class="diag" style="margin-top:24px"><span class="spin" style="border-color:rgba(59,158,255,.3);border-top-color:var(--azure)"></span><div class="body"><div class="q">Đang phân tích “'+esc(f.name)+'”…</div></div></div>';
-  try{
-    if(DEMO){ await new Promise(r=>setTimeout(r,650));
-      SUB==="format"?renderFormat(demoFormat(),out):renderContent(demoContent(),out); return; }
-    const fd=new FormData(); fd.append("file",f);
-    const r=await fetch(API+"/api/check/"+SUB,{method:"POST",body:fd});
-    const d=await r.json();
-    SUB==="format"?renderFormat(d,out):renderContent(d,out);
-  }catch{ out.innerHTML='<div class="empty">Không kiểm tra được tệp. Kiểm tra kết nối máy chủ.</div>'; }
-}
-function renderFormat(d,out){
-  const ok=(d.so_loi||0)===0;
-  let h=`<div class="verdict ${ok?"ok":"bad"}"><span class="vn">${d.so_loi||0}</span>
-    <div>${ok?"Đạt thể thức — không phát hiện lỗi định dạng.":"lỗi định dạng cần sửa trước khi trình ký."}</div></div>`;
-  (d.loi||[]).forEach(l=>{
-    const sev = l.loai==="le_trang"||l.loai==="font" ? "crit" : "warn";
-    const name={font:"Font chữ",co_chu:"Cỡ chữ",le_trang:"Lề trang",gian_dong:"Giãn dòng"}[l.loai]||l.loai;
-    h+=`<div class="diag sev-${sev}"><span class="sev-pill">${name}</span>
-      <div class="body"><div class="loc">${esc(l.vi_tri||"")}</div>
+            async function handleFile(f) {
+                $("#drop-file").textContent = "📄 " + f.name;
+                const out = $("#check-out");
+                out.innerHTML = '<div class="diag" style="margin-top:24px"><span class="spin" style="border-col' +
+                        'or:rgba(59,158,255,.3);border-top-color:var(--azure)"></span><div class="body"' +
+                        '><div class="q">Đang phân tích “' + esc(f.name) + '”…</div></div></div>';
+                try {
+                    if (DEMO) {
+                        await new Promise(r => setTimeout(r, 650));
+                        SUB === "format"
+                            ? renderFormat(demoFormat(), out)
+                            : renderContent(demoContent(), out);
+                        return;
+                    }
+                    const fd = new FormData();
+                    fd.append("file", f);
+                    const r = await fetch(API + "/api/check/" + SUB, {
+                        method: "POST",
+                        body: fd
+                    });
+                    const d = await r.json();
+                    SUB === "format"
+                        ? renderFormat(d, out)
+                        : renderContent(d, out);
+                } catch  {
+                    out.innerHTML = '<div class="empty">Không kiểm tra được tệp. Kiểm tra kết nối máy chủ.</div>';
+                }
+            }
+            function renderFormat(d, out) {
+                const ok = (d.so_loi || 0) === 0;
+                let h = `<div class="verdict ${ok
+                    ? "ok"
+                    : "bad"}"><span class="vn">${d.so_loi || 0}</span>
+    <div>${ok
+                        ? "Đạt thể thức — không phát hiện lỗi định dạng."
+                        : "lỗi định dạng cần sửa trước khi trình ký."}</div></div>`;
+                (d.loi || []).forEach(l => {
+                    const sev = l.loai === "le_trang" || l.loai === "font"
+                        ? "crit"
+                        : "warn";
+                    const name = {
+                        font: "Font chữ",
+                        co_chu: "Cỡ chữ",
+                        le_trang: "Lề trang",
+                        gian_dong: "Giãn dòng"
+                    }[l.loai] || l.loai;
+                    h += `<div class="diag sev-${sev}"><span class="sev-pill">${name}</span>
+      <div class="body"><div class="loc">${esc(
+                        l.vi_tri || ""
+                    )}</div>
       <div class="q">Sai quy định thể thức</div></div>
-      <div class="nums"><span class="bad">${esc(l.phat_hien||"")}</span><br><span class="good">cần: ${esc(l.yeu_cau||"")}</span></div></div>`;
-  });
-  out.innerHTML=h;
-}
-function renderContent(d,out){
-  let h="";
-  const cc=d.kiem_tra_can_cu||[];
-  if(cc.length){
-    h+=`<div class="section-h">Đối chiếu căn cứ pháp lý</div>`;
-    cc.forEach(c=>{
-      h+=`<div class="cc"><div class="head"><span class="ky">${esc(c.so_ky_hieu_trich||"?")}</span>
-        <span style="color:var(--muted);font-size:12.5px">${esc((c.can_cu||"").replace(/^Căn cứ\s*/i,""))}</span>
-        <span class="badge ${c.tim_thay_trong_kho?"found":"miss"}">${c.tim_thay_trong_kho?"có trong kho":"chưa thấy trong kho"}</span></div>`;
-      if(c.goi_y&&c.goi_y.length) h+=`<div class="ref">↳ Khớp: ${c.goi_y.map(g=>esc(g.so_ky_hieu)+(g.ngay?` (${esc(g.ngay)})`:"")).join(" · ")}</div>`;
-      h+=`</div>`;
-    });
-  }
-  const rv=d.ra_soat_noi_dung||{}; const loi=rv.loi||[];
-  h+=`<div class="section-h">Rà soát nội dung</div>`;
-  if(rv.nhan_xet_chung) h+=`<p style="font-size:13.5px;color:var(--muted);margin:4px 0 6px">${esc(rv.nhan_xet_chung)}</p>`;
-  if(!loi.length) h+=`<div class="verdict ok"><span class="vn">0</span><div>Không phát hiện lỗi nội dung rõ ràng.</div></div>`;
-  loi.forEach(l=>{
-    const sev={can_cu:"crit",logic:"crit",chinh_ta:"info",the_thuc_noi_dung:"warn"}[l.loai]||"warn";
-    const name={chinh_ta:"Chính tả",logic:"Logic",can_cu:"Căn cứ",the_thuc_noi_dung:"Thể thức"}[l.loai]||l.loai;
-    h+=`<div class="diag sev-${sev}"><span class="sev-pill">${name}</span>
-      <div class="body"><div class="q"><em>“${esc(l.trich_doan||"")}”</em></div>
-      <div class="q" style="margin-top:5px">${esc(l.van_de||"")}</div>
-      <div class="fix"><b>Sửa:</b> ${esc(l.de_xuat||"")} ${l.nguon?`<span class="ky" style="color:var(--azure)">${esc(l.nguon)}</span>`:""}</div></div></div>`;
-  });
-  out.innerHTML=h;
-}
+      <div class="nums"><span class="bad">${esc(
+                        l.phat_hien || ""
+                    )}</span><br><span class="good">cần: ${esc(l.yeu_cau || "")}</span></div></div>`;
+                });
+                out.innerHTML = h;
+            }
+            function renderContent(d, out) {
+                let h = "";
+                const cc = d.kiem_tra_can_cu || [];
+                if (cc.length) {
+                    h += `<div class="section-h">Đối chiếu căn cứ pháp lý</div>`;
+                    cc.forEach(c => {
+                        h += `<div class="cc"><div class="head"><span class="ky">${esc(
+                            c.so_ky_hieu_trich || "?"
+                        )}</span>
+        <span style="color:var(--muted);font-size:12.5px">${esc(
+                            (c.can_cu || "").replace(/^Căn cứ\s*/i, "")
+                        )}</span>
+        <span class="badge ${c.tim_thay_trong_kho
+                            ? "found"
+                            : "miss"}">${c.tim_thay_trong_kho
+                                ? "có trong kho"
+                                : "chưa thấy trong kho"}</span></div>`;
+                        if (c.goi_y && c.goi_y.length) 
+                            h += `<div class="ref">↳ Khớp: ${c
+                                .goi_y
+                                .map(g => esc(g.so_ky_hieu) + (
+                                    g.ngay
+                                        ? ` (${esc(g.ngay)})`
+                                        : ""
+                                ))
+                                .join(" · ")}</div>`;
+                        h += `</div>`;
+                    });
+                }
+                const rv = d.ra_soat_noi_dung || {};
+                const loi = rv.loi || [];
+                h += `<div class="section-h">Rà soát nội dung</div>`;
+                if (rv.nhan_xet_chung) 
+                    h += `<p style="font-size:13.5px;color:var(--muted);margin:4px 0 6px">${esc(
+                        rv.nhan_xet_chung
+                    )}</p>`;
+                if (!loi.length) 
+                    h += `<div class="verdict ok"><span class="vn">0</span><div>Không phát hiện lỗi nội dung rõ ràng.</div></div>`;
+                loi.forEach(l => {
+                    const sev = {
+                        can_cu: "crit",
+                        logic: "crit",
+                        chinh_ta: "info",
+                        the_thuc_noi_dung: "warn"
+                    }[l.loai] || "warn";
+                    const name = {
+                        chinh_ta: "Chính tả",
+                        logic: "Logic",
+                        can_cu: "Căn cứ",
+                        the_thuc_noi_dung: "Thể thức"
+                    }[l.loai] || l.loai;
+                    h += `<div class="diag sev-${sev}"><span class="sev-pill">${name}</span>
+      <div class="body"><div class="q"><em>“${esc(
+                        l.trich_doan || ""
+                    )}”</em></div>
+      <div class="q" style="margin-top:5px">${esc(
+                        l.van_de || ""
+                    )}</div>
+      <div class="fix"><b>Sửa:</b> ${esc(l.de_xuat || "")} ${l.nguon
+                        ? `<span class="ky" style="color:var(--azure)">${esc(l.nguon)}</span>`
+                        : ""}</div></div></div>`;
+                });
+                out.innerHTML = h;
+            }
 
-/* ================= DEMO DATA (xem thử khi chưa nối backend) ================= */
-async function demoSearch(q,ans,src){
-  renderSources([
-    {metadata:{so_ky_hieu:"215/KH-UBND",ngay_ban_hanh:"2025-12-30"},score:.94,text:"Kế hoạch triển khai Đề án 06 trên địa bàn tỉnh; giao Sở Khoa học và Công nghệ chủ trì xây dựng nền tảng dữ liệu dùng chung, hoàn thành trong quý II..."},
-    {metadata:{so_ky_hieu:"01/KH-TU",ngay_ban_hanh:"2026-07-06"},score:.88,text:"Căn cứ Nghị quyết 57-NQ/TW, Tỉnh ủy ban hành kế hoạch về phát triển khoa học, công nghệ, đổi mới sáng tạo và chuyển đổi số..."},
-    {metadata:{so_ky_hieu:"1442/BC-SKHCN",ngay_ban_hanh:"2026-03-31"},score:.81,text:"Báo cáo kết quả quý I: đã tổ chức 12 buổi tập huấn chuyển đổi số cho cán bộ cấp xã, hoàn thành 78% nhiệm vụ được giao..."}
-  ],src);
-  const md=`Theo kế hoạch **215/KH-UBND** ngày 30/12/2025, Sở Khoa học và Công nghệ được giao chủ trì xây dựng nền tảng dữ liệu dùng chung, hạn hoàn thành **quý II** \`[215/KH-UBND]\`.
+            /* ================= DEMO DATA (xem thử khi chưa nối backend) ================= */
+            async function demoSearch(q, ans, src) {
+                renderSources(
+                    [
+                        {
+                            metadata: {
+                                so_ky_hieu: "215/KH-UBND",
+                                ngay_ban_hanh: "2025-12-30"
+                            },
+                            score: .94,
+                            text: "Kế hoạch triển khai Đề án 06 trên địa bàn tỉnh; giao Sở Khoa học và Công nghệ " +
+                                    "chủ trì xây dựng nền tảng dữ liệu dùng chung, hoàn thành trong quý II..."
+                        }, {
+                            metadata: {
+                                so_ky_hieu: "01/KH-TU",
+                                ngay_ban_hanh: "2026-07-06"
+                            },
+                            score: .88,
+                            text: "Căn cứ Nghị quyết 57-NQ/TW, Tỉnh ủy ban hành kế hoạch về phát triển khoa học, " +
+                                    "công nghệ, đổi mới sáng tạo và chuyển đổi số..."
+                        }, {
+                            metadata: {
+                                so_ky_hieu: "1442/BC-SKHCN",
+                                ngay_ban_hanh: "2026-03-31"
+                            },
+                            score: .81,
+                            text: "Báo cáo kết quả quý I: đã tổ chức 12 buổi tập huấn chuyển đổi số cho cán bộ cấ" +
+                                    "p xã, hoàn thành 78% nhiệm vụ được giao..."
+                        }
+                    ],
+                    src
+                );
+                const md = `Theo kế hoạch **215/KH-UBND** ngày 30/12/2025, Sở Khoa học và Công nghệ được giao chủ trì xây dựng nền tảng dữ liệu dùng chung, hạn hoàn thành **quý II** \`[215/KH-UBND]\`.
 
 Tính đến hết quý I/2026, tiến độ đạt **78%** nhiệm vụ, đã tổ chức **12 buổi tập huấn** chuyển đổi số cho cán bộ cấp xã \`[1442/BC-SKHCN]\`.
 
 Kế hoạch này căn cứ trực tiếp vào kế hoạch **01/KH-TU** của Tỉnh ủy, vốn cụ thể hóa **Nghị quyết 57-NQ/TW** của Bộ Chính trị \`[01/KH-TU]\`.`;
-  ans.innerHTML=""; let i=0;
-  await new Promise(res=>{const t=setInterval(()=>{
-    i+=4; ans.innerHTML=marked.parse(md.slice(0,i))+'<span class="caret"></span>';
-    if(i>=md.length){clearInterval(t);ans.innerHTML=marked.parse(md);res();}},14);});
-}
-function demoAgg(q){
-  return {question:q,metric:"Số buổi tập huấn chuyển đổi số",agg:"sum",total:47,
-    n_docs_scanned:23,n_docs_matched:5,evidence:[
-    {so_ky_hieu:"1442/BC-SKHCN",ngay_ban_hanh:"2026-03-31",value:12,unit:"buổi",evidence:"đã tổ chức 12 buổi tập huấn chuyển đổi số cho cán bộ cấp xã"},
-    {so_ky_hieu:"58/BC-UBND",ngay_ban_hanh:"2026-03-28",value:9,unit:"buổi",evidence:"phối hợp tổ chức 09 buổi tập huấn kỹ năng số cho người dân"},
-    {so_ky_hieu:"77/BC-UBND",ngay_ban_hanh:"2026-03-25",value:11,unit:"buổi",evidence:"tổ chức 11 lớp tập huấn về chuyển đổi số cấp xã"},
-    {so_ky_hieu:"102/BC-PGD",ngay_ban_hanh:"2026-03-20",value:8,unit:"buổi",evidence:"08 buổi bồi dưỡng chuyển đổi số cho giáo viên"},
-    {so_ky_hieu:"39/BC-UBND",ngay_ban_hanh:"2026-03-18",value:7,unit:"buổi",evidence:"đã tổ chức 7 buổi tập huấn nền tảng số cộng đồng"}
-  ]};
-}
-function demoFormat(){
-  return {so_loi:3,loi:[
-    {loai:"font",vi_tri:"6 đoạn (vd đoạn [4, 9, 12, 18, 21])",phat_hien:"Arial",yeu_cau:"Times New Roman"},
-    {loai:"co_chu",vi_tri:"3 đoạn (vd đoạn [9, 12, 18])",phat_hien:"12pt",yeu_cau:"13/14pt"},
-    {loai:"le_trang",vi_tri:"lề left",phat_hien:"2.50cm",yeu_cau:"3.0–3.5cm"}
-  ]};
-}
-function demoContent(){
-  return {kiem_tra_can_cu:[
-    {can_cu:"Căn cứ Nghị quyết số 57-NQ/TW ngày 22/12/2024 của Bộ Chính trị",so_ky_hieu_trich:"57-NQ/TW",tim_thay_trong_kho:true,goi_y:[{so_ky_hieu:"57-NQ/TW",ngay:"2024-12-22"}]},
-    {can_cu:"Căn cứ Kế hoạch số 01/KH-TU ngày 06/7/2026 của Tỉnh ủy",so_ky_hieu_trich:"01/KH-TU",tim_thay_trong_kho:true,goi_y:[{so_ky_hieu:"01/KH-TU",ngay:"2026-07-06"}]},
-    {can_cu:"Căn cứ Quyết định số 999/QĐ-UBND của UBND tỉnh",so_ky_hieu_trich:"999/QĐ-UBND",tim_thay_trong_kho:false,goi_y:[]}
-  ],ra_soat_noi_dung:{nhan_xet_chung:"Dự thảo bám sát căn cứ pháp lý; cần rà lại một mốc thời gian và một lỗi chính tả.",
-    loi:[
-    {loai:"can_cu",trich_doan:"Quyết định số 999/QĐ-UBND",van_de:"Không tìm thấy văn bản này trong kho; có thể sai số ký hiệu hoặc đã hết hiệu lực.",de_xuat:"Đối chiếu lại số ký hiệu trên hệ thống QLVB trước khi viện dẫn.",nguon:""},
-    {loai:"logic",trich_doan:"hoàn thành trước ngày 30/02/2026",van_de:"Ngày không tồn tại (tháng 2 không có ngày 30).",de_xuat:"Sửa thành mốc thời gian hợp lệ.",nguon:""},
-    {loai:"chinh_ta",trich_doan:"triển khai đồng bộ trên đại bàn tỉnh",van_de:"Sai chính tả: “đại bàn”.",de_xuat:"“địa bàn”.",nguon:""}
-  ]}};
-}
+                ans.innerHTML = "";
+                let i = 0;
+                await new Promise(res => {
+                    const t = setInterval(() => {
+                        i += 4;
+                        ans.innerHTML = marked.parse(md.slice(0, i)) + '<span class="caret"></span>';
+                        if (i >= md.length) {
+                            clearInterval(t);
+                            ans.innerHTML = marked.parse(md);
+                            res();
+                        }
+                    }, 14);
+                });
+            }
+            function demoAgg(q) {
+                return {
+                    question: q,
+                    metric: "Số buổi tập huấn chuyển đổi số",
+                    agg: "sum",
+                    total: 47,
+                    n_docs_scanned: 23,
+                    n_docs_matched: 5,
+                    evidence: [
+                        {
+                            so_ky_hieu: "1442/BC-SKHCN",
+                            ngay_ban_hanh: "2026-03-31",
+                            value: 12,
+                            unit: "buổi",
+                            evidence: "đã tổ chức 12 buổi tập huấn chuyển đổi số cho cán bộ cấp xã"
+                        }, {
+                            so_ky_hieu: "58/BC-UBND",
+                            ngay_ban_hanh: "2026-03-28",
+                            value: 9,
+                            unit: "buổi",
+                            evidence: "phối hợp tổ chức 09 buổi tập huấn kỹ năng số cho người dân"
+                        }, {
+                            so_ky_hieu: "77/BC-UBND",
+                            ngay_ban_hanh: "2026-03-25",
+                            value: 11,
+                            unit: "buổi",
+                            evidence: "tổ chức 11 lớp tập huấn về chuyển đổi số cấp xã"
+                        }, {
+                            so_ky_hieu: "102/BC-PGD",
+                            ngay_ban_hanh: "2026-03-20",
+                            value: 8,
+                            unit: "buổi",
+                            evidence: "08 buổi bồi dưỡng chuyển đổi số cho giáo viên"
+                        }, {
+                            so_ky_hieu: "39/BC-UBND",
+                            ngay_ban_hanh: "2026-03-18",
+                            value: 7,
+                            unit: "buổi",
+                            evidence: "đã tổ chức 7 buổi tập huấn nền tảng số cộng đồng"
+                        }
+                    ]
+                };
+            }
+            function demoFormat() {
+                return {
+                    so_loi: 3,
+                    loi: [
+                        {
+                            loai: "font",
+                            vi_tri: "6 đoạn (vd đoạn [4, 9, 12, 18, 21])",
+                            phat_hien: "Arial",
+                            yeu_cau: "Times New Roman"
+                        }, {
+                            loai: "co_chu",
+                            vi_tri: "3 đoạn (vd đoạn [9, 12, 18])",
+                            phat_hien: "12pt",
+                            yeu_cau: "13/14pt"
+                        }, {
+                            loai: "le_trang",
+                            vi_tri: "lề left",
+                            phat_hien: "2.50cm",
+                            yeu_cau: "3.0–3.5cm"
+                        }
+                    ]
+                };
+            }
+            function demoContent() {
+                return {
+                    kiem_tra_can_cu: [
+                        {
+                            can_cu: "Căn cứ Nghị quyết số 57-NQ/TW ngày 22/12/2024 của Bộ Chính trị",
+                            so_ky_hieu_trich: "57-NQ/TW",
+                            tim_thay_trong_kho: true,
+                            goi_y: [
+                                {
+                                    so_ky_hieu: "57-NQ/TW",
+                                    ngay: "2024-12-22"
+                                }
+                            ]
+                        }, {
+                            can_cu: "Căn cứ Kế hoạch số 01/KH-TU ngày 06/7/2026 của Tỉnh ủy",
+                            so_ky_hieu_trich: "01/KH-TU",
+                            tim_thay_trong_kho: true,
+                            goi_y: [
+                                {
+                                    so_ky_hieu: "01/KH-TU",
+                                    ngay: "2026-07-06"
+                                }
+                            ]
+                        }, {
+                            can_cu: "Căn cứ Quyết định số 999/QĐ-UBND của UBND tỉnh",
+                            so_ky_hieu_trich: "999/QĐ-UBND",
+                            tim_thay_trong_kho: false,
+                            goi_y: []
+                        }
+                    ],
+                    ra_soat_noi_dung: {
+                        nhan_xet_chung: "Dự thảo bám sát căn cứ pháp lý; cần rà lại một mốc thời gian và một lỗi chính " +
+                                "tả.",
+                        loi: [
+                            {
+                                loai: "can_cu",
+                                trich_doan: "Quyết định số 999/QĐ-UBND",
+                                van_de: "Không tìm thấy văn bản này trong kho; có thể sai số ký hiệu hoặc đã hết hiệu l" +
+                                        "ực.",
+                                de_xuat: "Đối chiếu lại số ký hiệu trên hệ thống QLVB trước khi viện dẫn.",
+                                nguon: ""
+                            }, {
+                                loai: "logic",
+                                trich_doan: "hoàn thành trước ngày 30/02/2026",
+                                van_de: "Ngày không tồn tại (tháng 2 không có ngày 30).",
+                                de_xuat: "Sửa thành mốc thời gian hợp lệ.",
+                                nguon: ""
+                            }, {
+                                loai: "chinh_ta",
+                                trich_doan: "triển khai đồng bộ trên đại bàn tỉnh",
+                                van_de: "Sai chính tả: “đại bàn”.",
+                                de_xuat: "“địa bàn”.",
+                                nguon: ""
+                            }
+                        ]
+                    }
+                };
+            }
 
-health();
-</script>
-</body>
+            health();
+        </script>
+    </body>
 </html>
