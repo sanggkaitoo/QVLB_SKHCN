@@ -14,6 +14,7 @@ except ImportError:
 
 class CrawlRequest(BaseModel):
     limit: int
+    mode: str = "all"
 
 class LoginSubmitRequest(BaseModel):
     username: str
@@ -37,8 +38,8 @@ async def api_crawl_start(req: CrawlRequest):
     if crawler_state["status"] in ["starting", "waiting_login", "logging_in", "crawling"]:
         return {"status": "error", "message": "Một tiến trình Crawler đang chạy!"}
     
-    # Chạy ngầm Playwright ngay trên Main Thread! (Vẫn trả về API ngay lập tức)
-    asyncio.create_task(run_spider(req.limit))
+    # Truyền thêm req.mode vào run_spider
+    asyncio.create_task(run_spider(req.limit, req.mode))
     return {"status": "success", "message": "Đã khởi động Crawler."}
 
 @router.post("/crawl/submit_login")

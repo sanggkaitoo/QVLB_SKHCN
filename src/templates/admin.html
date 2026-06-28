@@ -204,24 +204,33 @@ body {
     </section>
 
     <section class="panel" id="p-crawler">
-      <div class="ctrl-group">
+      <div class="ctrl-group" style="flex-direction: column; align-items: flex-start; gap: 20px;">
         <div class="ctrl-info">
           <h4>Crawl Toàn bộ hệ thống</h4>
           <p>Bot sẽ tự động lật từng trang, tải toàn bộ PDF mới và đẩy vào luồng Ingest.</p>
         </div>
-        <div class="ctrl-action">
-          <button class="btn btn-primary" onclick="runFullCrawl()">🚀 Chạy Toàn bộ</button>
+        <div class="ctrl-action" style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <button class="btn btn-primary" onclick="runFullCrawl('all')">🚀 Toàn bộ Đi & Đến</button>
+          
+          <button class="btn btn-secondary" onclick="runFullCrawl('di')" style="background: var(--surface-2); color: var(--text); border: 1px solid var(--line); padding: 10px 24px; border-radius: var(--r-sm); cursor: pointer; font-weight: 600;">
+            📤 Toàn bộ VB Đi
+          </button>
+          
+          <button class="btn btn-secondary" onclick="runFullCrawl('den')" style="background: var(--surface-2); color: var(--text); border: 1px solid var(--line); padding: 10px 24px; border-radius: var(--r-sm); cursor: pointer; font-weight: 600;">
+            📥 Toàn bộ VB Đến
+          </button>
         </div>
       </div>
 
-      <div class="ctrl-group demo">
+      <div class="ctrl-group demo" style="flex-direction: column; align-items: flex-start; gap: 20px;">
         <div class="ctrl-info">
           <h4>Crawl Demo (Kiểm thử)</h4>
           <p>Nhập số lượng văn bản muốn Bot chạy thử nghiệm để kiểm tra luồng Ingest.</p>
         </div>
-        <div class="ctrl-action">
-          <input type="number" id="demoLimit" class="input-num" value="5" min="1" max="100">
-          <button class="btn btn-warning" onclick="runDemoCrawl()">⚡ Chạy Demo</button>
+        <div class="ctrl-action" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+          <input type="number" id="demoLimit" class="input-num" value="5" min="1" max="100" title="Số lượng văn bản muốn tải">
+          <button class="btn btn-warning" onclick="runDemoCrawl('di')">⚡ Demo VB Đi</button>
+          <button class="btn btn-warning" onclick="runDemoCrawl('den')">⚡ Demo VB Đến</button>
         </div>
       </div>
     </section>
@@ -362,9 +371,13 @@ function startPolling() {
   }
 }
 
-async function runFullCrawl() {
+async function runFullCrawl(mode = 'all') {
+  let modeText = "TOÀN BỘ ĐI & ĐẾN";
+  if (mode === 'di') modeText = "TOÀN BỘ VĂN BẢN ĐI";
+  if (mode === 'den') modeText = "TOÀN BỘ VĂN BẢN ĐẾN";
+
   Swal.fire({
-    title: 'Xác nhận chạy toàn bộ?',
+    title: `Xác nhận chạy ${modeText}?`,
     text: "Quá trình này sẽ mất nhiều thời gian, bạn sẽ cần canh để nhập Captcha ở bước đầu tiên.",
     icon: 'warning',
     showCancelButton: true,
@@ -373,21 +386,23 @@ async function runFullCrawl() {
   }).then(async (result) => {
     if (result.isConfirmed) {
       await fetch('/api/admin/crawl/start', { 
-        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({limit: 0}) 
+        method: 'POST', 
+        headers: {'Content-Type': 'application/json'}, 
+        body: JSON.stringify({limit: 0, mode: mode}) // <--- Đã bổ sung gửi biến mode
       });
       startPolling();
     }
   });
 }
 
-async function runDemoCrawl() {
+async function runDemoCrawl(mode) {
   const limit = document.getElementById('demoLimit').value;
   if(!limit || limit < 1) return Swal.fire('Lỗi', 'Vui lòng nhập số hợp lệ', 'error');
 
   await fetch('/api/admin/crawl/start', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ limit: parseInt(limit) })
+    body: JSON.stringify({ limit: parseInt(limit), mode: mode }) // <--- Đã bổ sung gửi biến mode
   });
   startPolling();
 }

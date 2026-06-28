@@ -34,48 +34,155 @@ def save_history(history_set: set):
 def sanitize_filename(name: str) -> str:
     return re.sub(r'[\\/*?:"<>|]', "_", name).strip()
 
-async def run_spider(limit: int):
+# ==========================================
+# CÁC HÀM DÙNG CHUNG (REUSABLE COMPONENTS)
+# ==========================================
+async def handle_download_modal(page, cells, so_ky_hieu, ngay_ban_hanh, trich_yeu, huong, co_quan_ban_hanh=""):
+    """Hàm dùng chung để xử lý Modal tải file của cả VB Đi và Đến"""
+    try:
+        button_locator = cells.last.locator("button")
+        if await button_locator.count() > 0:
+            await button_locator.first.click()
+        else:
+            await cells.last.click()
+
+        modal = page.locator("ngb-modal-window")
+        await modal.wait_for(state="visible", timeout=15000)
+        await page.wait_for_timeout(1000)
+
+        file_links = await modal.locator("a").all()
+        for link in file_links:
+            try:
+                async with page.expect_download(timeout=30000) as download_info:
+                    await link.click()
+                
+                download = await download_info.value
+                new_filename = f"{sanitize_filename(so_ky_hieu)}_{download.suggested_filename}"
+                file_path = os.path.join(config.DOWNLOAD_DIR, new_filename)
+                
+                await download.save_as(file_path)
+                
+                # Ghi Metadata kèm Cơ quan ban hành (nếu có)
+                meta_path = file_path + ".meta.json"
+                with open(meta_path, "w", encoding="utf-8") as mf:
+                    json.dump({
+                        "so_ky_hieu": so_ky_hieu,
+                        "ngay_ban_hanh": ngay_ban_hanh,
+                        "trich_yeu": trich_yeu,
+                        "huong": huong, 
+                        "co_quan_ban_hanh": co_quan_ban_hanh,
+                        "file_goc": download.suggested_filename
+                    }, mf, ensure_ascii=False, indent=2)
+            except Exception:
+                pass
+
+        await page.keyboard.press("Escape")
+        await modal.wait_for(state="hidden", timeout=5000)
+    except Exception:
+        await page.keyboard.press("Escape")
+
+async def crawl_table(page, target_url, huong, limit, history_set, total_downloaded):
+    """Hàm lướt danh sách bảng và bóc tách dữ liệu linh hoạt theo Hướng"""
     global crawler_state
     
-    crawler_state.update({
-        "status": "starting",
-        "login_data": None,
-        "captcha_b64": None,
-        "message": "Đang khởi động trình duyệt ảo (Playwright)..."
-    })
+    crawler_state["message"] = f"Đang truy cập danh mục Văn bản {huong.upper()}..."
+    await page.goto(target_url, wait_until="domcontentloaded", timeout=60000)
+    await page.wait_for_selector("table tbody tr", timeout=60000)
     
+    # Cả "Ngày ban hành" (VB Đi) và "Ngày Nhận" (VB Đến) đều vô tình nằm ở Index 5!
+    crawler_state["message"] = f"Đang sắp xếp Văn bản {huong.upper()} theo ngày mới nhất..."
+    try:
+        sort_icon = page.locator("table thead th").nth(5).locator("i").first
+        await sort_icon.click()
+        await page.wait_for_timeout(3000)
+        await sort_icon.click()
+        await page.wait_for_timeout(3000)
+    except Exception: pass
+    
+    page_num = 1
+    has_next_page = True
+    
+    while has_next_page:
+        crawler_state["message"] = f"[Văn bản {huong.upper()}] Quét trang {page_num}... (Tổng đã tải: {total_downloaded})"
+        await page.wait_for_timeout(2000)
+        
+        rows = await page.locator("table tbody tr").all()
+        new_docs_in_page = 0
+        
+        for row in rows:
+            if limit > 0 and total_downloaded >= limit: break
+            
+            cells = row.locator("td")
+            # Bảng Đi có 12 cột, bảng Đến có 15 cột. Đặt điều kiện > 10 là an toàn.
+            if await cells.count() < 10: continue 
+            
+            co_quan_ban_hanh = ""
+            
+            # TÁCH LÔ-GIC ĐỌC CỘT DỰA VÀO HƯỚNG VĂN BẢN
+            if huong == "di":
+                trich_yeu = (await cells.nth(1).inner_text()).strip()
+                so_ky_hieu = (await cells.nth(3).inner_text()).strip()
+                ngay_ban_hanh = (await cells.nth(5).inner_text()).strip()
+            else: # huong == "den"
+                trich_yeu = (await cells.nth(2).inner_text()).strip()
+                so_ky_hieu = (await cells.nth(3).inner_text()).strip()
+                ngay_ban_hanh = (await cells.nth(4).inner_text()).strip()
+                co_quan_ban_hanh = (await cells.nth(8).inner_text()).strip() # Bốc thẳng từ Web!
+            
+            if not so_ky_hieu or so_ky_hieu in history_set: continue
+            
+            new_docs_in_page += 1
+            total_downloaded += 1
+            crawler_state["message"] = f"[{huong.upper()}] Tải {total_downloaded}/{limit if limit > 0 else 'Tất cả'}: {so_ky_hieu}"
+
+            # Gọi module tải file dùng chung và truyền thêm Cơ quan ban hành
+            await handle_download_modal(page, cells, so_ky_hieu, ngay_ban_hanh, trich_yeu, huong, co_quan_ban_hanh)
+
+            history_set.add(so_ky_hieu)
+            save_history(history_set)
+
+        if limit > 0 and total_downloaded >= limit: break
+        if new_docs_in_page == 0 and page_num > 1: break
+
+        next_li = page.locator("li.page-item", has=page.locator("a", has_text="›")).first
+        class_attr = await next_li.get_attribute("class")
+        if class_attr and "disabled" in class_attr:
+            has_next_page = False
+        else:
+            await next_li.click()
+            await page.wait_for_timeout(3000) 
+            page_num += 1
+            
+    return total_downloaded
+
+# ==========================================
+# LUỒNG CHẠY CHÍNH (MAIN WORKER)
+# ==========================================
+async def run_spider(limit: int, mode: str = "all"):
+    global crawler_state
+    
+    crawler_state.update({"status": "starting", "login_data": None, "captcha_b64": None, "message": "Đang khởi động Playwright..."})
     os.makedirs(config.DOWNLOAD_DIR, exist_ok=True)
     history_set = load_history()
     
     QLVB_URL = os.getenv("QLVB_URL", "https://egov1.laocai.gov.vn")
-    TARGET_URL = f"{QLVB_URL}/document/xem-di-index?statustype=published&type=vanbandi"
-    total_downloaded = 0
-
+    URL_DI = f"{QLVB_URL}/document/xem-di-index?statustype=published&type=vanbandi"
+    URL_DEN = f"{QLVB_URL}/document/xem-den-index?type=all"
+    
     try:
         async with async_playwright() as p:
-            browser = await p.chromium.launch(
-                headless=True,
-                args=['--no-sandbox', '--disable-setuid-sandbox']
-            )
-            
-            context = await browser.new_context(
-                viewport={'width': 1280, 'height': 720}, 
-                ignore_https_errors=True,                
-                accept_downloads=True
-            )
+            browser = await p.chromium.launch(headless=True, args=['--no-sandbox', '--disable-setuid-sandbox'])
+            context = await browser.new_context(viewport={'width': 1280, 'height': 720}, ignore_https_errors=True, accept_downloads=True)
             page = await context.new_page()
 
+            # --- ĐĂNG NHẬP ---
             login_success = False
-            
             await page.goto(QLVB_URL, wait_until="domcontentloaded")
             await page.wait_for_timeout(2000)
 
-            # --- VÒNG LẶP ĐĂNG NHẬP ---
             for attempt in range(5):
-                crawler_state["message"] = f"Đang chờ load trang đăng nhập (Lần thử {attempt+1}/5)..."
-                
+                crawler_state["message"] = f"Đang chờ load trang đăng nhập (Lần {attempt+1}/5)..."
                 await page.wait_for_selector("input#usernameUserInput", timeout=60000)
-
                 captcha_element = await page.query_selector("img#captchaImage")
                 if not captcha_element: continue
 
@@ -90,10 +197,7 @@ async def run_spider(limit: int):
                     await asyncio.sleep(1)
                     wait_time += 1
                 
-                if crawler_state["login_data"] is None:
-                    crawler_state["status"] = "error"
-                    crawler_state["message"] = "Hết thời gian chờ nhập Captcha."
-                    return
+                if crawler_state["login_data"] is None: return
 
                 data = crawler_state["login_data"]
                 crawler_state["status"] = "logging_in"
@@ -110,7 +214,7 @@ async def run_spider(limit: int):
                     login_success = True
                     break
                 except Exception:
-                    crawler_state["message"] = "Sai tài khoản/mật khẩu/Captcha. Đang tải lại ảnh mới..."
+                    crawler_state["message"] = "Sai tài khoản/mật khẩu/Captcha. Đang tải lại ảnh..."
                     try:
                         await page.click("img#captchaImage", timeout=3000)
                         await page.wait_for_timeout(1500)
@@ -121,116 +225,18 @@ async def run_spider(limit: int):
                 crawler_state["message"] = "Đăng nhập thất bại quá 5 lần. Đã hủy."
                 return
 
-            # --- VÒNG LẶP CÀO DỮ LIỆU ---
+            # --- CÀO DỮ LIỆU ---
             crawler_state["status"] = "crawling"
-            crawler_state["message"] = "Đăng nhập thành công! Đang truy cập danh sách..."
+            total_downloaded = 0
             
-            # Khắc phục lỗi Timeout 15s bằng cách Tăng lên 60s
-            await page.goto(TARGET_URL, wait_until="domcontentloaded", timeout=60000)
-            await page.wait_for_selector("table tbody tr", timeout=60000)
+            # Khối 1: Chỉ cào Văn bản Đi nếu mode là 'all' hoặc 'di'
+            if mode in ["all", "di"]:
+                total_downloaded = await crawl_table(page, URL_DI, "di", limit, history_set, total_downloaded)
             
-            # --- BÊ NGUYÊN CODE CŨ: Sắp xếp theo ngày ban hành ---
-            crawler_state["message"] = "Đang thao tác sắp xếp văn bản theo 'Ngày ban hành'..."
-            try:
-                sort_icon = page.locator("table thead th").nth(5).locator("i").first
-                await sort_icon.click()
-                await page.wait_for_timeout(3000)
-                
-                await sort_icon.click()
-                await page.wait_for_timeout(3000)
-            except Exception:
-                pass
-            
-            page_num = 1
-            has_next_page = True
-            
-            while has_next_page:
-                crawler_state["message"] = f"Đang quét trang {page_num}... (Đã tải {total_downloaded})"
-                await page.wait_for_timeout(2000)
-                
-                rows = await page.locator("table tbody tr").all()
-                new_docs_in_page = 0
-                
-                for row in rows:
-                    if limit > 0 and total_downloaded >= limit: break
-                    
-                    cells = row.locator("td")
-                    if await cells.count() < 6: continue
-                    
-                    trich_yeu = (await cells.nth(1).inner_text()).strip()
-                    so_ky_hieu = (await cells.nth(3).inner_text()).strip()
-                    ngay_ban_hanh = (await cells.nth(5).inner_text()).strip()
-                    
-                    if not so_ky_hieu: continue
-                    if so_ky_hieu in history_set: continue
-                    
-                    new_docs_in_page += 1
-                    total_downloaded += 1
-                    crawler_state["message"] = f"Đang tải {total_downloaded}/{limit if limit > 0 else 'Tất cả'}: {so_ky_hieu}"
-
-                    # =======================================================
-                    # XỬ LÝ HỘP THOẠI (MODAL) TẢI FILE
-                    # =======================================================
-                    try:
-                        # 1. Tìm và click vào button ở cột cuối cùng
-                        button_locator = cells.last.locator("button")
-                        if await button_locator.count() > 0:
-                            await button_locator.first.click()
-                        else:
-                            await cells.last.click()
-
-                        # 2. Đợi hộp thoại ngb-modal-window bật lên
-                        modal = page.locator("ngb-modal-window")
-                        await modal.wait_for(state="visible", timeout=15000)
-                        await page.wait_for_timeout(1000)
-
-                        # 3. Lấy tất cả các thẻ link <a> nằm trong hộp thoại
-                        file_links = await modal.locator("a").all()
-                        for link_idx, link in enumerate(file_links):
-                            try:
-                                async with page.expect_download(timeout=30000) as download_info:
-                                    await link.click()
-                                
-                                download = await download_info.value
-                                new_filename = f"{sanitize_filename(so_ky_hieu)}_{download.suggested_filename}"
-                                file_path = os.path.join(config.DOWNLOAD_DIR, new_filename)
-                                
-                                await download.save_as(file_path)
-                                
-                                meta_path = file_path + ".meta.json"
-                                with open(meta_path, "w", encoding="utf-8") as mf:
-                                    json.dump({
-                                        "so_ky_hieu": so_ky_hieu,
-                                        "ngay_ban_hanh": ngay_ban_hanh,
-                                        "trich_yeu": trich_yeu,
-                                        "huong": "di",
-                                        "file_goc": download.suggested_filename
-                                    }, mf, ensure_ascii=False, indent=2)
-                            except Exception:
-                                pass
-
-                        # 4. Tắt hộp thoại bằng cách nhấn phím ESC
-                        await page.keyboard.press("Escape")
-                        await modal.wait_for(state="hidden", timeout=5000)
-
-                    except Exception:
-                        await page.keyboard.press("Escape")
-                    # =======================================================
-
-                    history_set.add(so_ky_hieu)
-                    save_history(history_set)
-
-                if limit > 0 and total_downloaded >= limit: break
-                if new_docs_in_page == 0 and page_num > 1: break
-
-                next_li = page.locator("li.page-item", has=page.locator("a", has_text="›")).first
-                class_attr = await next_li.get_attribute("class")
-                if class_attr and "disabled" in class_attr:
-                    has_next_page = False
-                else:
-                    await next_li.click()
-                    await page.wait_for_timeout(3000) 
-                    page_num += 1
+            # Khối 2: Chỉ cào Văn bản Đến nếu mode là 'all' hoặc 'den'
+            if mode in ["all", "den"]:
+                if limit == 0 or total_downloaded < limit:
+                    await crawl_table(page, URL_DEN, "den", limit, history_set, total_downloaded)
 
             await browser.close()
             crawler_state["message"] = "Đã tải xong văn bản! Đang tiến hành nạp vào AI (Ingest)..."
