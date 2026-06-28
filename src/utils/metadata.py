@@ -50,7 +50,7 @@ for k, v in LOAI_VB.items():
 
 _LOAI_LIST_STR = ", ".join(f"{k} ({v})" for k, v in LOAI_VB.items() if k != "khac")
 
-_SYS = f"""Bạn là chuyên viên văn thư. Trích thông tin định danh từ một văn bản hành chính Việt Nam.
+_SYS = f"""Bạn là chuyên viên văn thư xuất sắc đang công tác tại Sở Khoa học và Công nghệ tỉnh Lào Cai. Trích thông tin định danh từ một văn bản hành chính Việt Nam.
 Phân loại loai_vb vào ĐÚNG MỘT trong 29 loại theo NĐ 30/2020/NĐ-CP:
 {_LOAI_LIST_STR}, khac.
 Nếu không chắc trường nào, để null. Ngày theo định dạng YYYY-MM-DD."""
@@ -60,9 +60,15 @@ _FIELDS = """Trả JSON với khóa:
  "viet_tat_loai": str|null,
  "co_quan_ban_hanh": str|null, "nguoi_ky": str|null, "chuc_vu_nguoi_ky": str|null,
  "trich_yeu": str|null,
- "chu_truong": ["tên nghị quyết/đề án lớn của TW hoặc tỉnh mà VB này phục vụ, VD: Trung ương: Nghị quyết 57-NQ/TW, Nghị quyết 59-NQ/TW, Nghị quyết 66-NQ/TW, Nghị quyết 68-NQ/TW, Nghị quyết 70-NQ/TW, Nghị quyết 71-NQ/TW, Đề án 06/QĐ-TTg, Chiến lược 942/QĐ-TTg, Chương trình 749/QĐ-TTg, Tỉnh: Đề án số 11, Rỗng nếu không rõ"],
+ "vai_tro_van_ban": "giao_nhiem_vu" | "thuc_hien_nhiem_vu" | "khac",
+ "chu_truong": ["tên nghị quyết/đề án lớn của TW hoặc tỉnh mà VB này phục vụ, VD: Trung ương: Nghị quyết 57-NQ/TW, Đề án 06, Tỉnh: Đề án số 11..."],
  "linh_vuc": ["chọn 1+ trong: khoa_hoc, cong_nghe, dmst, cds, tdđlcl, bcvt"],
- "chuyen_de": ["3-6 từ khóa chuyên đề: hạ tầng số, chính quyền số, kinh tế số, xã hội số, nghiên cứu khoa học, sở hữu trí tuệ, khởi nghiệp, viễn thông, mạng số liệu chuyên dùng, internet, đầu tư, dự án đầu tư công, dự án chi thường xuyên..."]}"""
+ "chuyen_de": ["3-6 từ khóa chuyên đề: hạ tầng số, chính quyền số, kinh tế số..."]}
+
+QUY TẮC BẮT BUỘC CHO TRƯỜNG 'vai_tro_van_ban' (Từ góc nhìn của Sở KH&CN cấp tỉnh):
+1. "giao_nhiem_vu": Nếu cơ quan ban hành là cấp trên hoặc ngang cấp (Trung ương, Tỉnh ủy, Đảng ủy UBND tỉnh, UBND tỉnh, các Sở, Ban, Ngành khác) VÀ nội dung mang tính chất Kế hoạch, Chiến lược, Quyết định, hoặc Công văn chỉ đạo, phân công công việc.
+2. "thuc_hien_nhiem_vu": Nếu cơ quan ban hành là cấp dưới (UBND cấp huyện, chính quyền cấp xã, tổ chức, cá nhân) HOẶC văn bản đó là Báo cáo, Tờ trình do chính Sở KH&CN gửi đi nhằm mục đích báo cáo kết quả, thực thi chỉ đạo.
+3. "khac": Giấy mời, thông báo chung, giấy ủy quyền không chứa nhiệm vụ."""
 
 
 def guess_loai_from_soky(so_ky_hieu: str | None) -> str | None:
@@ -107,6 +113,11 @@ def extract_metadata(full_text: str, fallback: dict | None = None) -> dict:
     data["chu_truong"] = [str(t).strip() for t in (data.get("chu_truong") or []) if t]
     data["linh_vuc"] = [v for v in (data.get("linh_vuc") or []) if v in _LV_VALID]
     data["chuyen_de"] = [str(t).strip() for t in (data.get("chuyen_de") or [])[:8] if t]
+
+    vai_tro = data.get("vai_tro_van_ban")
+    if vai_tro not in ("giao_nhiem_vu", "thuc_hien_nhiem_vu"):
+        vai_tro = "khac"
+    data["vai_tro_van_ban"] = vai_tro
 
     return data
 

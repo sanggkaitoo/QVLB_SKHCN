@@ -55,8 +55,26 @@ body {
 .topbar { padding: 20px 34px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; background: var(--surface); transition: background 0.3s, border-color 0.3s; }
 .topbar h2 { font-size: 21px; font-weight: 600; }
 
-.theme-toggle { background: var(--surface-2); border: 1px solid var(--line); color: var(--text); padding: 8px 16px; border-radius: 99px; cursor: pointer; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }
-.theme-toggle:hover { border-color: var(--azure); }
+.theme-toggle { 
+  background: var(--surface-2); 
+  border: 1px solid var(--line); 
+  color: var(--text); 
+  padding: 10px 16px; 
+  border-radius: var(--r-sm); 
+  cursor: pointer; 
+  font-size: 13px; 
+  font-weight: 600; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  gap: 8px; 
+  transition: all 0.2s;
+  width: 100%;
+}
+.theme-toggle:hover { 
+  border-color: var(--azure); 
+  color: var(--azure);
+}
 
 .panel-wrap { padding: 30px 34px; flex: 1; overflow-y: auto; }
 .panel { display: none; animation: rise .4s cubic-bezier(.2,.7,.2,1); }
@@ -93,6 +111,44 @@ body {
 .btn-primary { background: var(--azure); }
 .btn-primary:hover { background: var(--azure-deep); }
 .btn-warning { background: var(--amber); color: #fff; }
+
+/* POPUP CSS */
+.swal2-popup {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: var(--r) !important;
+  box-shadow: var(--shadow) !important;
+}
+.swal2-title {
+  color: var(--text) !important;
+  font-family: 'Be Vietnam Pro', sans-serif !important;
+}
+.swal2-html-container {
+  color: var(--muted) !important;
+}
+.swal2-input {
+  background: var(--surface-2) !important;
+  border: 1px solid var(--line) !important;
+  color: var(--text) !important;
+  border-radius: var(--r-sm) !important;
+  font-family: 'JetBrains Mono', monospace !important;
+}
+.swal2-input:focus {
+  border-color: var(--azure) !important;
+  box-shadow: 0 0 0 2px var(--azure-soft) !important;
+}
+.swal2-confirm {
+  background: var(--azure) !important;
+  border-radius: var(--r-sm) !important;
+  font-weight: 600 !important;
+  font-family: 'Be Vietnam Pro', sans-serif !important;
+}
+.swal2-cancel {
+  background: var(--surface-2) !important;
+  color: var(--text) !important;
+  border-radius: var(--r-sm) !important;
+}
 </style>
 </head>
 <body>
@@ -107,14 +163,17 @@ body {
     <div class="tab" data-target="p-crawler">Điều khiển Crawler</div>
     <div class="tab" onclick="window.location.href='/'">← Về trang Tra cứu</div>
   </nav>
+  
+  <div style="flex: 1;"></div>
+  
+  <button class="theme-toggle" id="themeBtn" onclick="toggleTheme()">
+    <span id="themeIcon">☀️</span> Giao diện Sáng
+  </button>
 </aside>
 
 <main class="main">
   <div class="topbar">
     <h2>Quản trị Hệ thống</h2>
-    <button class="theme-toggle" id="themeBtn" onclick="toggleTheme()">
-      <span id="themeIcon">☀️</span> Giao diện Sáng
-    </button>
   </div>
 
   <div class="panel-wrap">
@@ -226,34 +285,111 @@ async function loadStats() {
 }
 
 // --- Nút điều khiển Crawler ---
+let pollInterval = null;
+
+async function checkCrawlerStatus() {
+  try {
+    const res = await fetch('/api/admin/crawl/status');
+    const data = await res.json();
+    
+    // Nếu hệ thống đòi Captcha và Modal chưa được mở
+    if (data.status === 'waiting_login' && !document.getElementById('swal2-title')) {
+      Swal.fire({
+        title: 'Xác thực Hệ thống SSO',
+        html: `
+          <p style="font-size: 13px; color: var(--muted); margin-bottom: 15px;">Vui lòng nhập tài khoản và mã Captcha để Bot tiếp tục công việc.</p>
+          <input id="swal-user" class="swal2-input" placeholder="Tài khoản SSO" style="width: 80%;" value="">
+          <input id="swal-pass" class="swal2-input" type="password" placeholder="Mật khẩu" style="width: 80%;">
+          <div style="margin: 20px 0; text-align: center;">
+            <img src="data:image/png;base64,${data.captcha_b64}" style="border: 2px solid var(--line); border-radius: 8px; width: 140px; height: auto;" alt="Captcha">
+          </div>
+          <input id="swal-captcha" class="swal2-input" placeholder="Nhập mã trên ảnh" style="width: 60%; text-align: center; letter-spacing: 2px;">
+        `,
+        confirmButtonText: 'Đăng nhập & Tiếp tục',
+        allowOutsideClick: false,
+        preConfirm: () => {
+          const u = document.getElementById('swal-user').value;
+          const p = document.getElementById('swal-pass').value;
+          const c = document.getElementById('swal-captcha').value;
+          if (!u || !p || !c) {
+            Swal.showValidationMessage('Vui lòng nhập đầy đủ thông tin!');
+            return false;
+          }
+          return { username: u, password: p, captcha: c };
+        }
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          // Gửi dữ liệu về API
+          await fetch('/api/admin/crawl/submit_login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(result.value)
+          });
+          
+          Swal.fire({
+            title: 'Đang kiểm tra...',
+            text: 'Đã gửi thông tin cho hệ thống, vui lòng chờ!',
+            icon: 'info',
+            showConfirmButton: false,
+            timer: 2500
+          });
+        }
+      });
+    } 
+    // Dừng polling nếu thành công hoặc có lỗi
+    else if (data.status === 'done' || data.status === 'error') {
+      clearInterval(pollInterval);
+      pollInterval = null;
+      if (data.status === 'done') {
+        Swal.fire('Hoàn tất!', data.message, 'success');
+        loadStats(); // Tải lại thống kê ở trang chủ Admin
+      } else {
+        Swal.fire('Hủy bỏ', data.message, 'error');
+      }
+      document.querySelector('.topbar h2').innerText = "Quản trị Hệ thống";
+    }
+    // Hiển thị trạng thái đang cào lên Topbar cho người dùng biết
+    else if (data.status === 'crawling' || data.status === 'starting' || data.status === 'logging_in') {
+      document.querySelector('.topbar h2').innerHTML = `<span class="spin" style="display:inline-block; vertical-align:middle; border-top-color:var(--azure); margin-right:8px;"></span> ${data.message}`;
+    }
+
+  } catch(e) {}
+}
+
+function startPolling() {
+  if (!pollInterval) {
+    pollInterval = setInterval(checkCrawlerStatus, 2000);
+  }
+}
+
 async function runFullCrawl() {
   Swal.fire({
     title: 'Xác nhận chạy toàn bộ?',
-    text: "Tiến trình này có thể mất nhiều giờ tùy thuộc vào số lượng văn bản trên QLVB.",
+    text: "Quá trình này sẽ mất nhiều thời gian, bạn sẽ cần canh để nhập Captcha ở bước đầu tiên.",
     icon: 'warning',
     showCancelButton: true,
-    confirmButtonText: 'Đồng ý, Chạy ngay',
+    confirmButtonText: 'Bắt đầu',
     cancelButtonText: 'Hủy'
   }).then(async (result) => {
     if (result.isConfirmed) {
-      const res = await fetch('/api/admin/crawl/full', { method: 'POST' });
-      const data = await res.json();
-      Swal.fire('Thành công', data.message, 'success');
+      await fetch('/api/admin/crawl/start', { 
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({limit: 0}) 
+      });
+      startPolling();
     }
   });
 }
 
 async function runDemoCrawl() {
   const limit = document.getElementById('demoLimit').value;
-  if(!limit || limit < 1) return Swal.fire('Lỗi', 'Vui lòng nhập số lượng hợp lệ', 'error');
+  if(!limit || limit < 1) return Swal.fire('Lỗi', 'Vui lòng nhập số hợp lệ', 'error');
 
-  const res = await fetch('/api/admin/crawl/demo', {
+  await fetch('/api/admin/crawl/start', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ limit: parseInt(limit) })
   });
-  const data = await res.json();
-  Swal.fire('Đã kích hoạt', data.message, 'success');
+  startPolling();
 }
 
 // Khởi chạy khi load trang

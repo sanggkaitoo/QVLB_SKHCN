@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
-:root{
+:root[data-theme="dark"] {
   --ink:#0B1018; --surface:#121A26; --surface-2:#18222F; --raised:#1F2A39;
   --line:rgba(255,255,255,.08); --line-strong:rgba(255,255,255,.14);
   --text:#E8EDF4; --muted:#8A99AD; --faint:#5B6A7D;
@@ -18,19 +18,54 @@
   --amber:#E8A93B; --emerald:#35C28A;
   --r:14px; --r-sm:9px;
   --shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 18px 40px -24px rgba(0,0,0,.7);
+  --bg-gradient: radial-gradient(1100px 700px at 82% -10%, rgba(59,158,255,.10), transparent 60%), radial-gradient(900px 600px at -8% 108%, rgba(224,70,59,.07), transparent 55%), var(--ink);
+}
+
+:root[data-theme="light"] {
+  --ink:#F8FAFC; --surface:#FFFFFF; --surface-2:#F1F5F9; --raised:#E2E8F0;
+  --line:rgba(0,0,0,.08); --line-strong:rgba(0,0,0,.15);
+  --text:#0F172A; --muted:#475569; --faint:#64748B;
+  --azure:#0284C7; --azure-deep:#0369A1; --azure-soft:rgba(2, 132, 199, .12);
+  --seal:#DC2626; --seal-soft:rgba(220, 38, 38, .12);
+  --amber:#D97706; --emerald:#059669;
+  --r:14px; --r-sm:9px;
+  --shadow:0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --bg-gradient: var(--ink);
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
-body{
-  font-family:'Be Vietnam Pro',system-ui,sans-serif;
-  background:
-    radial-gradient(1100px 700px at 82% -10%, rgba(59,158,255,.10), transparent 60%),
-    radial-gradient(900px 600px at -8% 108%, rgba(224,70,59,.07), transparent 55%),
-    var(--ink);
-  color:var(--text); line-height:1.55; -webkit-font-smoothing:antialiased;
-  display:flex; min-height:100vh;
+body {
+  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
+  background: var(--bg-gradient);
+  color: var(--text); 
+  line-height: 1.55; 
+  -webkit-font-smoothing: antialiased;
+  display: flex; min-height: 100vh;
+  transition: background 0.3s, color 0.3s;
 }
 .mono{font-family:'JetBrains Mono',monospace;font-variant-ligatures:none}
+
+/* ============ DARK/LIGHT TOGGLE ============ */
+.theme-toggle { 
+  background: var(--surface-2); 
+  border: 1px solid var(--line); 
+  color: var(--text); 
+  padding: 10px 16px; 
+  border-radius: var(--r-sm); 
+  cursor: pointer; 
+  font-size: 13px; 
+  font-weight: 600; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  gap: 8px; 
+  transition: all 0.2s;
+  width: 100%;
+}
+.theme-toggle:hover { 
+  border-color: var(--azure); 
+  color: var(--azure);
+}
 
 /* ============ SIDEBAR RAIL ============ */
 .rail{
@@ -271,6 +306,9 @@ table.evid tr:hover td{background:rgba(255,255,255,.015)}
       <span>Kiểm tra dự thảo</span></div>
   </nav>
   <div class="spacer"></div>
+
+  
+
   <div class="telemetry">
     <div class="tel-row"><span class="dot" id="d-q"></span>Vector · Qdrant<span class="mono" id="s-q">—</span></div>
     <div class="tel-row"><span class="dot" id="d-p"></span>CSDL · Postgres<span class="mono" id="s-p">—</span></div>
@@ -286,7 +324,7 @@ table.evid tr:hover td{background:rgba(255,255,255,.015)}
       <h2>Tìm trong toàn bộ kho văn bản</h2>
       <p>Tìm theo từ khóa hoặc ý nghĩa trên văn bản đi và đến. Mọi câu trả lời đều dẫn nguồn số ký hiệu.</p>
     </div>
-    <div class="demo-badge" id="demo"><span class="dot warn"></span>Chế độ xem thử — chưa nối backend</div>
+    <div class="demo-badge" id="demo" style="margin-left:auto;"><span class="dot warn"></span>Chế độ xem thử</div>
   </div>
 
   <div class="panel-wrap">
@@ -380,6 +418,23 @@ const API = ""; // cùng origin khi FastAPI phục vụ file này
 let DEMO = false;
 const $ = s => document.querySelector(s);
 const esc = s => (s??"").toString().replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+/* ---------- light / dark mode toggle ---------- */
+function toggleTheme() {
+  const root = document.documentElement;
+  const btn = document.getElementById('themeBtn');
+  const icon = document.getElementById('themeIcon');
+  
+  if (root.getAttribute('data-theme') === 'dark') {
+    root.setAttribute('data-theme', 'light');
+    icon.innerText = '🌙';
+    btn.innerHTML = `<span id="themeIcon">🌙</span> Giao diện Tối`;
+  } else {
+    root.setAttribute('data-theme', 'dark');
+    icon.innerText = '☀️';
+    btn.innerHTML = `<span id="themeIcon">☀️</span> Giao diện Sáng`;
+  }
+}
 
 /* ---------- health / telemetry ---------- */
 async function health(){
