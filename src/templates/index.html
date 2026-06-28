@@ -99,6 +99,7 @@
                 gap: 8px;
                 transition: all 0.2s;
                 width: 100%;
+                font-family: inherit;
             }
             .theme-toggle:hover {
                 border-color: var(--azure);
@@ -159,6 +160,7 @@
                 display: flex;
                 align-items: center;
                 gap: 11px;
+                width: 100%;
                 padding: 11px 12px;
                 border-radius: var(--r-sm);
                 color: var(--muted);
@@ -166,6 +168,9 @@
                 font-size: 14px;
                 font-weight: 500;
                 border: 1px solid transparent;
+                background: transparent;
+                font-family: inherit;
+                text-align: left;
                 position: relative;
                 transition: background 0.18s,color 0.18s,border-color 0.18s;
             }
@@ -198,6 +203,35 @@
             }
             .rail .spacer {
                 flex: 1;
+            }
+            .rail-actions {
+                display: grid;
+                gap: 8px;
+            }
+            .utility-link {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                min-height: 40px;
+                color: var(--muted);
+                background: transparent;
+                border: 1px solid var(--line);
+                border-radius: var(--r-sm);
+                font-size: 13px;
+                font-weight: 600;
+                font-family: inherit;
+                text-decoration: none;
+                transition: color 0.18s, border-color 0.18s, background 0.18s;
+            }
+            .utility-link:hover {
+                color: var(--text);
+                border-color: var(--line-strong);
+                background: var(--surface);
+            }
+            .utility-link svg {
+                width: 16px;
+                height: 16px;
             }
             .telemetry {
                 border-top: 1px solid var(--line);
@@ -382,6 +416,7 @@
                 cursor: pointer;
                 transition: all 0.15s;
                 font-weight: 500;
+                font-family: inherit;
                 user-select: none;
             }
             .chip:hover {
@@ -682,11 +717,14 @@
             }
             .subtab {
                 padding: 8px 20px;
+                border: 0;
                 border-radius: 99px;
                 font-size: 13.5px;
                 color: var(--muted);
+                background: transparent;
                 cursor: pointer;
                 font-weight: 500;
+                font-family: inherit;
                 transition: all 0.18s;
             }
             .subtab.active {
@@ -931,6 +969,41 @@
                 border-radius: 50%;
                 animation: rot 0.7s linear infinite;
             }
+            .btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                min-height: 44px;
+                padding: 0 18px;
+                border: 1px solid rgba(59,158,255,.45);
+                border-radius: var(--r-sm);
+                background: linear-gradient(180deg,var(--azure),var(--azure-deep));
+                color: #04101f;
+                box-shadow: 0 10px 26px -18px var(--azure);
+                cursor: pointer;
+                font-family: inherit;
+                font-size: 14px;
+                font-weight: 700;
+                white-space: nowrap;
+                transition: transform 0.12s, box-shadow 0.18s, opacity 0.18s;
+            }
+            .btn:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 16px 34px -20px var(--azure);
+            }
+            .btn:active {
+                transform: translateY(0);
+            }
+            .btn:disabled {
+                cursor: wait;
+                opacity: 0.72;
+            }
+            .btn svg {
+                width: 18px;
+                height: 18px;
+                flex: 0 0 18px;
+            }
             @keyframes rot {
                 to {
                     transform: rotate(360deg);
@@ -969,7 +1042,8 @@
                 }
                 .nav-label,
                 .rail .spacer,
-                .telemetry {
+                .telemetry,
+                .rail-actions {
                     display: none;
                 }
                 .tab.active::before {
@@ -980,6 +1054,14 @@
                 }
                 .tab {
                     padding: 10px;
+                }
+                .qbar {
+                    align-items: stretch;
+                    flex-direction: column;
+                }
+                .filter-row {
+                    flex-direction: column;
+                    gap: 8px;
                 }
                 .split {
                     grid-template-columns: 1fr;
@@ -1061,17 +1143,27 @@
             </div>
             <nav class="nav">
                 <div class="nav-label">Nghiệp vụ</div>
-                <div class="tab active" data-tab="search">
+                <button class="tab active" type="button" data-tab="search">
                     <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-                    <span>Tra cứu văn bản</span></div>
-                <div class="tab" data-tab="agg">
+                    <span>Tra cứu văn bản</span></button>
+                <button class="tab" type="button" data-tab="agg">
                     <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
-                    <span>Tổng hợp số liệu</span></div>
-                <div class="tab" data-tab="check">
+                    <span>Tổng hợp số liệu</span></button>
+                <button class="tab" type="button" data-tab="check">
                     <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 5-3.5 7.5-8.5 9C7.5 19.5 4 17 4 12V6l8-3 8 3z"/></svg>
-                    <span>Kiểm tra dự thảo</span></div>
+                    <span>Kiểm tra dự thảo</span></button>
             </nav>
             <div class="spacer"></div>
+
+            <div class="rail-actions">
+                <a class="utility-link" href="/admin">
+                    <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+                    Quản trị
+                </a>
+                <button class="theme-toggle" id="themeBtn" type="button" onclick="toggleTheme()">
+                    <span id="themeIcon">☀</span><span id="themeText">Giao diện Sáng</span>
+                </button>
+            </div>
 
             <div class="telemetry">
                 <div class="tel-row">
@@ -1111,24 +1203,24 @@
                         <div class="filter-row">
                             <div class="lbl">Hướng:</div>
                             <div class="chip-group">
-                                <span class="chip" data-f="huong" data-v="den">Văn bản đến</span>
-                                <span class="chip" data-f="huong" data-v="di">Văn bản đi</span>
+                                <button class="chip" type="button" data-f="huong" data-v="den" aria-pressed="false">Văn bản đến</button>
+                                <button class="chip" type="button" data-f="huong" data-v="di" aria-pressed="false">Văn bản đi</button>
                             </div>
                         </div>
 
                         <div class="filter-row">
                             <div class="lbl">Loại:</div>
                             <div class="chip-group">
-                                <span class="chip" data-f="loai_vb" data-v="cong_van">Công văn</span>
-                                <span class="chip" data-f="loai_vb" data-v="ke_hoach">Kế hoạch</span>
-                                <span class="chip" data-f="loai_vb" data-v="bao_cao">Báo cáo</span>
-                                <span class="chip" data-f="loai_vb" data-v="quyet_dinh">Quyết định</span>
-                                <span class="chip" data-f="loai_vb" data-v="to_trinh">Tờ trình</span>
-                                <span class="chip" data-f="loai_vb" data-v="thong_bao">Thông báo</span>
-                                <span class="chip" data-f="loai_vb" data-v="nghi_quyet">Nghị quyết</span>
-                                <span class="chip" data-f="loai_vb" data-v="chuong_trinh">Chương trình</span>
-                                <span class="chip" data-f="loai_vb" data-v="de_an">Đề án</span>
-                                <span class="chip" data-f="loai_vb" data-v="chi_thi">Chỉ thị</span>
+                                <button class="chip" type="button" data-f="loai_vb" data-v="cong_van" aria-pressed="false">Công văn</button>
+                                <button class="chip" type="button" data-f="loai_vb" data-v="ke_hoach" aria-pressed="false">Kế hoạch</button>
+                                <button class="chip" type="button" data-f="loai_vb" data-v="bao_cao" aria-pressed="false">Báo cáo</button>
+                                <button class="chip" type="button" data-f="loai_vb" data-v="quyet_dinh" aria-pressed="false">Quyết định</button>
+                                <button class="chip" type="button" data-f="loai_vb" data-v="to_trinh" aria-pressed="false">Tờ trình</button>
+                                <button class="chip" type="button" data-f="loai_vb" data-v="thong_bao" aria-pressed="false">Thông báo</button>
+                                <button class="chip" type="button" data-f="loai_vb" data-v="nghi_quyet" aria-pressed="false">Nghị quyết</button>
+                                <button class="chip" type="button" data-f="loai_vb" data-v="chuong_trinh" aria-pressed="false">Chương trình</button>
+                                <button class="chip" type="button" data-f="loai_vb" data-v="de_an" aria-pressed="false">Đề án</button>
+                                <button class="chip" type="button" data-f="loai_vb" data-v="chi_thi" aria-pressed="false">Chỉ thị</button>
                                 <select class="chip-select" id="more-loai">
                                     <option value="">Loại khác ▾</option>
                                     <option value="quy_che">Quy chế</option>
@@ -1157,12 +1249,12 @@
                         <div class="filter-row">
                             <div class="lbl">Lĩnh vực:</div>
                             <div class="chip-group">
-                                <span class="chip" data-f="linh_vuc" data-v="cds">Chuyển đổi số</span>
-                                <span class="chip" data-f="linh_vuc" data-v="khoa_hoc">Khoa học</span>
-                                <span class="chip" data-f="linh_vuc" data-v="cong_nghe">Công nghệ</span>
-                                <span class="chip" data-f="linh_vuc" data-v="dmst">ĐMST</span>
-                                <span class="chip" data-f="linh_vuc" data-v="tdđlcl">TC-ĐL-CL</span>
-                                <span class="chip" data-f="linh_vuc" data-v="bcvt">Bưu chính VT</span>
+                                <button class="chip" type="button" data-f="linh_vuc" data-v="cds" aria-pressed="false">Chuyển đổi số</button>
+                                <button class="chip" type="button" data-f="linh_vuc" data-v="khoa_hoc" aria-pressed="false">Khoa học</button>
+                                <button class="chip" type="button" data-f="linh_vuc" data-v="cong_nghe" aria-pressed="false">Công nghệ</button>
+                                <button class="chip" type="button" data-f="linh_vuc" data-v="dmst" aria-pressed="false">ĐMST</button>
+                                <button class="chip" type="button" data-f="linh_vuc" data-v="tdđlcl" aria-pressed="false">TC-ĐL-CL</button>
+                                <button class="chip" type="button" data-f="linh_vuc" data-v="bcvt" aria-pressed="false">Bưu chính VT</button>
                             </div>
                         </div>
                     </div>
@@ -1204,8 +1296,8 @@
                 <!-- ---- CHECK ---- -->
                 <section class="panel" id="p-check">
                     <div class="subtabs">
-                        <div class="subtab active" data-sub="format">Định dạng (NĐ 30/2020)</div>
-                        <div class="subtab" data-sub="content">Nội dung &amp; căn cứ</div>
+                        <button class="subtab active" type="button" data-sub="format">Định dạng (NĐ 30/2020)</button>
+                        <button class="subtab" type="button" data-sub="content">Nội dung &amp; căn cứ</button>
                     </div>
                     <div class="drop" id="drop">
                         <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 16V4m0 0 4 4m-4-4L8 8"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
@@ -1223,26 +1315,25 @@
             const API = ""; // cùng origin khi FastAPI phục vụ file này
             let DEMO = false;
             const $ = s => document.querySelector(s);
-            const esc = s => (s ?? "")
+            const esc = s => (s == null ? "" : s)
                 .toString()
                 .replace(/[&<>]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;"}[c]));
 
             /* ---------- light / dark mode toggle ---------- */
-            function toggleTheme() {
-                const root = document.documentElement;
-                const btn = document.getElementById('themeBtn');
-                const icon = document.getElementById('themeIcon');
-
-                if (root.getAttribute('data-theme') === 'dark') {
-                    root.setAttribute('data-theme', 'light');
-                    icon.innerText = '🌙';
-                    btn.innerHTML = `<span id="themeIcon">🌙</span> Giao diện Tối`;
-                } else {
-                    root.setAttribute('data-theme', 'dark');
-                    icon.innerText = '☀️';
-                    btn.innerHTML = `<span id="themeIcon">☀️</span> Giao diện Sáng`;
-                }
+            function setTheme(theme) {
+                const isLight = theme === "light";
+                document.documentElement.setAttribute("data-theme", isLight ? "light" : "dark");
+                localStorage.setItem("qlvb-theme", isLight ? "light" : "dark");
+                const icon = document.getElementById("themeIcon");
+                const text = document.getElementById("themeText");
+                if (icon) icon.textContent = isLight ? "☾" : "☀";
+                if (text) text.textContent = isLight ? "Giao diện Tối" : "Giao diện Sáng";
             }
+            function toggleTheme() {
+                const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+                setTheme(next);
+            }
+            setTheme(localStorage.getItem("qlvb-theme") || "dark");
 
             /* ---------- health / telemetry ---------- */
             async function health() {
@@ -1327,6 +1418,7 @@
                     c
                         .classList
                         .toggle("on");
+                    c.setAttribute("aria-pressed", c.classList.contains("on") ? "true" : "false");
                     if (c.classList.contains("on")) {
                         if (!filters[f].includes(v)) 
                             filters[f].push(v);
@@ -1454,7 +1546,7 @@
                 el.innerHTML = list
                     .map(s => {
                         const m = s.metadata || {},
-                            sc = Math.round((s.score ?? 0.7) * 100);
+                            sc = Math.round((s.score == null ? 0.7 : s.score) * 100);
                         return `<div class="src"><div class="meta"><span class="tag">${esc(
                             m.so_ky_hieu || "?"
                         )}</span>
@@ -1505,7 +1597,7 @@
                         r => `<tr>
     <td><span class="ky">${esc(r.so_ky_hieu || "?")}</span></td>
     <td class="mono" style="color:var(--muted);font-size:12.5px">${esc(r.ngay_ban_hanh || "")}</td>
-    <td><span class="val">${esc(String(r.value ?? ""))}</span> <span style="color:var(--faint);font-size:12px">${esc(r.unit || "")}</span></td>
+    <td><span class="val">${esc(String(r.value == null ? "" : r.value))}</span> <span style="color:var(--faint);font-size:12px">${esc(r.unit || "")}</span></td>
     <td class="ev">${esc(r.evidence || "")}</td></tr>`
                     )
                     .join("");

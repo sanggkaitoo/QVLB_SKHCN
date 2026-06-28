@@ -60,26 +60,37 @@ def ingest_file(file_path: str, huong: str = "di", raw_meta: dict | None = None,
         return -1
 
     meta = metadata.extract_metadata(text, fallback=raw_meta)
-
+    
+    # 1. Khóa cứng Số ký hiệu và Trích yếu
     meta["so_ky_hieu"] = raw_meta.get("so_ky_hieu", meta.get("so_ky_hieu"))
-    meta["ngay_ban_hanh"] = raw_meta.get("ngay_ban_hanh", meta.get("ngay_ban_hanh"))
     meta["trich_yeu"] = raw_meta.get("trich_yeu", meta.get("trich_yeu"))
-
+    
+    # 2. Xử lý chuẩn hóa Ngày ban hành (Từ DD/MM/YYYY sang YYYY-MM-DD)
+    raw_ngay = raw_meta.get("ngay_ban_hanh", "")
+    if raw_ngay and "/" in raw_ngay:
+        parts = raw_ngay.split("/")
+        if len(parts) == 3:
+            meta["ngay_ban_hanh"] = f"{parts[2].strip()}-{parts[1].strip().zfill(2)}-{parts[0].strip().zfill(2)}"
+    elif raw_ngay:
+        meta["ngay_ban_hanh"] = raw_ngay
+    
+    # 3. Khóa cứng Cơ quan ban hành (Dành cho Văn bản Đến)
     if raw_meta.get("co_quan_ban_hanh"):
         meta["co_quan_ban_hanh"] = raw_meta.get("co_quan_ban_hanh")
 
     meta.update({
-        "huong": huong, "file_name": name, "full_text": text,
-        "source_url": source_url, "sha256": _sha256(file_path),
-        "extract_method": method, "raw_meta": json.dumps(raw_meta, ensure_ascii=False),
+        "huong": huong, 
+        "file_name": name, 
+        "full_text": text,
+        "source_url": source_url, 
+        "sha256": _sha256(file_path),
+        "extract_method": method, 
+        "raw_meta": json.dumps(raw_meta, ensure_ascii=False),
+        "file_path": name, # <--- THÊM DÒNG NÀY ĐỂ THỎA MÃN POSTGRES
     })
 
-    # GIỮ bản gốc vào kho lưu trữ an toàn (STORE_DIR)
-    os.makedirs(config.STORE_DIR, exist_ok=True)
-    dest = os.path.join(config.STORE_DIR, name)
-    if os.path.abspath(dest) != os.path.abspath(file_path):
-        shutil.copy2(file_path, dest)
-    meta["file_path"] = dest
+    # --- ĐÃ XÓA TÍNH NĂNG COPY FILE SANG STORE_DIR ---
+    # Hệ thống giờ đây chỉ lấy Text, không lưu trữ tệp vật lý.
 
     chunks = split_text(text, config.CHUNK_SIZE, config.CHUNK_OVERLAP)
     meta["n_chunks"] = len(chunks)
@@ -92,7 +103,6 @@ def ingest_file(file_path: str, huong: str = "di", raw_meta: dict | None = None,
     vecs = embedder.encode(chunks)
     points = []
     for chunk, v in zip(chunks, vecs):
-        # THÊM TRƯỜNG vai_tro_van_ban VÀO ĐỂ TÌM KIẾM THEO GIAO VIỆC / BÁO CÁO
         points.append(qm.PointStruct(
             id=str(uuid.uuid4()),
             vector={"dense": v["dense"],
@@ -193,10 +203,15 @@ def ingest_download_dir():
                 final_files_to_ingest.append(p)
                 
             # 3. Gom cặp bài trùng: Nếu có cả Bản PDF và Bản Word trùng tên gốc, Xóa bản Word
-            pdf_basenames = {os.path.splitext(p["name"])[0] for p in filtered_pdfs}
+            # ĐÃ NÂNG CẤP: Xóa các tiền tố "0_", "1_" do hệ thống QLVB tự sinh ra để so sánh chuẩn xác
+            def clean_basename(filename):
+                base = os.path.splitext(filename)[0]
+                # Dùng Regex r'^\d+_' để tìm và xóa các số theo sau là dấu gạch dưới ở ĐẦU chuỗi
+                return re.sub(r'^\d+_', '', base)
+                
+            pdf_basenames = {clean_basename(p["name"]) for p in filtered_pdfs}
             for w in words:
-                basename = os.path.splitext(w["name"])[0]
-                if basename not in pdf_basenames: 
+                if clean_basename(w["name"]) not in pdf_basenames: 
                     final_files_to_ingest.append(w) # Chỉ lấy Word nếu ko có PDF trùng tên
 
         # 3. KÍCH HOẠT NẠP AI & DỌN DẸP Ổ CỨNG
