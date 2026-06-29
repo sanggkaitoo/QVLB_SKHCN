@@ -319,14 +319,16 @@ button { letter-spacing: 0; }
   animation: rot .72s linear infinite;
 }
 @keyframes rot { to { transform: rotate(360deg); } }
-.swal2-popup { background: var(--surface) !important; color: var(--text) !important; border: 1px solid var(--line) !important; border-radius: var(--r) !important; box-shadow: var(--shadow) !important; }
-.swal2-title, .swal2-confirm, .swal2-cancel { font-family: 'Be Vietnam Pro', sans-serif !important; }
-.swal2-title { color: var(--text) !important; }
-.swal2-html-container { color: var(--muted) !important; }
-.swal2-input { background: var(--surface-2) !important; border: 1px solid var(--line) !important; color: var(--text) !important; border-radius: var(--r-sm) !important; font-family: 'Be Vietnam Pro', sans-serif !important; }
+.swal2-popup { width: 420px !important; max-width: calc(100vw - 32px) !important; padding: 26px !important; background: var(--surface) !important; color: var(--text) !important; border: 1px solid var(--line) !important; border-radius: var(--r) !important; box-shadow: var(--shadow) !important; }
+.swal2-title { font-family: 'Be Vietnam Pro', sans-serif !important; color: var(--text) !important; font-size: 19px !important; font-weight: 700 !important; padding: 0 0 6px !important; }
+.swal2-html-container { color: var(--muted) !important; font-size: 13.5px !important; margin: 8px 0 0 !important; }
+.swal2-input { box-sizing: border-box !important; width: 100% !important; height: 42px !important; margin: 8px 0 0 !important; padding: 0 13px !important; font-size: 14px !important; background: var(--surface-2) !important; border: 1px solid var(--line) !important; color: var(--text) !important; border-radius: var(--r-sm) !important; font-family: 'Be Vietnam Pro', sans-serif !important; }
 .swal2-input:focus { border-color: var(--azure) !important; box-shadow: 0 0 0 3px var(--azure-soft) !important; }
-.swal2-confirm { background: var(--azure) !important; color: #04101f !important; border-radius: var(--r-sm) !important; font-weight: 700 !important; }
-.swal2-cancel { background: var(--surface-2) !important; color: var(--text) !important; border-radius: var(--r-sm) !important; }
+.swal2-actions { margin-top: 20px !important; gap: 10px !important; }
+.swal2-confirm, .swal2-cancel { font-family: 'Be Vietnam Pro', sans-serif !important; margin: 0 !important; font-weight: 700 !important; border-radius: var(--r-sm) !important; }
+.swal2-confirm { background: var(--azure) !important; color: #04101f !important; }
+.swal2-cancel { background: var(--surface-2) !important; color: var(--text) !important; }
+.swal2-validation-message { background: var(--surface-2) !important; color: #f08a82 !important; }
 :focus-visible { outline: 2px solid var(--azure); outline-offset: 2px; }
 @media (max-width: 1100px) {
   .stats-grid { grid-template-columns: repeat(2, minmax(170px, 1fr)); }
@@ -612,7 +614,7 @@ function openLoginModal(captcha) {
       <p style="font-size:13px;color:var(--muted);margin:0 0 14px">Nhập thông tin để crawler tiếp tục phiên tải dữ liệu.</p>
       <input id="swal-user" class="swal2-input" autocomplete="username" placeholder="Tài khoản SSO">
       <input id="swal-pass" class="swal2-input" type="password" autocomplete="current-password" placeholder="Mật khẩu">
-      <div style="margin:18px 0;text-align:center"><img src="data:image/png;base64,${captcha}" alt="Captcha" style="width:150px;height:auto;border:1px solid var(--line);border-radius:6px;background:#fff"></div>
+      <div style="margin:14px 0 4px;text-align:center"><img src="data:image/png;base64,${captcha}" alt="Captcha" style="width:160px;height:auto;border:1px solid var(--line);border-radius:6px;background:#fff"></div>
       <input id="swal-captcha" class="swal2-input" placeholder="Nhập mã captcha" style="text-align:center;letter-spacing:2px">`,
     confirmButtonText: 'Gửi và tiếp tục',
     allowOutsideClick: false,
