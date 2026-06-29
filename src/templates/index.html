@@ -31,6 +31,8 @@
                 --seal-soft: rgba(224,70,59,.12);
                 --amber: #E8A93B;
                 --emerald: #35C28A;
+                --amber-soft: rgba(232,169,59,.12);
+                --emerald-soft: rgba(53,194,138,.14);
                 --r: 14px;
                 --r-sm: 9px;
                 --shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 18px 40px -24px rgba(0,0,0,.7);
@@ -54,6 +56,8 @@
                 --seal-soft: rgba(220, 38, 38, .12);
                 --amber: #D97706;
                 --emerald: #059669;
+                --amber-soft: rgba(217,119,6,.12);
+                --emerald-soft: rgba(5,150,105,.13);
                 --r: 14px;
                 --r-sm: 9px;
                 --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -1011,83 +1015,57 @@
             }
 
             /* ---- responsive ---- */
-            @media(max-width:920px) {
-                body {
-                    flex-direction: column;
-                }
-                .rail {
-                    width: 100%;
-                    height: auto;
-                    flex-direction: row;
-                    position: sticky;
-                    top: 0;
-                    align-items: center;
-                    padding: 12px 16px;
-                    gap: 14px;
-                    overflow-x: auto;
-                    z-index: 5;
-                    backdrop-filter:blur(8px);
-                    background: rgba(11,16,24,.85);
-                }
-                .brand {
-                    flex: 0 0 auto;
-                }
-                .brand .sub,
-                .brand h1 {
-                    display: none;
-                }
-                .nav {
-                    flex-direction: row;
-                    gap: 4px;
-                }
-                .nav-label,
-                .rail .spacer,
-                .telemetry,
-                .rail-actions {
-                    display: none;
-                }
-                .tab.active::before {
-                    display: none;
-                }
-                .tab span {
-                    display: none;
-                }
-                .tab {
-                    padding: 10px;
-                }
-                .qbar {
-                    align-items: stretch;
-                    flex-direction: column;
-                }
-                .filter-row {
-                    flex-direction: column;
-                    gap: 8px;
-                }
-                .split {
-                    grid-template-columns: 1fr;
-                }
-                .panel-wrap,
-                .topbar {
-                    padding-left: 18px;
-                    padding-right: 18px;
-                }
-                .agg-total {
-                    flex-wrap: wrap;
-                }
-                .agg-stats {
-                    margin-left: 0;
-                    width: 100%;
-                    justify-content: flex-start;
-                }
-                table.evid .ev {
-                    display: none;
-                }
+            /* ---- responsive: tablet ---- */
+            @media (max-width: 1100px) {
+                .split { grid-template-columns: 1fr; }
+                .aside { order: -1; }              /* nguồn lên trên khi 1 cột */
+                .panel-wrap, .topbar { padding-left: 24px; padding-right: 24px; }
             }
-            @media(prefers-reduced-motion:reduce) {
-                * {
-                    animation: none!important;
-                    transition: none!important;
+
+            /* ---- responsive: mobile (rail ngang) ---- */
+            @media (max-width: 820px) {
+                body { flex-direction: column; }
+                .rail {
+                    width: 100%; height: auto; flex-direction: row;
+                    position: sticky; top: 0; align-items: center;
+                    padding: 10px 14px; gap: 10px; overflow-x: auto;
+                    z-index: 20; backdrop-filter: blur(8px);
+                    background: rgba(11,16,24,.88);
                 }
+                :root[data-theme="light"] .rail { background: rgba(248,250,252,.92); }
+                .brand { flex: 0 0 auto; }
+                .brand .sub, .brand h1 { display: none; }
+                .nav { flex-direction: row; gap: 4px; }
+                .nav-label, .rail .spacer, .telemetry, .rail-actions { display: none; }
+                .tab.active::before { display: none; }
+                .tab span { display: none; }
+                .tab { padding: 10px; min-width: 42px; justify-content: center; }
+                .topbar { padding: 16px 18px; }
+                .topbar h2 { font-size: 18px; }
+                .panel-wrap { padding: 20px 18px 56px; }
+                .qbar { flex-direction: column; align-items: stretch; }
+                .qbar .btn { width: 100%; }
+                .filter-row { flex-direction: column; gap: 8px; }
+                .filter-row .lbl { min-width: 0; padding-top: 0; }
+                .agg-total { flex-wrap: wrap; padding: 20px; }
+                .agg-num { font-size: 44px; }
+                .agg-stats { margin-left: 0; width: 100%; justify-content: flex-start; gap: 20px; }
+                table.evid .ev { display: none; }
+                .subtabs { width: 100%; }
+                .subtab { flex: 1; text-align: center; padding: 8px 10px; }
+            }
+
+            /* ---- responsive: small phone ---- */
+            @media (max-width: 480px) {
+                .agg-num { font-size: 36px; }
+                .agg-stats { gap: 14px; }
+                .drop { padding: 32px 16px; }
+                .answer { padding: 18px 16px; }
+                table.evid th, table.evid td { padding: 10px 11px; font-size: 12.5px; }
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                * { animation: none !important; transition: none !important; }
             }
             :focus-visible {
                 outline: 2px solid var(--azure);
@@ -1244,10 +1222,7 @@
                 <!-- ---- SEARCH ---- -->
                 <section class="panel active" id="p-search">
                     <div class="qbar">
-                        <input
-                            id="q-search"
-                            placeholder="Ví dụ: tiến độ triển khai Đề án 06 trong các báo cáo quý..."
-                            autocomplete="off">
+                        <input id="q-search" aria-label="Câu hỏi tra cứu" placeholder="Ví dụ: tiến độ triển khai Đề án 06 trong các báo cáo quý..." autocomplete="off">
                         <button class="btn" id="b-search">
                             <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Tra cứu</button>
                     </div>
@@ -1330,10 +1305,7 @@
                 <!-- ---- AGGREGATE ---- -->
                 <section class="panel" id="p-agg">
                     <div class="qbar">
-                        <input
-                            id="q-agg"
-                            placeholder="Ví dụ: tổng số buổi tập huấn chuyển đổi số trong tất cả báo cáo của các xã..."
-                            autocomplete="off">
+                        <input id="q-agg" aria-label="Câu hỏi tổng hợp số liệu" placeholder="Ví dụ: tổng số buổi tập huấn chuyển đổi số trong tất cả báo cáo của các xã..." autocomplete="off">
                         <button class="btn" id="b-agg">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Tổng hợp</button>
                     </div>
