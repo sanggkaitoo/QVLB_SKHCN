@@ -453,7 +453,7 @@ button { letter-spacing: 0; }
               <div class="control-info"><h3>Crawl kiểm thử</h3><p>Giới hạn số văn bản để kiểm tra luồng tải, ingest và ghi dữ liệu trước khi chạy toàn bộ.</p></div>
             </div>
             <div class="control-actions">
-              <input class="input-field" type="number" id="demoLimit" value="5" min="1" max="100" aria-label="Số lượng văn bản kiểm thử">
+              <input class="input-field" type="number" id="demoLimit" value="5" min="1" max="1000" aria-label="Số lượng văn bản kiểm thử">
               <button class="btn btn-warning crawl-action" type="button" onclick="runDemoCrawl('di')">Demo VB đi</button>
               <button class="btn btn-warning crawl-action" type="button" onclick="runDemoCrawl('den')">Demo VB đến</button>
             </div>
@@ -660,8 +660,8 @@ async function runFullCrawl(mode = 'all') {
 }
 function runDemoCrawl(mode) {
   const limit = parseInt($('#demoLimit').value, 10);
-  if (!Number.isFinite(limit) || limit < 1 || limit > 100) {
-    Swal.fire('Giới hạn chưa hợp lệ', 'Nhập số từ 1 đến 100 để chạy kiểm thử.', 'error');
+  if (!Number.isFinite(limit) || limit < 1 || limit > 1000) {
+    Swal.fire('Giới hạn chưa hợp lệ', 'Nhập số từ 1 đến 1000 để chạy kiểm thử.', 'error');
     return;
   }
   startCrawl({ limit, mode });

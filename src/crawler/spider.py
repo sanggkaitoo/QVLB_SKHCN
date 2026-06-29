@@ -11,8 +11,6 @@ from src.services.ingest import ingest_download_dir
 
 load_dotenv() 
 
-HISTORY_FILE = os.path.join(config.DOWNLOAD_DIR, "downloaded_records.json")
-
 crawler_state = {
     "status": "idle",
     "captcha_b64": None,
@@ -20,15 +18,27 @@ crawler_state = {
     "message": ""
 }
 
-def load_history() -> set:
-    if os.path.exists(HISTORY_FILE):
-        with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+# ==========================================
+# HÀM QUẢN LÝ LỊCH SỬ TẢI FILE (ĐÃ TÁCH 2 FILE)
+# ==========================================
+def get_history_file(huong: str) -> str:
+    """Trả về đường dẫn file lịch sử tùy theo hướng văn bản."""
+    filename = "downloaded_records_di.json" if huong == "di" else "downloaded_records_den.json"
+    return os.path.join(config.DOWNLOAD_DIR, filename)
+
+def load_history(huong: str) -> set:
+    """Đọc lịch sử đã tải dựa trên hướng văn bản."""
+    path = get_history_file(huong)
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
             try: return set(json.load(f))
             except: return set()
     return set()
 
-def save_history(history_set: set):
-    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+def save_history(history_set: set, huong: str):
+    """Lưu lịch sử vào đúng file của hướng văn bản đó."""
+    path = get_history_file(huong)
+    with open(path, "w", encoding="utf-8") as f:
         json.dump(list(history_set), f, ensure_ascii=False, indent=4)
 
 def sanitize_filename(name: str) -> str:
@@ -40,15 +50,28 @@ def sanitize_filename(name: str) -> str:
 async def handle_download_modal(page, cells, so_ky_hieu, ngay_ban_hanh, trich_yeu, huong, co_quan_ban_hanh=""):
     """Hàm dùng chung để xử lý Modal tải file của cả VB Đi và Đến"""
     try:
-        button_locator = cells.last.locator("button")
-        if await button_locator.count() > 0:
-            await button_locator.first.click()
+        if huong == "den":
+            # Xử lý riêng văn bản ĐẾN: Click cột 16 (index 15) hoặc áp chót
+            num_cols = await cells.count()
+            target_index = 15 if num_cols > 15 else (num_cols - 2)
+            target_cell = cells.nth(target_index)
+            
+            clickable = target_cell.locator("a, button, i")
+            if await clickable.count() > 0:
+                await clickable.first.click()
+            else:
+                await target_cell.click()
         else:
-            await cells.last.click()
+            # Xử lý văn bản ĐI: Click cột cuối cùng
+            button_locator = cells.last.locator("button")
+            if await button_locator.count() > 0:
+                await button_locator.first.click()
+            else:
+                await cells.last.click()
 
         modal = page.locator("ngb-modal-window")
         await modal.wait_for(state="visible", timeout=15000)
-        await page.wait_for_timeout(1000)
+        await page.wait_for_timeout(1500)
 
         file_links = await modal.locator("a").all()
         for link in file_links:
@@ -73,12 +96,13 @@ async def handle_download_modal(page, cells, so_ky_hieu, ngay_ban_hanh, trich_ye
                         "co_quan_ban_hanh": co_quan_ban_hanh,
                         "file_goc": download.suggested_filename
                     }, mf, ensure_ascii=False, indent=2)
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"  [!] Lỗi tải file đính kèm của {so_ky_hieu}: {str(e)}")
 
         await page.keyboard.press("Escape")
         await modal.wait_for(state="hidden", timeout=5000)
-    except Exception:
+    except Exception as e:
+        print(f"  [!] Lỗi mở Modal của {so_ky_hieu}: {str(e)}")
         await page.keyboard.press("Escape")
 
 async def crawl_table(page, target_url, huong, limit, history_set, total_downloaded):
@@ -89,7 +113,6 @@ async def crawl_table(page, target_url, huong, limit, history_set, total_downloa
     await page.goto(target_url, wait_until="domcontentloaded", timeout=60000)
     await page.wait_for_selector("table tbody tr", timeout=60000)
     
-    # Cả "Ngày ban hành" (VB Đi) và "Ngày Nhận" (VB Đến) đều vô tình nằm ở Index 5!
     crawler_state["message"] = f"Đang sắp xếp Văn bản {huong.upper()} theo ngày mới nhất..."
     try:
         sort_icon = page.locator("table thead th").nth(5).locator("i").first
@@ -113,21 +136,19 @@ async def crawl_table(page, target_url, huong, limit, history_set, total_downloa
             if limit > 0 and total_downloaded >= limit: break
             
             cells = row.locator("td")
-            # Bảng Đi có 12 cột, bảng Đến có 15 cột. Đặt điều kiện > 10 là an toàn.
             if await cells.count() < 10: continue 
             
             co_quan_ban_hanh = ""
             
-            # TÁCH LÔ-GIC ĐỌC CỘT DỰA VÀO HƯỚNG VĂN BẢN
             if huong == "di":
                 trich_yeu = (await cells.nth(1).inner_text()).strip()
                 so_ky_hieu = (await cells.nth(3).inner_text()).strip()
                 ngay_ban_hanh = (await cells.nth(5).inner_text()).strip()
-            else: # huong == "den"
+            else: 
                 trich_yeu = (await cells.nth(2).inner_text()).strip()
                 so_ky_hieu = (await cells.nth(3).inner_text()).strip()
                 ngay_ban_hanh = (await cells.nth(4).inner_text()).strip()
-                co_quan_ban_hanh = (await cells.nth(8).inner_text()).strip() # Bốc thẳng từ Web!
+                co_quan_ban_hanh = (await cells.nth(8).inner_text()).strip()
             
             if not so_ky_hieu or so_ky_hieu in history_set: continue
             
@@ -135,11 +156,11 @@ async def crawl_table(page, target_url, huong, limit, history_set, total_downloa
             total_downloaded += 1
             crawler_state["message"] = f"[{huong.upper()}] Tải {total_downloaded}/{limit if limit > 0 else 'Tất cả'}: {so_ky_hieu}"
 
-            # Gọi module tải file dùng chung và truyền thêm Cơ quan ban hành
             await handle_download_modal(page, cells, so_ky_hieu, ngay_ban_hanh, trich_yeu, huong, co_quan_ban_hanh)
 
+            # Thêm vào history_set đang duyệt và lưu ra file đúng hướng
             history_set.add(so_ky_hieu)
-            save_history(history_set)
+            save_history(history_set, huong)
 
         if limit > 0 and total_downloaded >= limit: break
         if new_docs_in_page == 0 and page_num > 1: break
@@ -163,7 +184,6 @@ async def run_spider(limit: int, mode: str = "all"):
     
     crawler_state.update({"status": "starting", "login_data": None, "captcha_b64": None, "message": "Đang khởi động Playwright..."})
     os.makedirs(config.DOWNLOAD_DIR, exist_ok=True)
-    history_set = load_history()
     
     QLVB_URL = os.getenv("QLVB_URL", "https://egov1.laocai.gov.vn")
     URL_DI = f"{QLVB_URL}/document/xem-di-index?statustype=published&type=vanbandi"
@@ -229,14 +249,16 @@ async def run_spider(limit: int, mode: str = "all"):
             crawler_state["status"] = "crawling"
             total_downloaded = 0
             
-            # Khối 1: Chỉ cào Văn bản Đi nếu mode là 'all' hoặc 'di'
+            # Khối 1: Cào Văn bản Đi 
             if mode in ["all", "di"]:
-                total_downloaded = await crawl_table(page, URL_DI, "di", limit, history_set, total_downloaded)
+                history_di = load_history("di")
+                total_downloaded = await crawl_table(page, URL_DI, "di", limit, history_di, total_downloaded)
             
-            # Khối 2: Chỉ cào Văn bản Đến nếu mode là 'all' hoặc 'den'
+            # Khối 2: Cào Văn bản Đến 
             if mode in ["all", "den"]:
                 if limit == 0 or total_downloaded < limit:
-                    await crawl_table(page, URL_DEN, "den", limit, history_set, total_downloaded)
+                    history_den = load_history("den")
+                    await crawl_table(page, URL_DEN, "den", limit, history_den, total_downloaded)
 
             await browser.close()
             crawler_state["message"] = "Đã tải xong văn bản! Đang tiến hành nạp vào AI (Ingest)..."

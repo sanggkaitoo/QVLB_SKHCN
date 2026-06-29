@@ -90,6 +90,15 @@ def extract_metadata(full_text: str, fallback: dict | None = None) -> dict:
     user = f"PHẦN ĐẦU:\n{head}\n\nPHẦN CUỐI:\n{tail}\n\n{_FIELDS}"
     data = llm.extract_json(_SYS, user, model=config.LLM_CHEAP) or {}
 
+    # --- THÊM KHỐI LỆNH NÀY ĐỂ ÉP KIỂU DỮ LIỆU ---
+    # Nếu AI trả về mảng list (VD: [{...}]), ta sẽ lấy phần tử đầu tiên
+    if isinstance(data, list):
+        data = data[0] if len(data) > 0 and isinstance(data[0], dict) else {}
+    # Nếu AI trả về chuỗi hay thứ gì khác, ép về Dict rỗng
+    elif not isinstance(data, dict):
+        data = {}
+    # -----------------------------------------------
+
     # hợp nhất với metadata crawler (.meta.json) làm dự phòng
     for k in ("so_ky_hieu", "ngay_ban_hanh", "trich_yeu"):
         if not data.get(k) and fallback.get(k) and fallback.get(k) != "N/A":
