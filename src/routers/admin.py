@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from src.core import store
-# Import trực tiếp hàm async run_spider
+import psycopg2.extras
 from src.crawler.spider import run_spider, crawler_state 
 
 try:
@@ -53,3 +53,33 @@ async def api_crawl_submit_login(req: LoginSubmitRequest):
         "captcha": req.captcha
     }
     return {"status": "success", "message": "Đã gửi thông tin đăng nhập."}
+
+@router.get("/docs")
+async def api_admin_docs(q: str = ""):
+    try:
+        with store.pg() as c, c.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            if q:
+                # Tìm kiếm theo Số ký hiệu hoặc Trích yếu (có phân biệt từ khóa)
+                cur.execute(
+                    "SELECT so_ky_hieu, ngay_ban_hanh, loai_vb, trich_yeu "
+                    "FROM documents "
+                    "WHERE so_ky_hieu ILIKE %s OR trich_yeu ILIKE %s "
+                    "ORDER BY ngay_ban_hanh DESC NULLS LAST LIMIT 100",
+                    (f"%{q}%", f"%{q}%")
+                )
+            else:
+                # Nếu không nhập từ khóa, lấy 100 văn bản mới nhất
+                cur.execute(
+                    "SELECT so_ky_hieu, ngay_ban_hanh, loai_vb, trich_yeu "
+                    "FROM documents "
+                    "ORDER BY ngay_ban_hanh DESC NULLS LAST LIMIT 100"
+                )
+            
+            rows = cur.fetchall()
+            # Xử lý format ngày tháng thành chuỗi để trả về JSON an toàn
+            for r in rows:
+                if r["ngay_ban_hanh"]:
+                    r["ngay_ban_hanh"] = str(r["ngay_ban_hanh"])
+            return JSONResponse(rows)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quản trị — Trục Văn thư</title>
+<title>Quản trị — DocNexus</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -117,6 +117,7 @@ button { letter-spacing: 0; }
   text-align: left;
   text-decoration: none;
   cursor: pointer;
+  font-size: 14px;
   transition: background .18s, border-color .18s, color .18s;
 }
 .tab:hover, .side-link:hover { background: var(--surface); color: var(--text); }
@@ -266,7 +267,7 @@ button { letter-spacing: 0; }
 .icon-box.warn { background: var(--amber-soft); color: var(--amber); }
 .icon-box svg { width: 21px; height: 21px; }
 .control-info h3 { margin: 0; font-size: 16px; line-height: 1.35; }
-.control-info p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+.control-info p { margin: 5px 0 0; color: var(--muted); font-size: 14px; }
 .control-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
 .btn {
   min-height: 40px;
@@ -280,7 +281,7 @@ button { letter-spacing: 0; }
   background: var(--surface-2);
   color: var(--text);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   transition: transform .12s, background .18s, border-color .18s, opacity .18s;
 }
@@ -358,6 +359,20 @@ button { letter-spacing: 0; }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* ---- Bảng Tra cứu Kho văn bản (Admin) ---- */
+.qbar-admin { display: flex; gap: 10px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-sm); padding: 8px; box-shadow: var(--shadow); transition: border-color 0.2s,box-shadow 0.2s; margin-bottom: 24px; }
+.qbar-admin:focus-within { border-color: var(--azure); box-shadow: 0 0 0 3px var(--azure-soft),var(--shadow); }
+.qbar-admin input { flex: 1; background: transparent; border: 0; outline: 0; color: var(--text); font-size: 14.5px; padding: 6px 10px; font-family: inherit; }
+.qbar-admin input::placeholder { color: var(--faint); }
+.evid-wrap { border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; background: var(--surface); box-shadow: var(--shadow); }
+table.evid { width: 100%; border-collapse: collapse; text-align: left; }
+table.evid th { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint); padding: 14px 18px; border-bottom: 1px solid var(--line); font-weight: 700; background: var(--surface-2); }
+table.evid td { padding: 14px 18px; border-bottom: 1px solid var(--line); font-size: 13.5px; vertical-align: top; color: var(--text); }
+table.evid tr:last-child td { border-bottom: 0; }
+table.evid tr:hover td { background: rgba(255,255,255,.015); }
+.evid .ky { font-family: 'JetBrains Mono',monospace; font-size: 13.5px; color: var(--azure); white-space: nowrap; font-weight: 600; }
+.evid .loai { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--surface-2); color: var(--muted); text-transform: uppercase; white-space: nowrap; border: 1px solid var(--line); }
 </style>
 </head>
 <body>
@@ -374,8 +389,8 @@ button { letter-spacing: 0; }
   <div class="brand">
     <svg class="seal" viewBox="0 0 100 100" aria-hidden="true"><use href="#sealmark-admin"/></svg>
     <div>
-      <h1>Quản trị QLVB</h1>
-      <p>Dữ liệu và crawler</p>
+      <h1>DocNexus Admin</h1>
+      <p>Admin console</p>
     </div>
   </div>
   <nav class="nav" aria-label="Khu vực quản trị">
@@ -383,6 +398,10 @@ button { letter-spacing: 0; }
     <button class="tab active" type="button" data-target="p-dashboard">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16v-5"/><path d="M13 16V8"/><path d="M18 16v-3"/></svg>
       Thống kê dữ liệu
+    </button>
+    <button class="tab" type="button" data-target="p-docs">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      Tra cứu kho văn bản
     </button>
     <button class="tab" type="button" data-target="p-crawler">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v4"/><rect x="4" y="7" width="16" height="11" rx="2"/><path d="M8 12h.01M16 12h.01"/><path d="M9 18v3M15 18v3"/></svg>
@@ -433,6 +452,31 @@ button { letter-spacing: 0; }
           <div class="box-head"><h3>Chuyên đề xuất hiện nhiều</h3><small id="tagHint">Đang tải</small></div>
           <div class="list" id="list-tags"><div class="shimmer" style="width:80%"></div><div class="shimmer" style="width:72%"></div><div class="shimmer" style="width:88%"></div></div>
         </section>
+      </div>
+    </section>
+    <section class="panel" id="p-docs">
+      <div class="qbar-admin">
+        <input type="text" id="adminSearchInput" placeholder="Nhập số ký hiệu hoặc trích yếu để tìm kiếm..." onkeydown="if(event.key === 'Enter') searchDocs()">
+        <button class="btn btn-primary" onclick="searchDocs()" id="b-docs-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          Tìm kiếm
+        </button>
+      </div>
+      
+      <div class="evid-wrap">
+        <table class="evid">
+          <thead>
+            <tr>
+              <th style="width: 18%;">Số ký hiệu</th>
+              <th style="width: 15%;">Ngày ban hành</th>
+              <th style="width: 15%;">Loại VB</th>
+              <th style="width: 52%;">Trích yếu</th>
+            </tr>
+          </thead>
+          <tbody id="adminDocsBody">
+             <tr><td colspan="4" class="empty">Đang kết nối kho dữ liệu...</td></tr>
+          </tbody>
+        </table>
       </div>
     </section>
     <section class="panel" id="p-crawler">
@@ -496,7 +540,8 @@ setTheme(localStorage.getItem('qlvb-theme') || 'dark');
 
 const heads = {
   'p-dashboard': ['Admin Console', 'Quan sát dữ liệu và vận hành crawler', 'Theo dõi trạng thái kho văn bản, kiểm tra phân bố loại văn bản và khởi chạy crawler khi cần nạp dữ liệu mới.'],
-  'p-crawler': ['Crawler', 'Điều khiển luồng nạp dữ liệu', 'Chọn phạm vi chạy, theo dõi trạng thái và hoàn tất xác thực SSO ngay trong giao diện quản trị.']
+  'p-crawler': ['Crawler', 'Điều khiển luồng nạp dữ liệu', 'Chọn phạm vi chạy, theo dõi trạng thái và hoàn tất xác thực SSO ngay trong giao diện quản trị.'],
+  'p-docs': ['Kho văn bản', 'Tra cứu văn bản đã nạp', 'Quản lý và tìm kiếm các văn bản (theo số ký hiệu, trích yếu) hiện đang lưu trữ trong cơ sở dữ liệu.']
 };
 $$('.tab[data-target]').forEach(tab => {
   tab.addEventListener('click', () => {
@@ -554,6 +599,47 @@ async function loadStats() {
     setApiState(false);
   }
 }
+
+async function searchDocs() {
+    const q = $('#adminSearchInput').value.trim();
+    const tbody = $('#adminDocsBody');
+    const btn = $('#b-docs-search');
+    
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span>Đang tìm...';
+    tbody.innerHTML = '<tr><td colspan="4" class="empty"><div class="shimmer" style="width: 100%;"></div></td></tr>';
+    
+    try {
+        const res = await fetch(`/api/admin/docs?q=${encodeURIComponent(q)}`);
+        if (!res.ok) throw new Error('Lỗi mạng');
+        const data = await res.json();
+        
+        if (!data || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="empty">Không tìm thấy văn bản nào phù hợp.</td></tr>';
+        } else {
+            tbody.innerHTML = data.map(row => `
+                <tr>
+                    <td><span class="ky">${esc(row.so_ky_hieu || 'Chưa rõ')}</span></td>
+                    <td class="mono" style="color: var(--muted); font-size: 13px;">${esc(row.ngay_ban_hanh || '---')}</td>
+                    <td><span class="loai">${esc(row.loai_vb || 'Khác')}</span></td>
+                    <td style="color: var(--muted); line-height: 1.4;">${esc(row.trich_yeu || 'Không có trích yếu')}</td>
+                </tr>
+            `).join('');
+        }
+    } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="4" class="error" style="border:none;">Có lỗi xảy ra khi tải dữ liệu từ Postgres.</td></tr>';
+    }
+    
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Tìm kiếm';
+}
+
+// Tự động load 100 văn bản mới nhất khi người dùng click vào tab Kho văn bản
+document.querySelector('.tab[data-target="p-docs"]').addEventListener('click', () => {
+    if ($('#adminDocsBody').innerHTML.includes('Đang kết nối') || $('#adminDocsBody').innerHTML.includes('Bấm "Tìm kiếm"')) {
+        searchDocs();
+    }
+});
 
 function renderStatus(data) {
   const status = data.status || 'idle';
