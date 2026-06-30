@@ -9,7 +9,12 @@ import re
 from openai import OpenAI
 from src.core import config
 
-_client = OpenAI(base_url=config.LLM_BASE_URL, api_key=config.LLM_API_KEY)
+_client = OpenAI(
+    base_url=config.LLM_BASE_URL,
+    api_key=config.LLM_API_KEY,
+    timeout=120.0,
+    max_retries=3
+)
 
 
 def chat(system: str, user: str, model: str | None = None,

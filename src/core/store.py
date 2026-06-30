@@ -9,7 +9,7 @@ from src.core import config
 
 # ----------------------------- Qdrant --------------------------------
 _q = QdrantClient(host=config.QDRANT_HOST, port=config.QDRANT_PORT,
-                  api_key=config.QDRANT_API_KEY, https=False, timeout=60.0)
+                  api_key=config.QDRANT_API_KEY, https=False, timeout=300.0)
 
 DENSE_DIM = 1024  # bge-m3
 
