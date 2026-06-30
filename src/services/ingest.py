@@ -59,6 +59,7 @@ def ingest_file(file_path: str, huong: str = "di", raw_meta: dict | None = None,
         print("   ! rỗng / OCR fail, bỏ qua (KHÔNG xóa file).")
         return -1
 
+    text = text.replace('\x00', '')
     meta = metadata.extract_metadata(text, fallback=raw_meta)
     
     # 1. Khóa cứng Số ký hiệu và Trích yếu

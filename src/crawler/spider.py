@@ -197,7 +197,7 @@ async def run_spider(limit: int, mode: str = "all"):
 
             # --- ĐĂNG NHẬP ---
             login_success = False
-            await page.goto(QLVB_URL, wait_until="domcontentloaded")
+            await page.goto(QLVB_URL, timeout=30000, wait_until="domcontentloaded")
             await page.wait_for_timeout(2000)
 
             for attempt in range(5):
