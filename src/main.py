@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from src.routers import web_routes, search, admin, check, aggregate
+from src.core import store
 
 app = FastAPI(title="QLVB AI v3")
 
@@ -9,6 +10,10 @@ app.include_router(search.router, prefix="/api", tags=["Search"])
 app.include_router(aggregate.router, prefix="/api", tags=["Aggregate"])
 app.include_router(check.router, prefix="/api/check", tags=["Check"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
+
+@app.on_event("startup")
+async def startup():
+    store.ensure_collection()
 
 @app.get("/api/health")
 async def health():
