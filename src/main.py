@@ -11,10 +11,6 @@ app.include_router(aggregate.router, prefix="/api", tags=["Aggregate"])
 app.include_router(check.router, prefix="/api/check", tags=["Check"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
 
-@app.on_event("startup")
-async def startup():
-    store.ensure_collection()
-
 @app.get("/api/health")
 async def health():
     return {"ok": True, "service": "qlvb_v3"}
