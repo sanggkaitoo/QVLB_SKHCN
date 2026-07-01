@@ -464,6 +464,16 @@
                 color: var(--text);
             }
 
+            /* ---- audio textarea ---- */
+            .audio-ta {
+                width: 100%; min-height: 260px; padding: 16px; margin-top: 10px;
+                border: 1px solid var(--line); border-radius: var(--r-sm);
+                background: var(--surface-2); color: var(--text);
+                font-family: inherit; font-size: 14.5px; line-height: 1.6;
+                resize: vertical; outline: none; transition: border-color 0.2s;
+            }
+            .audio-ta:focus { border-color: var(--azure); box-shadow: 0 0 0 3px var(--azure-soft); }
+
             /* ---- search layout ---- */
             .split {
                 display: grid;
@@ -1182,6 +1192,10 @@
                 <button class="tab" type="button" data-tab="check">
                     <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 5-3.5 7.5-8.5 9C7.5 19.5 4 17 4 12V6l8-3 8 3z"/></svg>
                     <span>Kiểm tra dự thảo</span></button>
+                <button class="tab" type="button" data-tab="audio">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+                    <span>Chuyển audio thành văn bản</span>
+                </button>
             </nav>
             <div class="spacer"></div>
 
@@ -1340,6 +1354,42 @@
                     </div>
                     <div id="check-out"></div>
                 </section>
+
+                <!-- ---- TRANSCRIPT ---- -->
+                <section class="panel" id="p-audio">
+                    <div class="drop" id="drop-audio">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+                        <div class="t">Kéo thả hoặc chọn file Audio (.mp3, .wav, .m4a)</div>
+                        <div class="s">Hệ thống sẽ gửi file lên Whisper-large-v3-turbo để convert audio</div>
+                        <div class="file" id="audio-file"></div>
+                        <input type="file" id="inp-audio" accept="audio/*" hidden="hidden">
+                    </div>
+
+                    <div class="split" style="margin-top: 24px; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div class="answer" style="display: flex; flex-direction: column;">
+                            <h3 style="margin-top:0">Văn bản gốc (Transcript)</h3>
+                            
+                            <div id="audio-loading" style="display: none; align-items: center; gap: 10px; color: var(--azure); font-weight: 500; font-size: 13.5px; margin-bottom: 10px;">
+                                <span class="spin" style="border-top-color: var(--azure);"></span>
+                                Đang tải lên và convert âm thanh (Vui lòng chờ)...
+                            </div>
+
+                            <textarea id="ta-transcript" class="audio-ta" placeholder="Kết quả gỡ băng sẽ hiển thị ở đây. Bạn có thể tự chỉnh sửa thủ công nếu muốn trước khi bấm Tóm tắt..."></textarea>
+                            
+                            <button class="btn" id="b-summarize" style="margin-top: 16px; align-self: flex-start;" disabled>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                                Tóm tắt & Tổng hợp
+                            </button>
+                        </div>
+
+                        <div class="answer" style="display: flex; flex-direction: column;">
+                            <h3 style="margin-top:0">Ghi chú (Note hoàn chỉnh)</h3>
+                            <div id="audio-out" style="flex: 1; padding: 16px; border: 1.5px dashed var(--line-strong); border-radius: var(--r-sm); background: var(--surface-2); overflow-y: auto; margin-top: 10px;">
+                                <div class="empty" style="padding: 20px 0;">Bấm "Tóm tắt & Tổng hợp" để AI Qwen lược bỏ từ thừa và cấu trúc lại.</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </div>
         </main>
 
@@ -1398,17 +1448,15 @@
             /* ---------- tabs ---------- */
             const HEAD = {
                 search: [
-                    "Tra cứu", "Tìm trong toàn bộ kho văn bản", "Tìm theo từ khóa hoặc ý nghĩa trên văn bản đi và đến. Mọi câu trả lời đều dẫn " +
-                            "nguồn số ký hiệu."
+                    "Tra cứu", "Tìm trong toàn bộ kho văn bản", "Tìm theo từ khóa hoặc ý nghĩa trên văn bản đi và đến. Mọi câu trả lời đều dẫn nguồn số ký hiệu."
                 ],
                 agg: [
-                    "Tổng hợp", "Cộng số liệu trên nhiều văn bản (Chưa chính xác lắm 😔)", "Đặt một câu hỏi đếm hoặc cộng; hệ thống quét từng văn bản và trả về tổng kèm m" +
-                            "inh chứng."
+                    "Tổng hợp", "Cộng số liệu trên nhiều văn bản (Chưa chính xác lắm 😔)", "Đặt một câu hỏi đếm hoặc cộng; hệ thống quét từng văn bản và trả về tổng kèm minh chứng."
                 ],
                 check: [
-                    "Kiểm tra", "Rà soát dự thảo trước khi trình ký", "Đối chiếu thể thức theo Nghị định 30/2020 và kiểm tra căn cứ, chính tả, tính l" +
-                            "ogic của nội dung."
-                ]
+                    "Kiểm tra", "Rà soát dự thảo trước khi trình ký", "Đối chiếu thể thức theo Nghị định 30/2020 và kiểm tra căn cứ, chính tả, tính logic của nội dung."
+                ],
+                audio: [ "Tiện ích", "Gỡ băng & Tổng hợp Audio", "Chuyển đổi file ghi âm giọng nói thành văn bản (Speech-to-Text) và tự động tóm tắt, làm gọn thành ghi chú mạch lạc." ]
             };
             document
                 .querySelectorAll(".tab")
@@ -1593,6 +1641,7 @@
 
             /* Hàm tìm và chuyển đổi [Số ký hiệu] thành Icon */
             function formatCitations(mdText) {
+                if (!mdText) return "";
                 let html = marked.parse(mdText);
                 // Regex tìm [Nội dung] hoặc <code>[Nội dung]</code> do LLM sinh ra
                 return html.replace(/<code>\[([^\]]+)\]<\/code>|\[([^\]]+)\]/g, (match, g1, g2) => {
@@ -1863,6 +1912,89 @@
                 });
                 out.innerHTML = h;
             }
+
+            /* ---------- AUDIO ---------- */
+            const dropAudio = $("#drop-audio"), inpAudio = $("#inp-audio");
+            dropAudio.onclick = () => inpAudio.click();
+            dropAudio.ondragover = e => { e.preventDefault(); dropAudio.classList.add("over"); };
+            dropAudio.ondragleave = () => dropAudio.classList.remove("over");
+            dropAudio.ondrop = e => {
+                e.preventDefault(); dropAudio.classList.remove("over");
+                if (e.dataTransfer.files[0]) handleAudioFile(e.dataTransfer.files[0]);
+            };
+            inpAudio.onchange = () => { if (inpAudio.files[0]) handleAudioFile(inpAudio.files[0]); };
+
+            async function handleAudioFile(f) {
+                $("#audio-file").textContent = "🎵 " + f.name;
+                const ta = $("#ta-transcript");
+                const btn = $("#b-summarize");
+                const loading = $("#audio-loading"); // Trỏ đến thẻ loading
+                
+                // 1. Bật spinner, khóa textarea không cho bấm lung tung
+                loading.style.display = "flex";
+                ta.value = "";
+                ta.disabled = true;
+                btn.disabled = true;
+                $("#audio-out").innerHTML = '<div class="empty" style="padding: 20px 0;">Đang chờ văn bản gốc...</div>';
+
+                const fd = new FormData();
+                fd.append("file", f);
+
+                try {
+                    if (DEMO) {
+                        await new Promise(r => setTimeout(r, 1500));
+                        ta.value = "ờm... kính thưa các đồng chí thì... hôm nay chúng ta họp về vấn đề là giải ngân vốn đầu tư công. ờ... tiến độ hiện nay đang rất là chậm...";
+                    } else {
+                        const r = await fetch(API + "/api/audio/transcribe", { method: "POST", body: fd });
+                        const d = await r.json();
+                        if (d.error) throw new Error(d.error);
+                        
+                        // Gán text trả về, có dự phòng chuỗi cảnh báo nếu text bị undefined
+                        ta.value = d.text || "⚠️ File âm thanh trống hoặc không nhận diện được giọng nói.";
+                    }
+                    btn.disabled = false;
+                } catch (e) {
+                    ta.value = "Lỗi khi convert audio: " + e.message;
+                } finally {
+                    // 2. Xử lý xong thì tắt spinner, mở khóa textarea lại
+                    loading.style.display = "none";
+                    ta.disabled = false;
+                }
+            }
+
+            $("#b-summarize").onclick = async () => {
+                const text = $("#ta-transcript").value.trim();
+                if (!text) return;
+
+                const btn = $("#b-summarize");
+                const out = $("#audio-out");
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spin"></span>Đang tổng hợp...';
+                out.innerHTML = '<div class="shimmer" style="width:90%"></div><div class="shimmer" style="width:75%"></div><div class="shimmer" style="width:85%"></div>';
+
+                try {
+                    if (DEMO) {
+                        await new Promise(r => setTimeout(r, 1500));
+                        out.innerHTML = formatCitations("- **Vấn đề chính:** Họp bàn về giải ngân vốn đầu tư công.\n- **Thực trạng:** Tiến độ hiện đang rất chậm.");
+                    } else {
+                        const r = await fetch(API + "/api/audio/summarize", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ text: text })
+                        });
+                        const d = await r.json();
+                        if (d.error) throw new Error(d.error);
+                        
+                        // Ép kiểu: d.summary hoặc chuỗi báo lỗi, tránh ném Null vào formatCitations
+                        out.innerHTML = formatCitations(d.summary || "*Không có nội dung tóm tắt được trả về từ máy chủ.*");
+                    }
+                } catch (e) {
+                    out.innerHTML = `<div class="empty" style="color:#f08a82">Lỗi tóm tắt: ${e.message}</div>`;
+                }
+                
+                btn.disabled = false;
+                btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Tóm tắt & Tổng hợp';
+            };
 
             /* ================= DEMO DATA (xem thử khi chưa nối backend) ================= */
             async function demoSearch(q, ans, src) {

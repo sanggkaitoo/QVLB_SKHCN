@@ -34,6 +34,7 @@ pyvi==0.1.1
 # --- LLM (OpenAI-compatible: OpenRouter / Gemini) ---
 openai>=1.40.0
 httpx>=0.27.0
+google-generativeai==0.8.3
 
 # --- RPA (giữ nguyên từ bản cũ, để crawler chạy) ---
 playwright==1.44.0
