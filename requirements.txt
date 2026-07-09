@@ -14,12 +14,12 @@ qdrant-client==1.12.1
 # --- Quan hệ / system-of-record ---
 psycopg2-binary==2.9.9
 
-# --- Embedding + rerank (bge-m3: dense + sparse) ---
+# --- Embedding + Rerank (bge-m3: dense + sparse) ---
 FlagEmbedding==1.2.10
 sentence-transformers==3.0.1
-torch  # CPU build
+torch  # Chỉ cài bản CPU cho nhẹ, phục vụ vector search
 
-# --- Trích xuất văn bản ---
+# --- Trích xuất văn bản & Hình ảnh ---
 PyMuPDF==1.24.5
 python-docx==1.1.2
 pandas==2.2.2
@@ -31,11 +31,12 @@ Pillow==10.3.0
 # --- Tách từ tiếng Việt (cải thiện BM25/sparse) ---
 pyvi==0.1.1
 
-# --- LLM (OpenAI-compatible: OpenRouter / Gemini) ---
+# --- LLM & External API (Giao tiếp với AI) ---
 openai>=1.40.0
 httpx>=0.27.0
+requests>=2.31.0  # MỚI: Dùng để gọi sang SGLang/Unlimited-OCR Server
 google-generativeai==0.8.3
 
-# --- RPA (giữ nguyên từ bản cũ, để crawler chạy) ---
+# --- RPA Crawler ---
 playwright==1.44.0
 watchdog==4.0.1

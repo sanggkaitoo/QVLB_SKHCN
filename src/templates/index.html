@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi" data-theme="dark">
+<html lang="vi" data-theme="light">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1183,9 +1183,161 @@
                 opacity: 1;
                 transform: translateX(-50%) scale(1);
             }
+            /* ============ GOVERNMENT ACCESSIBILITY REDESIGN ============ */
+            :root[data-theme="light"] {
+                --ink: #F8FAFC;
+                --surface: #FFFFFF;
+                --surface-2: #F1F5F9;
+                --raised: #E8ECF1;
+                --line: rgba(15, 23, 42, .10);
+                --line-strong: rgba(15, 23, 42, .18);
+                --text: #020617;
+                --muted: #475569;
+                --faint: #64748B;
+                --azure: #0369A1;
+                --azure-deep: #075985;
+                --azure-soft: rgba(3, 105, 161, .10);
+                --seal: #B91C1C;
+                --seal-soft: rgba(185, 28, 28, .10);
+                --amber: #B45309;
+                --emerald: #047857;
+                --amber-soft: rgba(180, 83, 9, .12);
+                --emerald-soft: rgba(4, 120, 87, .12);
+                --r: 8px;
+                --r-sm: 6px;
+                --shadow: 0 1px 2px rgba(15, 23, 42, .06), 0 12px 28px -22px rgba(15, 23, 42, .35);
+                --bg-gradient: linear-gradient(180deg, #F8FAFC 0%, #EEF4F8 100%);
+            }
+            :root[data-theme="dark"] {
+                --ink: #020617;
+                --surface: #0F172A;
+                --surface-2: #162033;
+                --raised: #1E293B;
+                --line: rgba(226, 232, 240, .12);
+                --line-strong: rgba(226, 232, 240, .22);
+                --text: #F8FAFC;
+                --muted: #CBD5E1;
+                --faint: #94A3B8;
+                --azure: #38BDF8;
+                --azure-deep: #0EA5E9;
+                --azure-soft: rgba(56, 189, 248, .14);
+                --seal: #F87171;
+                --seal-soft: rgba(248, 113, 113, .14);
+                --amber: #FBBF24;
+                --emerald: #34D399;
+                --amber-soft: rgba(251, 191, 36, .14);
+                --emerald-soft: rgba(52, 211, 153, .14);
+                --r: 8px;
+                --r-sm: 6px;
+                --shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 18px 38px -28px rgba(0,0,0,.72);
+                --bg-gradient: #020617;
+            }
+            .skip-link {
+                position: fixed;
+                left: 16px;
+                top: 12px;
+                z-index: 1000;
+                transform: translateY(-140%);
+                background: var(--text);
+                color: var(--ink);
+                border-radius: var(--r-sm);
+                padding: 10px 14px;
+                font-size: 13px;
+                font-weight: 700;
+                text-decoration: none;
+                transition: transform .18s ease;
+            }
+            .skip-link:focus { transform: translateY(0); }
+            body { color-scheme: light dark; }
+            .rail { background: rgba(255, 255, 255, .78); backdrop-filter: blur(14px); }
+            :root[data-theme="dark"] .rail { background: rgba(15, 23, 42, .82); }
+            .topbar { background: rgba(248, 250, 252, .82); backdrop-filter: blur(14px); }
+            :root[data-theme="dark"] .topbar { background: rgba(2, 6, 23, .72); }
+            .brand h1,
+            .topbar h2,
+            .section-title,
+            .box h3,
+            .upload strong { letter-spacing: 0; }
+            .tab,
+            .utility-link,
+            .theme-toggle,
+            .chip,
+            .chip-select,
+            .btn,
+            .qbar,
+            .answer,
+            .src,
+            .upload,
+            .box,
+            .diag,
+            .verdict,
+            .metric-card { border-radius: var(--r-sm); }
+            .qbar,
+            .answer,
+            .box,
+            .upload,
+            .metric-card { box-shadow: var(--shadow); }
+            .tab,
+            .utility-link,
+            .theme-toggle,
+            .chip,
+            .chip-select,
+            .btn,
+            .upload,
+            .src { min-height: 44px; }
+            .btn,
+            .tab,
+            .utility-link,
+            .theme-toggle,
+            .chip,
+            .upload,
+            .drop,
+            select,
+            button,
+            a[href] { cursor: pointer; }
+            .btn:hover,
+            .src:hover,
+            .upload:hover,
+            .utility-link:hover,
+            .theme-toggle:hover { transform: translateY(-1px); }
+            .tab.active {
+                background: var(--azure-soft);
+                border-color: rgba(3, 105, 161, .32);
+                color: var(--text);
+            }
+            .tab.active::before { background: var(--azure); box-shadow: none; }
+            .btn.primary,
+            .btn-primary,
+            button.primary { background: linear-gradient(180deg, var(--azure), var(--azure-deep)); color: #FFFFFF; }
+            .qbar input,
+            input,
+            textarea,
+            select { font-size: 16px; }
+            .answer,
+            .src,
+            .box,
+            .upload { border-color: var(--line); }
+            .watermark { opacity: .018; }
+            .demo-badge { border-radius: 999px; color: var(--amber); }
+            :focus-visible { outline: 3px solid var(--azure); outline-offset: 3px; }
+            @media (max-width: 860px) {
+                .rail { background: var(--surface); border-bottom: 1px solid var(--line); }
+                .tab,
+                .utility-link { min-width: max-content; }
+                .topbar,
+                .panel-wrap { padding-left: 18px; padding-right: 18px; }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .skip-link,
+                .btn,
+                .src,
+                .upload,
+                .tab { transition: none !important; transform: none !important; }
+            }
         </style>
     </head>
     <body>
+        <a class='skip-link' href='#main-content'>Bỏ qua điều hướng</a>
 
         <!-- SVG seal definition (signature element) -->
         <svg width="0" height="0" style="position:absolute">
@@ -1237,6 +1389,10 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
                     <span>Chuyển audio thành văn bản</span>
                 </button>
+                <button class="tab" type="button" data-tab="ocr">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    <span>Nhận dạng văn bản (OCR)</span>
+                </button>
             </nav>
             <div class="spacer"></div>
 
@@ -1261,7 +1417,7 @@
         </aside>
 
         <!-- ============ MAIN ============ -->
-        <main class="main">
+        <main class="main" id="main-content" tabindex="-1">
             <div class="topbar">
                 <div id="hd">
                     <div class="eyebrow">Tra cứu</div>
@@ -1431,6 +1587,33 @@
                         </div>
                     </div>
                 </section>
+
+                <!-- ---- OCR ---- -->
+                <section class="panel" id="p-ocr">
+                    <div class="drop" id="drop-ocr">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                        <div class="t">Kéo thả hoặc chọn file PDF cần nhận dạng</div>
+                        <div class="s">Hệ thống sẽ chạy qua Unlimited-OCR để trích xuất văn bản (Markdown)</div>
+                        <div class="file" id="ocr-file"></div>
+                        <input type="file" id="inp-ocr" accept="application/pdf" hidden="hidden">
+                    </div>
+
+                    <div class="answer" style="margin-top: 24px; display: flex; flex-direction: column;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                            <h3 style="margin:0">Kết quả trích xuất</h3>
+                            <button class="btn" id="b-download-ocr" style="min-height: 36px; font-size: 13px;" disabled>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Tải file .md
+                            </button>
+                        </div>
+                        
+                        <div id="ocr-loading" style="display: none; align-items: center; gap: 10px; color: var(--azure); font-weight: 500; font-size: 13.5px; margin-bottom: 10px;">
+                            <span class="spin" style="border-top-color: var(--azure);"></span>
+                            AI đang phân tích và đọc văn bản (Quá trình này có thể mất vài phút)...
+                        </div>
+
+                        <textarea id="ta-ocr" class="audio-ta" style="min-height: 400px;" placeholder="Văn bản trích xuất sẽ hiển thị tại đây..."></textarea>
+                    </div>
+                </section>
             </div>
         </main>
 
@@ -1456,7 +1639,7 @@
                 const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
                 setTheme(next);
             }
-            setTheme(localStorage.getItem("qlvb-theme") || "dark");
+            setTheme(localStorage.getItem("qlvb-theme") || "light");
 
             /* ---------- health / telemetry ---------- */
             async function health() {
@@ -1497,7 +1680,11 @@
                 check: [
                     "Kiểm tra", "Rà soát dự thảo trước khi trình ký", "Đối chiếu thể thức theo Nghị định 30/2020 và kiểm tra căn cứ, chính tả, tính logic của nội dung."
                 ],
-                audio: [ "Tiện ích", "Gỡ băng & Tổng hợp Audio", "Chuyển đổi file ghi âm giọng nói thành văn bản (Speech-to-Text) và tự động tóm tắt, làm gọn thành ghi chú mạch lạc." ]
+                audio: [ "Tiện ích", "Gỡ băng & Tổng hợp Audio", "Chuyển đổi file ghi âm giọng nói thành văn bản (Speech-to-Text) và tự động tóm tắt, làm gọn thành ghi chú mạch lạc."
+                ],
+                ocr: [ "Tiện ích", "Nhận dạng văn bản (OCR)", "Trích xuất toàn bộ nội dung từ file PDF thành văn bản (Markdown) bằng mô hình Unlimited-OCR."
+
+                ]
             };
             document
                 .querySelectorAll(".tab")
@@ -2088,6 +2275,60 @@ Kế hoạch này căn cứ trực tiếp vào kế hoạch **01/KH-TU** của T
                     }, 14);
                 });
             }
+
+            /* ---------- OCR ---------- */
+            const dropOcr = $("#drop-ocr"), inpOcr = $("#inp-ocr");
+            dropOcr.onclick = () => inpOcr.click();
+            dropOcr.ondragover = e => { e.preventDefault(); dropOcr.classList.add("over"); };
+            dropOcr.ondragleave = () => dropOcr.classList.remove("over");
+            dropOcr.ondrop = e => {
+                e.preventDefault(); dropOcr.classList.remove("over");
+                if (e.dataTransfer.files[0]) handleOcrFile(e.dataTransfer.files[0]);
+            };
+            inpOcr.onchange = () => { if (inpOcr.files[0]) handleOcrFile(inpOcr.files[0]); };
+
+            async function handleOcrFile(f) {
+                $("#ocr-file").textContent = "📄 " + f.name;
+                const ta = $("#ta-ocr");
+                const btnDl = $("#b-download-ocr");
+                const loading = $("#ocr-loading");
+                
+                loading.style.display = "flex";
+                ta.value = "";
+                ta.disabled = true;
+                btnDl.disabled = true;
+
+                const fd = new FormData();
+                fd.append("file", f);
+
+                try {
+                    const r = await fetch(API + "/api/ocr/process", { method: "POST", body: fd });
+                    const d = await r.json();
+                    if (d.error) throw new Error(d.error);
+                    
+                    ta.value = d.text || "⚠️ Không trích xuất được nội dung.";
+                    
+                    // Kích hoạt nút download khi có kết quả
+                    if (d.text) {
+                        btnDl.disabled = false;
+                        btnDl.onclick = () => {
+                            const blob = new Blob([d.text], {type: "text/markdown;charset=utf-8"});
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = f.name.replace(".pdf", ".md");
+                            a.click();
+                            URL.revokeObjectURL(url);
+                        };
+                    }
+                } catch (e) {
+                    ta.value = "Lỗi khi chạy OCR: " + e.message;
+                } finally {
+                    loading.style.display = "none";
+                    ta.disabled = false;
+                }
+            }
+
             function demoAgg(q) {
                 return {
                     question: q,

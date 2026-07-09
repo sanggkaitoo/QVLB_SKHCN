@@ -1,31 +1,89 @@
-# Python
+﻿# Python
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
 *.egg-info/
-venv/
-.venv/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 dist/
 build/
 
-# Env
-.env
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
 
-# Data (không push lên git)
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+secrets.*
+
+# Local data and generated files
 data/
+downloads/
+uploads/
+outputs/
+exports/
+store/
 *.pdf
-*.docx
 *.doc
+*.docx
+*.xls
 *.xlsx
+*.ppt
+*.pptx
+*.csv
+*.tsv
+*.jsonl
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.bak
+
+# Logs and runtime files
+logs/
+*.log
+*.pid
+*.tmp
+*.temp
+*.cache
+
+# Model/vector/database cache
+.cache/
+models/
+qdrant_storage/
+postgres_data/
+
+# Frontend/node artifacts
+node_modules/
+.npm/
+.pnpm-store/
+playwright-report/
+test-results/
+
+# Codex/local agent artifacts
+.agents/
+.codex-ui-*.png
+.codex_*.py
+.codex_*.cjs
 
 # IDE
 .vscode/
 .idea/
 *.swp
+*.swo
 
 # OS
 .DS_Store
 Thumbs.db
-
-# Models cache (bge-m3, reranker)
-.cache/
-models/
