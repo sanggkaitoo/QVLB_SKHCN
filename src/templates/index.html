@@ -4,6 +4,11 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>DocNexus — Sở Khoa học và Công nghệ Lào Cai</title>
+        <link rel="manifest" href="/manifest.webmanifest">
+        <link rel="icon" href="/static/pwa/icon.svg" type="image/svg+xml">
+        <meta name="theme-color" content="#0369A1">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-title" content="DocNexus">
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link
             rel="preconnect"
@@ -1076,7 +1081,7 @@
                     justify-content: flex-end;
                     gap: 6px; 
                 }
-                .nav-label, .rail .spacer, .telemetry, .rail-actions { display: none; }
+                .nav-label, .rail .spacer, .telemetry { display: none; }
 
                 /* Nút tab vuông vắn như App Mobile */
                 .tab {
@@ -1115,6 +1120,83 @@
                 table.evid th, table.evid td { padding: 10px 11px; font-size: 12.5px; }
             }
 
+            .install-pwa-btn {
+                width: 100%;
+                font-family: inherit;
+            }
+            .ios-install-guide {
+                position: fixed;
+                inset: auto 16px 16px auto;
+                width: min(360px, calc(100vw - 32px));
+                z-index: 1200;
+                padding: 16px;
+                border: 1px solid var(--line-strong);
+                border-radius: var(--r);
+                background: var(--surface);
+                color: var(--text);
+                box-shadow: var(--shadow);
+                display: none;
+            }
+            .ios-install-guide.show { display: block; }
+            .ios-install-guide h3 { margin: 0 0 8px; font-size: 15px; }
+            .ios-install-guide p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+            .ios-install-guide .guide-close {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                width: 32px;
+                height: 32px;
+                border: 0;
+                border-radius: var(--r-sm);
+                background: transparent;
+                color: var(--muted);
+                cursor: pointer;
+                font-size: 20px;
+                line-height: 1;
+            }
+            @media (max-width: 860px) {
+                .ios-install-guide { inset: auto 12px 12px 12px; width: auto; }
+            }
+            .install-pwa-btn:disabled {
+                opacity: .58;
+                cursor: not-allowed;
+                transform: none;
+            }
+            @media (max-width: 860px) {
+                .rail-actions {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    flex: 0 0 auto;
+                }
+                .rail-actions .utility-link,
+                .rail-actions .theme-toggle {
+                    width: 42px;
+                    min-width: 42px;
+                    height: 42px;
+                    min-height: 42px;
+                    padding: 0;
+                    border-radius: var(--r-sm);
+                }
+                .rail-actions .utility-link svg {
+                    width: 18px;
+                    height: 18px;
+                }
+                .rail-actions .action-label {
+                    position: absolute;
+                    width: 1px;
+                    height: 1px;
+                    overflow: hidden;
+                    clip: rect(0 0 0 0);
+                    white-space: nowrap;
+                }
+            }
+            @media (display-mode: standalone) {
+                .install-pwa-btn,
+                .ios-install-guide {
+                    display: none !important;
+                }
+            }
             @media (prefers-reduced-motion: reduce) {
                 * { animation: none !important; transition: none !important; }
             }
@@ -1321,11 +1403,50 @@
             .demo-badge { border-radius: 999px; color: var(--amber); }
             :focus-visible { outline: 3px solid var(--azure); outline-offset: 3px; }
             @media (max-width: 860px) {
-                .rail { background: var(--surface); border-bottom: 1px solid var(--line); }
+                .rail { background: var(--surface); border-bottom: 1px solid var(--line); overflow-x: auto; }
                 .tab,
                 .utility-link { min-width: max-content; }
                 .topbar,
                 .panel-wrap { padding-left: 18px; padding-right: 18px; }
+            }
+            .install-pwa-btn {
+                width: 100%;
+                font-family: inherit;
+            }
+
+            .install-pwa-btn:disabled {
+                opacity: .58;
+                cursor: not-allowed;
+                transform: none;
+            }
+            @media (max-width: 860px) {
+                .rail-actions {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    flex: 0 0 auto;
+                }
+                .rail-actions .utility-link,
+                .rail-actions .theme-toggle {
+                    width: 42px;
+                    min-width: 42px;
+                    height: 42px;
+                    min-height: 42px;
+                    padding: 0;
+                    border-radius: var(--r-sm);
+                }
+                .rail-actions .utility-link svg {
+                    width: 18px;
+                    height: 18px;
+                }
+                .rail-actions .action-label {
+                    position: absolute;
+                    width: 1px;
+                    height: 1px;
+                    overflow: hidden;
+                    clip: rect(0 0 0 0);
+                    white-space: nowrap;
+                }
             }
             @media (prefers-reduced-motion: reduce) {
                 .skip-link,
@@ -1397,12 +1518,16 @@
             <div class="spacer"></div>
 
             <div class="rail-actions">
-                <a class="utility-link" href="/admin">
-                    <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
-                    Quản trị
+                <a class="utility-link" href="/admin" aria-label="Mở trang quản trị" title="Quản trị">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+                    <span class="action-label">Quản trị</span>
                 </a>
-                <button class="theme-toggle" id="themeBtn" type="button" onclick="toggleTheme()">
-                    <span id="themeIcon">☀</span><span id="themeText">Giao diện Sáng</span>
+                <button class="utility-link install-pwa-btn" id="installPwaBtn" type="button" aria-label="Cài DocNexus" title="Cài ứng dụng DocNexus">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/><path d="M6 17v2h12v-2"/></svg>
+                    <span class="action-label">Cài ứng dụng</span>
+                </button>
+                <button class="theme-toggle" id="themeBtn" type="button" onclick="toggleTheme()" aria-label="Đổi giao diện sáng tối" title="Đổi giao diện">
+                    <span id="themeIcon">☀</span><span id="themeText" class="action-label">Giao diện Sáng</span>
                 </button>
             </div>
 
@@ -1416,6 +1541,11 @@
             </div>
         </aside>
 
+        <div class="ios-install-guide" id="iosInstallGuide" role="dialog" aria-live="polite" aria-label="Hướng dẫn cài DocNexus trên iPhone">
+            <button class="guide-close" id="iosGuideClose" type="button" aria-label="Đóng hướng dẫn">×</button>
+            <h3>Cài DocNexus trên iPhone</h3>
+            <p>Mở bằng Safari, bấm nút Chia sẻ, chọn Thêm vào Màn hình chính, rồi bấm Thêm.</p>
+        </div>
         <!-- ============ MAIN ============ -->
         <main class="main" id="main-content" tabindex="-1">
             <div class="topbar">
@@ -1640,6 +1770,53 @@
                 setTheme(next);
             }
             setTheme(localStorage.getItem("qlvb-theme") || "light");
+            let deferredInstallPrompt = null;
+            const installPwaBtn = document.getElementById("installPwaBtn");
+            function isStandalonePwa() {
+                return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+            }
+            function isIosSafari() {
+                const ua = window.navigator.userAgent;
+                const isIos = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+                const isSafari = /^((?!CriOS|FxiOS|EdgiOS|OPiOS).)*Safari/i.test(ua);
+                return isIos && isSafari;
+            }
+            function showIosInstallGuide() {
+                const guide = document.getElementById("iosInstallGuide");
+                if (guide) guide.classList.add("show");
+            }
+            document.getElementById("iosGuideClose")?.addEventListener("click", () => {
+                document.getElementById("iosInstallGuide")?.classList.remove("show");
+            });
+            function updateInstallPwaButton() {
+                if (!installPwaBtn) return;
+                if (isStandalonePwa()) {
+                    installPwaBtn.hidden = true;
+                    document.getElementById("iosInstallGuide")?.classList.remove("show");
+                    return;
+                }
+                installPwaBtn.disabled = false;
+                installPwaBtn.title = isIosSafari() ? "Bấm để xem cách cài trên iPhone" : (deferredInstallPrompt ? "Cài ứng dụng DocNexus" : "Cài từ menu trình duyệt");
+            }
+            window.addEventListener("beforeinstallprompt", (event) => {
+                event.preventDefault();
+                deferredInstallPrompt = event;
+                updateInstallPwaButton();
+            });
+            window.addEventListener("appinstalled", () => {
+                deferredInstallPrompt = null;
+                updateInstallPwaButton();
+            });
+            if (installPwaBtn) {
+                installPwaBtn.addEventListener("click", async () => {
+                    if (!deferredInstallPrompt) { if (isIosSafari()) showIosInstallGuide(); else alert("Bạn có thể cài DocNexus từ menu của trình duyệt."); return; }
+                    deferredInstallPrompt.prompt();
+                    await deferredInstallPrompt.userChoice;
+                    deferredInstallPrompt = null;
+                    updateInstallPwaButton();
+                });
+                updateInstallPwaButton();
+            }
 
             /* ---------- health / telemetry ---------- */
             async function health() {
@@ -2456,5 +2633,11 @@ Kế hoạch này căn cứ trực tiếp vào kế hoạch **01/KH-TU** của T
 
             health();
         </script>
-    </body>
+            <script>
+            if ("serviceWorker" in navigator) {
+                window.addEventListener("load", () => {
+                    navigator.serviceWorker.register("/sw.js").catch(() => {});
+                });
+            }
+        </script>    </body>
 </html>

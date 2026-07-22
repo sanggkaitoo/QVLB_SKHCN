@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="DocNexus">
+  <rect width="512" height="512" rx="96" fill="#0369A1"/>
+  <path d="M150 104h166l70 70v234H150z" fill="#fff"/>
+  <path d="M316 104v72h70" fill="#DCEEFF"/>
+  <path d="M196 236h120M196 286h120M196 336h78" stroke="#0F172A" stroke-width="24" stroke-linecap="round"/>
+  <circle cx="352" cy="360" r="54" fill="#0F172A"/>
+  <path d="m390 398 42 42" stroke="#0F172A" stroke-width="28" stroke-linecap="round"/>
+  <circle cx="352" cy="360" r="24" fill="#F8FAFC"/>
+</svg>

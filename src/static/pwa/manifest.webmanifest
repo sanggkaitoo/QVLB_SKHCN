@@ -1,0 +1,18 @@
+{
+  "name": "DocNexus QLVB",
+  "short_name": "DocNexus",
+  "description": "Tra cứu, kiểm tra và xử lý văn bản hành chính.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F8FAFC",
+  "theme_color": "#0369A1",
+  "orientation": "any",
+  "lang": "vi",
+  "categories": ["productivity", "government", "utilities"],
+  "icons": [{ "src": "/static/pwa/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }],
+  "shortcuts": [
+    { "name": "Tra cứu văn bản", "short_name": "Tra cứu", "url": "/", "icons": [{ "src": "/static/pwa/icon.svg", "sizes": "any", "type": "image/svg+xml" }] },
+    { "name": "Quản trị dữ liệu", "short_name": "Admin", "url": "/admin", "icons": [{ "src": "/static/pwa/icon.svg", "sizes": "any", "type": "image/svg+xml" }] }
+  ]
+}
