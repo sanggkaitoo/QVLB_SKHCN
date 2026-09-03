@@ -39,6 +39,9 @@ def retrieve(query: str, top_k: int = 8, rerank_pool: int = 24,
 
 
 def answer_stream(query: str, **kw):
+    if config.AGENTIC_RAG_ENABLED:
+        from src.agent import controller
+        return controller.answer_stream(query, **kw)
     ctx_items = retrieve(query, **kw)
     if not ctx_items:
         def _empty():

@@ -88,7 +88,11 @@ def extract_metadata(full_text: str, fallback: dict | None = None) -> dict:
     head = full_text[:3000]
     tail = full_text[-1500:]   # người ký thường ở cuối
     user = f"PHẦN ĐẦU:\n{head}\n\nPHẦN CUỐI:\n{tail}\n\n{_FIELDS}"
-    data = llm.extract_json(_SYS, user, model=config.LLM_CHEAP) or {}
+    try:
+        data = llm.extract_json(_SYS, user, model=config.LLM_CHEAP) or {}
+    except Exception as exc:
+        print(f"  ! LLM metadata tạm thời không khả dụng, dùng metadata crawler: {exc}")
+        data = {}
 
     # --- THÊM KHỐI LỆNH NÀY ĐỂ ÉP KIỂU DỮ LIỆU ---
     # Nếu AI trả về mảng list (VD: [{...}]), ta sẽ lấy phần tử đầu tiên

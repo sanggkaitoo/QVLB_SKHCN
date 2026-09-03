@@ -13,6 +13,9 @@ from qdrant_client import models as qm
 
 from src.core import config, embedder, store
 from src.utils import extract, metadata
+from src.services.chunking import (
+    build_structured_chunks, normalize_document_ref, stable_point_id,
+)
 
 
 def split_text(text: str, size: int, overlap: int,
@@ -48,6 +51,14 @@ def _sha256(path: str) -> str:
     return h.hexdigest()
 
 
+def _archive_source(file_path: str, digest: str) -> str:
+    target_dir = os.path.join(config.STORE_DIR, digest[:2], digest)
+    os.makedirs(target_dir, exist_ok=True)
+    target = os.path.join(target_dir, os.path.basename(file_path))
+    if os.path.abspath(file_path) != os.path.abspath(target) and not os.path.exists(target):
+        shutil.copy2(file_path, target)
+    return target
+
 def ingest_file(file_path: str, huong: str = "di", raw_meta: dict | None = None,
                 source_url: str | None = None) -> int:
     raw_meta = raw_meta or {}
@@ -56,8 +67,9 @@ def ingest_file(file_path: str, huong: str = "di", raw_meta: dict | None = None,
 
     text, method = extract.extract(file_path)
     if not text:
-        print("   ! rỗng / OCR fail, bỏ qua (KHÔNG xóa file).")
-        return -1
+        raise RuntimeError(
+            f"Không trích xuất được nội dung từ {name}; giữ tệp để thử lại."
+        )
 
     text = text.replace('\x00', '')
     meta = metadata.extract_metadata(text, fallback=raw_meta)
@@ -79,57 +91,81 @@ def ingest_file(file_path: str, huong: str = "di", raw_meta: dict | None = None,
     if raw_meta.get("co_quan_ban_hanh"):
         meta["co_quan_ban_hanh"] = raw_meta.get("co_quan_ban_hanh")
 
+    digest = _sha256(file_path)
+    archived_path = _archive_source(file_path, digest)
+    meta["normalized_so_ky_hieu"] = normalize_document_ref(meta.get("so_ky_hieu"))
     meta.update({
         "huong": huong, 
         "file_name": name, 
         "full_text": text,
         "source_url": source_url, 
-        "sha256": _sha256(file_path),
+        "sha256": digest,
         "extract_method": method, 
         "raw_meta": json.dumps(raw_meta, ensure_ascii=False),
-        "file_path": name, # <--- THÊM DÒNG NÀY ĐỂ THỎA MÃN POSTGRES
+        "file_path": archived_path,
     })
 
-    # --- ĐÃ XÓA TÍNH NĂNG COPY FILE SANG STORE_DIR ---
-    # Hệ thống giờ đây chỉ lấy Text, không lưu trữ tệp vật lý.
 
-    chunks = split_text(text, config.CHUNK_SIZE, config.CHUNK_OVERLAP)
+    chunks = build_structured_chunks(
+        text, config.CHUNK_SIZE, config.CHUNK_OVERLAP, doc_key=digest,
+    )
     meta["n_chunks"] = len(chunks)
 
     doc_id = store.insert_document(meta)
     if doc_id == -1:
-        print("   = Đã tồn tại trong hệ thống (sha256 trùng), bỏ qua.")
-        return -1
+        raise RuntimeError("Không thể tạo hoặc lấy document_id cho tệp.")
 
-    vecs = embedder.encode(chunks)
+    vecs = embedder.encode([chunk.text for chunk in chunks])
     points = []
-    for chunk, v in zip(chunks, vecs):
+    target_collection = config.RAG_COLLECTION
+    for chunk, vector in zip(chunks, vecs):
+        payload = {
+            "text": chunk.text,
+            "doc_id": doc_id,
+            "so_ky_hieu": meta.get("so_ky_hieu"),
+            "ngay_ban_hanh": meta.get("ngay_ban_hanh"),
+            "loai_vb": meta.get("loai_vb"),
+            "huong": huong,
+            "file_name": name,
+            "source_url": source_url,
+            "co_quan_ban_hanh": meta.get("co_quan_ban_hanh"),
+            "trich_yeu": meta.get("trich_yeu"),
+            "chu_truong": meta.get("chu_truong", []),
+            "linh_vuc": meta.get("linh_vuc", []),
+            "chuyen_de": meta.get("chuyen_de", []),
+            "tinh_trang_hieu_luc": meta.get("tinh_trang_hieu_luc", "chua_xac_dinh"),
+            "hieu_luc_tu": meta.get("hieu_luc_tu"),
+            "hieu_luc_den": meta.get("hieu_luc_den"),
+            "chunk_index": chunk.chunk_index,
+            "section_path": chunk.section_path,
+            "parent_chunk_id": chunk.parent_chunk_id,
+            "parent_text": chunk.parent_text,
+            "heading": chunk.heading,
+            "page_start": chunk.page_start,
+            "page_end": chunk.page_end,
+            "chunk_kind": "child",
+        }
         points.append(qm.PointStruct(
-            id=str(uuid.uuid4()),
-            vector={"dense": v["dense"],
-                    "sparse": qm.SparseVector(indices=list(v["sparse"].keys()),
-                                              values=list(v["sparse"].values()))},
-            payload={
-                "text": chunk, 
-                "doc_id": doc_id,
-                "so_ky_hieu": meta.get("so_ky_hieu"),
-                "ngay_ban_hanh": meta.get("ngay_ban_hanh"),
-                "loai_vb": meta.get("loai_vb"), 
-                "huong": huong,
-                "file_name": name,
-                "co_quan_ban_hanh": meta.get("co_quan_ban_hanh"),
-                "chu_truong": meta.get("chu_truong", []),
-                "linh_vuc": meta.get("linh_vuc", []),
-                "vai_tro_van_ban": meta.get("vai_tro_van_ban", "khac"), 
-                "chuyen_de": meta.get("chuyen_de", []),
+            id=stable_point_id(target_collection, doc_id, chunk.chunk_index, chunk.text),
+            vector={
+                "dense": vector["dense"],
+                "sparse": qm.SparseVector(
+                    indices=list(vector["sparse"].keys()), values=list(vector["sparse"].values())
+                ),
             },
+            payload=payload,
         ))
-    store.upsert_chunks(points)
+    store.ensure_collection(target_collection)
+    store.upsert_chunks(points, target_collection)
+    if target_collection != config.QDRANT_COLLECTION:
+        store.ensure_collection(config.QDRANT_COLLECTION)
+        store.upsert_chunks(points, config.QDRANT_COLLECTION)
     print(f"   ✓ Thành công! doc_id={doc_id}, sinh ra {len(chunks)} chunks -> Đã lưu Qdrant & Postgres")
     return doc_id
 
 
-def ingest_download_dir():
+def ingest_download_dir(download_dir: str | None = None):
+    download_dir = download_dir or config.DOWNLOAD_DIR
     store.ensure_collection()
     print("\n[AI INGEST] BẮT ĐẦU PHÂN TÍCH VÀ NẠP DỮ LIỆU...")
     
@@ -138,10 +174,10 @@ def ingest_download_dir():
     
     # 1. Gom nhóm file theo tuple (Số ký hiệu, Hướng) để không bị trộn lẫn Đi/Đến
     groups = defaultdict(list)
-    meta_files = [f for f in os.listdir(config.DOWNLOAD_DIR) if f.endswith(".meta.json")]
+    meta_files = [f for f in os.listdir(download_dir) if f.endswith(".meta.json")]
     
     for mf in meta_files:
-        meta_path = os.path.join(config.DOWNLOAD_DIR, mf)
+        meta_path = os.path.join(download_dir, mf)
         file_path = meta_path.replace(".meta.json", "")
         if not os.path.exists(file_path): continue 
             
@@ -222,7 +258,12 @@ def ingest_download_dir():
                 print(f"   🗑️ Đã lọc bỏ: {f['name']}")
 
             if f["path"] in keep_paths:
-                ingest_file(f["path"], huong=huong, raw_meta=f["meta"])
+                ingest_file(
+                    f["path"],
+                    huong=huong,
+                    raw_meta=f["meta"],
+                    source_url=f["meta"].get("source_url"),
+                )
             
             try:
                 os.remove(f["path"])

@@ -9,10 +9,8 @@
         <meta name="theme-color" content="#0369A1">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-title" content="DocNexus">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <style>
 :root[data-theme="dark"] {
   --ink: #0B1018;
@@ -70,13 +68,13 @@ body {
   display: flex;
   background: var(--bg);
   color: var(--text);
-  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
 button, input { font: inherit; }
 button { letter-spacing: 0; }
-.mono { font-family: 'JetBrains Mono', monospace; font-variant-ligatures: none; }
+.mono { font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; font-variant-ligatures: none; }
 .rail {
   width: 260px;
   flex: 0 0 260px;
@@ -207,7 +205,7 @@ button { letter-spacing: 0; }
   pointer-events: none;
 }
 .stat-label { color: var(--faint); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
-.stat-value { margin-top: 10px; font: 700 38px/1 'JetBrains Mono', monospace; color: var(--text); overflow-wrap: anywhere; }
+.stat-value { margin-top: 10px; font: 700 38px/1 ui-monospace, "SFMono-Regular", Consolas, monospace; color: var(--text); overflow-wrap: anywhere; }
 .stat-sub { margin-top: 9px; color: var(--muted); font-size: 12.5px; }
 .stat-card.accent-red::after { background: radial-gradient(circle, var(--seal-soft), transparent 66%); }
 .stat-card.accent-green::after { background: radial-gradient(circle, var(--emerald-soft), transparent 66%); }
@@ -235,7 +233,7 @@ button { letter-spacing: 0; }
   background: var(--surface-2);
   color: var(--muted);
   padding: 3px 8px;
-  font: 600 12px/1.3 'JetBrains Mono', monospace;
+  font: 600 12px/1.3 ui-monospace, "SFMono-Regular", Consolas, monospace;
 }
 .empty, .error {
   min-height: 118px;
@@ -305,7 +303,7 @@ button { letter-spacing: 0; }
   color: var(--text);
   padding: 0 12px;
   outline: none;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
 }
 .input-field:focus { border-color: var(--azure); box-shadow: 0 0 0 3px var(--azure-soft); }
 .status-panel { border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); padding: 18px; box-shadow: var(--shadow); }
@@ -326,12 +324,12 @@ button { letter-spacing: 0; }
 }
 @keyframes rot { to { transform: rotate(360deg); } }
 .swal2-popup { width: 420px !important; max-width: calc(100vw - 32px) !important; padding: 26px !important; background: var(--surface) !important; color: var(--text) !important; border: 1px solid var(--line) !important; border-radius: var(--r) !important; box-shadow: var(--shadow) !important; }
-.swal2-title { font-family: 'Be Vietnam Pro', sans-serif !important; color: var(--text) !important; font-size: 19px !important; font-weight: 700 !important; padding: 0 0 6px !important; }
+.swal2-title { font-family: system-ui, -apple-system, "Segoe UI", sans-serif !important; color: var(--text) !important; font-size: 19px !important; font-weight: 700 !important; padding: 0 0 6px !important; }
 .swal2-html-container { color: var(--muted) !important; font-size: 13.5px !important; margin: 8px 0 0 !important; }
-.swal2-input { box-sizing: border-box !important; width: 100% !important; height: 42px !important; margin: 8px 0 0 !important; padding: 0 13px !important; font-size: 14px !important; background: var(--surface-2) !important; border: 1px solid var(--line) !important; color: var(--text) !important; border-radius: var(--r-sm) !important; font-family: 'Be Vietnam Pro', sans-serif !important; }
+.swal2-input { box-sizing: border-box !important; width: 100% !important; height: 42px !important; margin: 8px 0 0 !important; padding: 0 13px !important; font-size: 14px !important; background: var(--surface-2) !important; border: 1px solid var(--line) !important; color: var(--text) !important; border-radius: var(--r-sm) !important; font-family: system-ui, -apple-system, "Segoe UI", sans-serif !important; }
 .swal2-input:focus { border-color: var(--azure) !important; box-shadow: 0 0 0 3px var(--azure-soft) !important; }
 .swal2-actions { margin-top: 20px !important; gap: 10px !important; }
-.swal2-confirm, .swal2-cancel { font-family: 'Be Vietnam Pro', sans-serif !important; margin: 0 !important; font-weight: 700 !important; border-radius: var(--r-sm) !important; }
+.swal2-confirm, .swal2-cancel { font-family: system-ui, -apple-system, "Segoe UI", sans-serif !important; margin: 0 !important; font-weight: 700 !important; border-radius: var(--r-sm) !important; }
 .swal2-confirm { background: var(--azure) !important; color: #04101f !important; }
 .swal2-cancel { background: var(--surface-2) !important; color: var(--text) !important; }
 .swal2-validation-message { background: var(--surface-2) !important; color: #f08a82 !important; }
@@ -376,7 +374,7 @@ table.evid th { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercas
 table.evid td { padding: 14px 18px; border-bottom: 1px solid var(--line); font-size: 13.5px; vertical-align: top; color: var(--text); }
 table.evid tr:last-child td { border-bottom: 0; }
 table.evid tr:hover td { background: rgba(255,255,255,.015); }
-.evid .ky { font-family: 'JetBrains Mono',monospace; font-size: 13.5px; color: var(--azure); white-space: nowrap; font-weight: 600; }
+.evid .ky { font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; font-size: 13.5px; color: var(--azure); white-space: nowrap; font-weight: 600; }
 .evid .loai { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--surface-2); color: var(--muted); text-transform: uppercase; white-space: nowrap; border: 1px solid var(--line); }
 /* ============ GOVERNMENT ACCESSIBILITY REDESIGN ============ */
 :root[data-theme="light"] {
@@ -661,6 +659,16 @@ const runningStates = ['starting', 'waiting_login', 'logging_in', 'crawling'];
 let pollInterval = null;
 let lastStatus = 'idle';
 
+async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function setTheme(theme) {
   const isLight = theme === 'light';
   document.documentElement.setAttribute('data-theme', isLight ? 'light' : 'dark');
@@ -712,7 +720,7 @@ function renderList(items, emptyText, nameKey) {
 async function loadStats() {
   setStatsLoading();
   try {
-    const res = await fetch('/api/admin/stats');
+    const res = await fetchWithTimeout('/api/admin/stats');
     if (!res.ok) throw new Error('stats');
     const data = await res.json();
     const byLoai = Array.isArray(data.by_loai) ? data.by_loai : [];
@@ -745,7 +753,7 @@ async function searchDocs() {
     tbody.innerHTML = '<tr><td colspan="4" class="empty"><div class="shimmer" style="width: 100%;"></div></td></tr>';
     
     try {
-        const res = await fetch(`/api/admin/docs?q=${encodeURIComponent(q)}`);
+        const res = await fetchWithTimeout(`/api/admin/docs?q=${encodeURIComponent(q)}`);
         if (!res.ok) throw new Error('Lỗi mạng');
         const data = await res.json();
         
@@ -800,7 +808,7 @@ function renderStatus(data) {
 }
 async function checkCrawlerStatus({ notify = false } = {}) {
   try {
-    const res = await fetch('/api/admin/crawl/status');
+    const res = await fetchWithTimeout('/api/admin/crawl/status');
     if (!res.ok) throw new Error('status');
     const data = await res.json();
     renderStatus(data);
@@ -890,7 +898,7 @@ function runDemoCrawl(mode) {
   startCrawl({ limit, mode });
 }
 
-window.addEventListener('load', () => {
+window.addEventListener('DOMContentLoaded', () => {
   loadStats();
   checkCrawlerStatus();
 });

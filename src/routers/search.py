@@ -8,3 +8,11 @@ router = APIRouter()
 async def api_search(q: str = Query(...), loai_vb: str = None, huong: str = None):
     gen = search_srv.answer_stream(q, loai_vb=loai_vb, huong=huong)
     return StreamingResponse(gen, media_type="text/event-stream")
+
+@router.get("/search_agent_stream")
+async def api_agent_search(q: str = Query(...), loai_vb: str = None, huong: str = None):
+    from src.agent import controller
+    return StreamingResponse(
+        controller.answer_stream(q, loai_vb=loai_vb, huong=huong),
+        media_type="text/event-stream",
+    )

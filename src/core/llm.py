@@ -18,9 +18,11 @@ _client = OpenAI(
 
 
 def chat(system: str, user: str, model: str | None = None,
-         temperature: float = 0.1, stream: bool = False):
+         temperature: float = 0.1, stream: bool = False,
+         timeout: float | None = None):
     model = model or config.LLM_MAIN
-    resp = _client.chat.completions.create(
+    request_client = _client.with_options(timeout=timeout, max_retries=0) if timeout else _client
+    resp = request_client.chat.completions.create(
         model=model,
         messages=[{"role": "system", "content": system},
                   {"role": "user", "content": user}],
@@ -35,13 +37,16 @@ def chat(system: str, user: str, model: str | None = None,
 _JSON_RE = re.compile(r"\{.*\}|\[.*\]", re.DOTALL)
 
 
-def extract_json(system: str, user: str, model: str | None = None) -> dict | list | None:
+def extract_json(system: str, user: str, model: str | None = None,
+                 timeout: float | None = None) -> dict | list | None:
     """Gọi model với yêu cầu CHỈ trả JSON; bóc tách an toàn."""
     model = model or config.LLM_CHEAP
     raw = chat(
         system=system + "\n\nCHỈ trả về JSON hợp lệ, không kèm giải thích, không markdown.",
-        user=user, model=model, temperature=0.0,
+        user=user, model=model, temperature=0.0, timeout=timeout,
     )
+    if not raw:
+        return None
     raw = raw.strip()
     raw = re.sub(r"^```(json)?|```$", "", raw, flags=re.MULTILINE).strip()
     try:
@@ -54,3 +59,20 @@ def extract_json(system: str, user: str, model: str | None = None) -> dict | lis
             except Exception:
                 return None
     return None
+
+
+def chat_with_fallback(system: str, user: str, models: list[str] | None = None,
+                       temperature: float = 0.1) -> str:
+    candidates = models or [config.LLM_MAIN, config.LLM_FALLBACK]
+    errors = []
+    for model in dict.fromkeys(candidate for candidate in candidates if candidate):
+        try:
+            answer = chat(
+                system, user, model=model, temperature=temperature, stream=False,
+                timeout=config.AGENT_TIMEOUT_SECONDS,
+            )
+            if answer and answer.strip():
+                return answer.strip()
+        except Exception as exc:
+            errors.append(f"{model}: {type(exc).__name__}")
+    raise RuntimeError("Không model nào trả lời được: " + ", ".join(errors))

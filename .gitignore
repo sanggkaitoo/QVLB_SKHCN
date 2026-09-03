@@ -1,4 +1,4 @@
-﻿# Python
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -58,6 +58,9 @@ logs/
 *.tmp
 *.temp
 *.cache
+
+# Generated RAG evaluation artifacts
+reports/generated/
 
 # Model/vector/database cache
 .cache/

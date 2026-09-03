@@ -22,7 +22,7 @@ class LoginSubmitRequest(BaseModel):
     captcha: str
 
 @router.get("/stats")
-async def api_admin_stats():
+def api_admin_stats():
     return JSONResponse(store.get_system_stats())
 
 @router.get("/crawl/status")
@@ -55,7 +55,7 @@ async def api_crawl_submit_login(req: LoginSubmitRequest):
     return {"status": "success", "message": "Đã gửi thông tin đăng nhập."}
 
 @router.get("/docs")
-async def api_admin_docs(q: str = ""):
+def api_admin_docs(q: str = ""):
     try:
         with store.pg() as c, c.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             if q:
