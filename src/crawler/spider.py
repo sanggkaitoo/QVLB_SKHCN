@@ -393,13 +393,40 @@ async def _wait_for_table(page, qlvb_url: str, target_url: str) -> None:
             raise
 
 
-async def _flush_batch(pending: list[tuple[str, str, str]], history: CrawlHistory) -> None:
+def _completed_history_records(result: dict) -> list[tuple[str, str, str]]:
+    records: list[tuple[str, str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for raw_meta in result.get("completed_documents", []):
+        direction = raw_meta.get("huong", "di")
+        document_ref = raw_meta.get("so_ky_hieu", "")
+        key = raw_meta.get("history_key") or source_key(
+            document_ref,
+            raw_meta.get("ngay_ban_hanh", ""),
+            raw_meta.get("trich_yeu", ""),
+        )
+        identity = (direction, key)
+        if identity in seen:
+            continue
+        seen.add(identity)
+        records.append((direction, key, document_ref))
+    return records
+
+
+async def _flush_batch(pending: list[tuple[str, str, str]], history: CrawlHistory) -> int:
     if not pending:
-        return
+        return 0
     crawler_state["message"] = f"Đang nạp một lô {len(pending)} văn bản vào AI..."
-    await asyncio.to_thread(ingest_download_dir, config.DOWNLOAD_DIR)
-    history.mark_completed(pending)
+    result = await asyncio.to_thread(ingest_download_dir, config.DOWNLOAD_DIR)
+    completed = _completed_history_records(result)
+    if completed:
+        history.mark_completed(completed)
+    failed_count = len(result.get("failed_files", []))
+    if failed_count:
+        crawler_state["message"] = (
+            f"Đã bỏ qua và cách ly {failed_count} tệp lỗi; đang tiếp tục crawl."
+        )
     pending.clear()
+    return failed_count
 
 
 async def _next_page(page, current_fingerprint: str) -> str:
@@ -525,8 +552,11 @@ async def crawl_table(
             total_downloaded += 1
             pending.append((direction, key, document_ref))
             if len(pending) >= config.CRAWLER_BATCH_SIZE:
-                await _flush_batch(pending, history)
+                if await _flush_batch(pending, history):
+                    scan_had_failures = True
 
+        if await _flush_batch(pending, history):
+            scan_had_failures = True
         if limit > 0 and total_downloaded >= limit:
             break
         if config.CRAWLER_MAX_PAGES > 0 and page_number >= config.CRAWLER_MAX_PAGES:
@@ -560,33 +590,24 @@ async def crawl_table(
 
 async def _ingest_leftovers(history: CrawlHistory) -> None:
     try:
-        meta_names = [
-            name for name in os.listdir(config.DOWNLOAD_DIR) if name.endswith(".meta.json")
-        ]
+        has_metadata = any(
+            name.endswith(".meta.json") for name in os.listdir(config.DOWNLOAD_DIR)
+        )
     except FileNotFoundError:
         return
-    if not meta_names:
+    if not has_metadata:
         return
 
-    pending: list[tuple[str, str, str]] = []
-    for name in meta_names:
-        try:
-            with open(os.path.join(config.DOWNLOAD_DIR, name), "r", encoding="utf-8") as stream:
-                raw_meta = json.load(stream)
-            direction = raw_meta.get("huong", "di")
-            document_ref = raw_meta.get("so_ky_hieu", "")
-            key = raw_meta.get("history_key") or source_key(
-                document_ref,
-                raw_meta.get("ngay_ban_hanh", ""),
-                raw_meta.get("trich_yeu", ""),
-            )
-            pending.append((direction, key, document_ref))
-        except (OSError, json.JSONDecodeError):
-            continue
-
     crawler_state["message"] = "Đang xử lý lô tải dở từ lần chạy trước..."
-    await asyncio.to_thread(ingest_download_dir, config.DOWNLOAD_DIR)
-    history.mark_completed(pending)
+    result = await asyncio.to_thread(ingest_download_dir, config.DOWNLOAD_DIR)
+    completed = _completed_history_records(result)
+    if completed:
+        history.mark_completed(completed)
+    failed_count = len(result.get("failed_files", []))
+    if failed_count:
+        crawler_state["message"] = (
+            f"Đã cách ly {failed_count} tệp tải dở bị lỗi; tiếp tục khởi động crawler."
+        )
 
 
 async def run_spider(limit: int, mode: str = "all"):

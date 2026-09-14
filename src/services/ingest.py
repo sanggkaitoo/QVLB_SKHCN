@@ -8,6 +8,7 @@ import uuid
 import shutil
 import hashlib
 import re
+from datetime import datetime, timezone
 from collections import defaultdict
 from qdrant_client import models as qm
 
@@ -59,6 +60,11 @@ def _archive_source(file_path: str, digest: str) -> str:
         shutil.copy2(file_path, target)
     return target
 
+
+class ExtractionError(RuntimeError):
+    """A source file could not be converted into usable text."""
+
+
 def ingest_file(file_path: str, huong: str = "di", raw_meta: dict | None = None,
                 source_url: str | None = None) -> int:
     raw_meta = raw_meta or {}
@@ -67,7 +73,7 @@ def ingest_file(file_path: str, huong: str = "di", raw_meta: dict | None = None,
 
     text, method = extract.extract(file_path)
     if not text:
-        raise RuntimeError(
+        raise ExtractionError(
             f"Không trích xuất được nội dung từ {name}; giữ tệp để thử lại."
         )
 
@@ -164,111 +170,197 @@ def ingest_file(file_path: str, huong: str = "di", raw_meta: dict | None = None,
     return doc_id
 
 
-def ingest_download_dir(download_dir: str | None = None):
+def _remove_download_pair(file_path: str) -> None:
+    for candidate in (file_path, file_path + ".meta.json"):
+        try:
+            os.remove(candidate)
+        except FileNotFoundError:
+            pass
+        except OSError as exc:
+            print(f"   ! Không dọn được {candidate}: {exc}")
+
+
+def _quarantine_failed_file(file_info: dict, error: Exception) -> str:
+    failed_dir = os.path.join(config.STORE_DIR, "failed_ingest")
+    os.makedirs(failed_dir, exist_ok=True)
+
+    source_path = file_info["path"]
+    filename = os.path.basename(source_path)
+    target_path = os.path.join(failed_dir, filename)
+    if os.path.exists(target_path):
+        stem, extension = os.path.splitext(filename)
+        target_path = os.path.join(
+            failed_dir,
+            f"{stem}_{uuid.uuid4().hex[:8]}{extension}",
+        )
+    shutil.move(source_path, target_path)
+
+    failure_meta = dict(file_info["meta"])
+    failure_meta.update({
+        "ingest_error": f"{type(error).__name__}: {error}",
+        "failed_at": datetime.now(timezone.utc).isoformat(),
+        "quarantined_file": target_path,
+    })
+    with open(target_path + ".meta.json", "w", encoding="utf-8") as stream:
+        json.dump(failure_meta, stream, ensure_ascii=False, indent=2)
+
+    try:
+        os.remove(source_path + ".meta.json")
+    except FileNotFoundError:
+        pass
+    return target_path
+
+
+def ingest_download_dir(download_dir: str | None = None) -> dict:
     download_dir = download_dir or config.DOWNLOAD_DIR
+    result = {
+        "completed_documents": [],
+        "processed_files": 0,
+        "filtered_files": 0,
+        "failed_files": [],
+    }
     store.ensure_collection()
     print("\n[AI INGEST] BẮT ĐẦU PHÂN TÍCH VÀ NẠP DỮ LIỆU...")
-    
-    from collections import defaultdict
-    import re
-    
-    # 1. Gom nhóm file theo tuple (Số ký hiệu, Hướng) để không bị trộn lẫn Đi/Đến
+
     groups = defaultdict(list)
-    meta_files = [f for f in os.listdir(download_dir) if f.endswith(".meta.json")]
-    
-    for mf in meta_files:
-        meta_path = os.path.join(download_dir, mf)
-        file_path = meta_path.replace(".meta.json", "")
-        if not os.path.exists(file_path): continue 
-            
+    try:
+        meta_files = sorted(
+            name for name in os.listdir(download_dir) if name.endswith(".meta.json")
+        )
+    except FileNotFoundError:
+        return result
+
+    for meta_name in meta_files:
+        meta_path = os.path.join(download_dir, meta_name)
+        file_path = meta_path.removesuffix(".meta.json")
+        if not os.path.exists(file_path):
+            continue
         try:
-            with open(meta_path, "r", encoding="utf-8") as f:
-                raw_meta = json.load(f)
-        except: continue
-                
-        so_ky_hieu = raw_meta.get("so_ky_hieu", f"unknown_{mf}")
-        huong = raw_meta.get("huong", "di")
-        
-        groups[(so_ky_hieu, huong)].append({
+            with open(meta_path, "r", encoding="utf-8") as stream:
+                raw_meta = json.load(stream)
+            file_size = os.path.getsize(file_path)
+        except (OSError, json.JSONDecodeError) as exc:
+            print(f"   ! Bỏ qua metadata lỗi {meta_name}: {exc}")
+            continue
+
+        document_ref = raw_meta.get("so_ky_hieu", f"unknown_{meta_name}")
+        issued_date = raw_meta.get("ngay_ban_hanh", "")
+        subject = raw_meta.get("trich_yeu", "")
+        direction = raw_meta.get("huong", "di")
+        document_key = raw_meta.get("history_key") or "|".join(
+            (str(document_ref), str(issued_date), str(subject))
+        )
+        groups[(str(document_key), direction)].append({
             "path": file_path,
             "name": os.path.basename(file_path).lower(),
             "ext": os.path.splitext(file_path)[1].lower(),
-            "size": os.path.getsize(file_path),
-            "meta": raw_meta
+            "size": file_size,
+            "meta": raw_meta,
         })
 
-    # 2. XỬ LÝ LỌC THEO HƯỚNG VĂN BẢN (DI / DEN)
-    for (so_ky_hieu, huong), files in groups.items():
-        print(f"\n🔍 [SÀNG LỌC] VB {huong.upper()}: {so_ky_hieu} ({len(files)} files)")
-        final_files_to_ingest = []
-        
-        pdfs = [f for f in files if f["ext"] == ".pdf"]
-        excels = [f for f in files if f["ext"] in [".xls", ".xlsx", ".csv"]]
-        words = [f for f in files if f["ext"] in [".doc", ".docx"]]
+    for (_, direction), files in groups.items():
+        document_ref = files[0]["meta"].get("so_ky_hieu", "")
+        print(
+            f"\n[SÀNG LỌC] VB {direction.upper()}: "
+            f"{document_ref or 'không số'} ({len(files)} files)"
+        )
+        selected = []
 
-        if huong == "di":
-            # --- LUẬT CỦA VĂN BẢN ĐI (Bóp nghẹt) ---
-            num_match = re.search(r'\d+', so_ky_hieu)
-            doc_num = num_match.group(0) if num_match else ""
-            
-            valid_pdfs = []
-            for p in pdfs:
-                if any(k in p["name"] for k in ["can_cu", "cancu", "thamkhao"]): continue 
-                if "signed" not in p["name"] and doc_num and doc_num not in p["name"]: continue 
-                valid_pdfs.append(p)
+        pdfs = [item for item in files if item["ext"] == ".pdf"]
+        excels = [item for item in files if item["ext"] in {".xls", ".xlsx", ".csv"}]
+        words = [item for item in files if item["ext"] in {".doc", ".docx"}]
 
-            if valid_pdfs:
-                signed_pdfs = [f for f in valid_pdfs if "signed" in f["name"]]
-                main_doc = sorted(signed_pdfs or valid_pdfs, key=lambda x: x["size"], reverse=True)[0]
-                final_files_to_ingest.append(main_doc)
-            elif words:
-                final_files_to_ingest.append(sorted(words, key=lambda x: x["size"], reverse=True)[0])
-            
-            final_files_to_ingest.extend(excels)
-
-        else:
-            # --- LUẬT CỦA VĂN BẢN ĐẾN (Heuristic) ---
-            # 1. Luôn giữ Excel
-            final_files_to_ingest.extend(excels)
-            
-            # 2. Khử Phiếu gửi, Phiếu chuyển bằng PDF
-            filtered_pdfs = []
-            for p in pdfs:
-                if any(k in p["name"] for k in ["phieu_gui", "phieu_chuyen", "ticket", "luanchuyen"]):
-                    continue
-                filtered_pdfs.append(p)
-                final_files_to_ingest.append(p)
-                
-            # 3. Gom cặp bài trùng: Nếu có cả Bản PDF và Bản Word trùng tên gốc, Xóa bản Word
-            # ĐÃ NÂNG CẤP: Xóa các tiền tố "0_", "1_" do hệ thống QLVB tự sinh ra để so sánh chuẩn xác
-            def clean_basename(filename):
-                base = os.path.splitext(filename)[0]
-                # Dùng Regex r'^\d+_' để tìm và xóa các số theo sau là dấu gạch dưới ở ĐẦU chuỗi
-                return re.sub(r'^\d+_', '', base)
-                
-            pdf_basenames = {clean_basename(p["name"]) for p in filtered_pdfs}
-            for w in words:
-                if clean_basename(w["name"]) not in pdf_basenames: 
-                    final_files_to_ingest.append(w) # Chỉ lấy Word nếu ko có PDF trùng tên
-
-        # 3. KÍCH HOẠT NẠP AI & DỌN DẸP Ổ CỨNG
-        keep_paths = [f["path"] for f in final_files_to_ingest]
-        for f in files:
-            if f["path"] not in keep_paths:
-                print(f"   🗑️ Đã lọc bỏ: {f['name']}")
-
-            if f["path"] in keep_paths:
-                ingest_file(
-                    f["path"],
-                    huong=huong,
-                    raw_meta=f["meta"],
-                    source_url=f["meta"].get("source_url"),
+        if direction == "di":
+            number_match = re.search(r"\d+", document_ref or "")
+            document_number = number_match.group(0) if number_match else ""
+            valid_pdfs = [
+                item for item in pdfs
+                if not any(token in item["name"] for token in ("can_cu", "cancu", "thamkhao"))
+                and (
+                    "signed" in item["name"]
+                    or not document_number
+                    or document_number in item["name"]
                 )
-            
+            ]
+            if valid_pdfs:
+                signed_pdfs = [item for item in valid_pdfs if "signed" in item["name"]]
+                selected.append(
+                    max(signed_pdfs or valid_pdfs, key=lambda item: item["size"])
+                )
+            elif words:
+                selected.append(max(words, key=lambda item: item["size"]))
+            selected.extend(excels)
+        else:
+            selected.extend(excels)
+            filtered_pdfs = [
+                item for item in pdfs
+                if not any(
+                    token in item["name"]
+                    for token in ("phieu_gui", "phieu_chuyen", "ticket", "luanchuyen")
+                )
+            ]
+            selected.extend(filtered_pdfs)
+
+            def clean_basename(filename: str) -> str:
+                return re.sub(r"^\d+_", "", os.path.splitext(filename)[0])
+
+            pdf_basenames = {clean_basename(item["name"]) for item in filtered_pdfs}
+            selected.extend(
+                item for item in words
+                if clean_basename(item["name"]) not in pdf_basenames
+            )
+
+        selected_paths = {item["path"] for item in selected}
+        group_failed = False
+        for file_info in files:
+            if file_info["path"] not in selected_paths:
+                print(f"   [lọc] {file_info['name']}")
+                result["filtered_files"] += 1
+                _remove_download_pair(file_info["path"])
+                continue
+
             try:
-                os.remove(f["path"])
-                os.remove(f["path"] + ".meta.json")
-            except: pass
+                ingest_file(
+                    file_info["path"],
+                    huong=direction,
+                    raw_meta=file_info["meta"],
+                    source_url=file_info["meta"].get("source_url"),
+                )
+            except Exception as exc:
+                group_failed = True
+                failure = {
+                    "file": os.path.basename(file_info["path"]),
+                    "error": f"{type(exc).__name__}: {exc}",
+                }
+                print(
+                    f"   ! Bỏ qua tệp lỗi {failure['file']}; "
+                    "crawler tiếp tục với tệp kế tiếp."
+                )
+                try:
+                    failure["quarantined_file"] = _quarantine_failed_file(file_info, exc)
+                    print(f"   ! Đã chuyển tệp lỗi tới {failure['quarantined_file']}")
+                except Exception as quarantine_error:
+                    failure["quarantine_error"] = (
+                        f"{type(quarantine_error).__name__}: {quarantine_error}"
+                    )
+                    print(f"   ! Không thể cách ly tệp lỗi: {quarantine_error}")
+                result["failed_files"].append(failure)
+                continue
+
+            result["processed_files"] += 1
+            _remove_download_pair(file_info["path"])
+
+        if not group_failed:
+            result["completed_documents"].append(files[0]["meta"])
+
+    print(
+        "\n[AI INGEST] HOÀN TẤT: "
+        f"{result['processed_files']} tệp thành công, "
+        f"{len(result['failed_files'])} tệp lỗi, "
+        f"{result['filtered_files']} tệp được lọc."
+    )
+    return result
+
 
 if __name__ == "__main__":
     ingest_download_dir()

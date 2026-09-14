@@ -67,7 +67,9 @@ def extract_doc(path: str):
 
 def extract_excel(path: str):
     output = ""
-    with pd.ExcelFile(path) as workbook:
+    extension = os.path.splitext(path)[1].lower()
+    engine = "xlrd" if extension == ".xls" else "openpyxl"
+    with pd.ExcelFile(path, engine=engine) as workbook:
         for sheet_name in workbook.sheet_names:
             frame = pd.read_excel(workbook, sheet_name=sheet_name)
             if frame.empty:
@@ -77,7 +79,20 @@ def extract_excel(path: str):
                 + frame.to_csv(index=False, sep="\t")
                 + "\n"
             )
-    return output.strip(), "xlsx"
+    return output.strip(), extension.lstrip(".")
+
+
+def extract_csv(path: str):
+    last_error = None
+    for encoding in ("utf-8-sig", "utf-8", "cp1258", "latin1"):
+        try:
+            frame = pd.read_csv(path, sep=None, engine="python", encoding=encoding)
+            return frame.to_csv(index=False, sep="\t").strip(), "csv"
+        except UnicodeDecodeError as exc:
+            last_error = exc
+    if last_error:
+        raise last_error
+    return "", "csv"
 
 
 def extract_image(path: str):
@@ -101,6 +116,8 @@ def extract(path: str):
             return extract_doc(path)
         if extension in ("xlsx", "xls"):
             return extract_excel(path)
+        if extension == "csv":
+            return extract_csv(path)
         if extension in ("png", "jpg", "jpeg", "bmp", "tiff"):
             return extract_image(path)
     except Exception as exc:

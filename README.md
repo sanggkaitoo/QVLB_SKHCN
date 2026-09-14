@@ -185,6 +185,8 @@ CRAWLER_MAX_PAGES=0
 
 CRAWLER_MAX_PAGES=0 nghĩa là không giới hạn số trang. Checkpoint nằm tại CRAWLER_STATE_DB. Lịch sử JSON cũ được nhập tự động; do lịch sử cũ không có ngày ban hành, một số văn bản có thể được kiểm tra lại một lần để tránh bỏ sót văn bản trùng số ở năm khác.
 
+Nếu một tệp không thể trích xuất hoặc ingest, crawler ghi lỗi, chuyển tệp cùng metadata vào STORE_DIR/failed_ingest và tiếp tục tệp kế tiếp. Văn bản lỗi không được checkpoint là thành công, nên có thể được tải và thử lại trong lần crawl sau.
+
 Docker đặt nofile của PostgreSQL và Qdrant ở 262144. Crawler xử lý theo lô và đóng tài nguyên sau từng tệp, nên số file mở được giữ ổn định thay vì tăng theo số lượng tài liệu. Với kho rất lớn, giới hạn thực tế còn phụ thuộc dung lượng đĩa, tốc độ QLVB, OCR, embedding và hạn mức LLM.
 
 ## Agentic RAG
