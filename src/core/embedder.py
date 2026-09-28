@@ -2,8 +2,33 @@
 Bản cũ chỉ dùng dense -> bỏ phí khả năng tìm theo từ khóa của bge-m3.
 """
 from functools import lru_cache
+from contextlib import contextmanager
+from threading import Lock
+from transformers import AutoTokenizer
+import torch
 from FlagEmbedding import BGEM3FlagModel, FlagReranker
 from src.core import config
+from src.core.runtime import remaining
+
+_inference_lock = Lock()
+torch.set_num_threads(config.MODEL_CPU_THREADS)
+
+
+@contextmanager
+def inference_slot():
+    if not _inference_lock.acquire(timeout=remaining(300)):
+        raise TimeoutError("Model worker is busy")
+    try:
+        remaining(300)
+        yield
+        remaining(300)
+    finally:
+        _inference_lock.release()
+
+
+@lru_cache(maxsize=1)
+def tokenizer():
+    return AutoTokenizer.from_pretrained(config.EMBED_MODEL, use_fast=True)
 
 
 @lru_cache(maxsize=1)
@@ -21,8 +46,9 @@ def _reranker():
 
 def encode(texts: list[str]) -> list[dict]:
     """Trả [{'dense': [...], 'sparse': {token_id: weight}}] cho từng text."""
-    out = _model().encode(texts, return_dense=True, return_sparse=True,
-                          return_colbert_vecs=False)
+    with inference_slot():
+        out = _model().encode(texts, return_dense=True, return_sparse=True,
+                              return_colbert_vecs=False, batch_size=config.EMBED_BATCH_SIZE)
     dense = out["dense_vecs"]
     sparse = out["lexical_weights"]   # list[dict[str,float]]
     res = []
@@ -40,5 +66,6 @@ def rerank(query: str, passages: list[str]) -> list[float]:
     if not passages:
         return []
     pairs = [[query, p] for p in passages]
-    scores = _reranker().compute_score(pairs, normalize=True)
+    with inference_slot():
+        scores = _reranker().compute_score(pairs, normalize=True, batch_size=config.EMBED_BATCH_SIZE)
     return scores if isinstance(scores, list) else [scores]

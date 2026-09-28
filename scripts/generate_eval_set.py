@@ -36,15 +36,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=20260723)
     parser.add_argument("--model", default=config.LLM_SMART)
     parser.add_argument("--max-document-chars", type=int, default=7000)
+    parser.add_argument("--comparison-count", type=int, default=0)
     return parser.parse_args()
 
 
 def load_candidates(limit: int = 600) -> list[dict[str, Any]]:
     sql = """
         SELECT id, so_ky_hieu, ngay_ban_hanh, loai_vb, huong,
-               co_quan_ban_hanh, trich_yeu, full_text
+               co_quan_ban_hanh, trich_yeu, full_text, sha256
         FROM documents
         WHERE so_ky_hieu IS NOT NULL
+          AND ingest_status = 'ready'
           AND btrim(so_ky_hieu) <> ''
           AND full_text IS NOT NULL
           AND length(full_text) >= 900
@@ -95,6 +97,7 @@ def exact_case(index: int, doc: dict[str, Any]) -> dict[str, Any]:
         "category": "exact_lookup",
         "question": question,
         "expected_documents": [int(doc["id"])],
+        "expected_sha256": [doc.get("sha256")],
         "expected_so_ky_hieu": [so_ky],
         "expected_facts": [expected_answer],
         "evidence": [{"doc_id": int(doc["id"]), "so_ky_hieu": so_ky, "quote": expected_answer}],
@@ -152,6 +155,8 @@ def no_answer_case(index: int, seed: int) -> dict[str, Any]:
 
 def main() -> int:
     args = parse_args()
+    if args.output.exists():
+        raise SystemExit("Output already exists; choose a new file to preserve the frozen evaluation set")
     if args.count < 10:
         raise SystemExit("--count phải từ 10 trở lên để các nhóm câu hỏi có ý nghĩa.")
 
@@ -185,6 +190,16 @@ def main() -> int:
 
     for index in range(1, no_answer_target + 1):
         cases.append(no_answer_case(index, args.seed))
+    for index in range(min(args.comparison_count, len(sampled) // 2)):
+        first, second = sampled[index * 2:index * 2 + 2]
+        cases.append({
+            "record_type": "case", "id": f"compare_{index + 1:03d}", "category": "compare",
+            "question": f"So sánh nội dung chính của văn bản {first['so_ky_hieu']} với văn bản {second['so_ky_hieu']}.",
+            "expected_documents": [first["id"], second["id"]],
+            "expected_facts": [first["trich_yeu"], second["trich_yeu"]],
+            "evidence": [{"doc_id": doc["id"], "so_ky_hieu": doc["so_ky_hieu"], "quote": doc["trich_yeu"]} for doc in (first, second)],
+            "should_answer": True, "filters": {},
+        })
 
     if semantic_count < semantic_target:
         print(
@@ -199,7 +214,7 @@ def main() -> int:
         "generator_model": args.model,
         "requested_count": args.count,
         "actual_count": len(cases),
-        "collection": config.QDRANT_COLLECTION,
+        "collection": config.RAG_COLLECTION,
     }
     rng.shuffle(cases)
     write_jsonl(args.output, [metadata, *cases])

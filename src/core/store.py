@@ -3,13 +3,18 @@ Qdrant collection dùng NAMED vectors để hybrid search (Query API + RRF).
 """
 import psycopg2
 import psycopg2.extras
+from psycopg2.pool import ThreadedConnectionPool
+from contextlib import contextmanager
+from threading import Lock
+import math
 from qdrant_client import QdrantClient
 from qdrant_client import models as qm
 from src.core import config
+from src.core.runtime import remaining
 
 # ----------------------------- Qdrant --------------------------------
 _q = QdrantClient(host=config.QDRANT_HOST, port=config.QDRANT_PORT,
-                  api_key=config.QDRANT_API_KEY, https=False, timeout=300.0)
+                  api_key=config.QDRANT_API_KEY, https=False, timeout=config.QDRANT_TIMEOUT_SECONDS)
 _q_stats = QdrantClient(host=config.QDRANT_HOST, port=config.QDRANT_PORT,
                         api_key=config.QDRANT_API_KEY, https=False, timeout=3.0)
 
@@ -21,36 +26,41 @@ def collection_exists(collection_name: str) -> bool:
 
 
 def ensure_collection(collection_name: str | None = None):
-    collection_name = collection_name or config.QDRANT_COLLECTION
-    if collection_exists(collection_name):
-        return
-    _q.create_collection(
-        collection_name=collection_name,
-        vectors_config={"dense": qm.VectorParams(size=DENSE_DIM, distance=qm.Distance.COSINE)},
-        sparse_vectors_config={"sparse": qm.SparseVectorParams(index=qm.SparseIndexParams())},
-    )
+    collection_name = collection_name or config.RAG_COLLECTION
+    if not collection_exists(collection_name):
+        _q.create_collection(
+            collection_name=collection_name,
+            vectors_config={"dense": qm.VectorParams(size=DENSE_DIM, distance=qm.Distance.COSINE)},
+            sparse_vectors_config={"sparse": qm.SparseVectorParams(index=qm.SparseIndexParams())},
+        )
     indexes = {
         "doc_id": qm.PayloadSchemaType.INTEGER,
         "chunk_index": qm.PayloadSchemaType.INTEGER,
         "loai_vb": qm.PayloadSchemaType.KEYWORD,
         "huong": qm.PayloadSchemaType.KEYWORD,
         "parent_chunk_id": qm.PayloadSchemaType.KEYWORD,
+        "issued_day": qm.PayloadSchemaType.INTEGER,
+        "agency_normalized": qm.PayloadSchemaType.KEYWORD,
+        "index_version": qm.PayloadSchemaType.KEYWORD,
+        "ready": qm.PayloadSchemaType.BOOL,
     }
+    existing = _q.get_collection(collection_name).payload_schema
     for field, schema in indexes.items():
-        _q.create_payload_index(collection_name, field, schema)
+        if field not in existing:
+            _q.create_payload_index(collection_name, field, schema, wait=True)
 
 
 def upsert_chunks(points: list[qm.PointStruct], collection_name: str | None = None):
-    collection_name = collection_name or config.QDRANT_COLLECTION
+    collection_name = collection_name or config.RAG_COLLECTION
     for i in range(0, len(points), 100):
-        _q.upsert(collection_name, points=points[i:i + 100])
+        _q.upsert(collection_name, points=points[i:i + 100], wait=True)
 
 
 def hybrid_query(dense, sparse: dict, top_k: int = 20,
                  flt: qm.Filter | None = None,
                  collection_name: str | None = None):
     """Prefetch dense + sparse, hợp nhất bằng RRF (Reciprocal Rank Fusion)."""
-    collection_name = collection_name or config.QDRANT_COLLECTION
+    collection_name = collection_name or config.RAG_COLLECTION
     sparse_vec = qm.SparseVector(indices=list(sparse.keys()),
                                  values=list(sparse.values()))
     res = _q.query_points(
@@ -61,13 +71,30 @@ def hybrid_query(dense, sparse: dict, top_k: int = 20,
         ],
         query=qm.FusionQuery(fusion=qm.Fusion.RRF),
         limit=top_k, with_payload=True,
+        timeout=max(1, math.ceil(remaining(config.QDRANT_TIMEOUT_SECONDS))),
     )
     return res.points
 
 
 # ---------------------------- Postgres -------------------------------
+_pool = None
+_pool_lock = Lock()
+
+
+@contextmanager
 def pg():
-    return psycopg2.connect(config.PG_DSN)
+    global _pool
+    with _pool_lock:
+        if _pool is None:
+            _pool = ThreadedConnectionPool(1, config.PG_POOL_SIZE, config.PG_DSN, connect_timeout=5)
+    connection = _pool.getconn()
+    try:
+        with connection:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT set_config('statement_timeout', %s, true)", (str(max(1, int(remaining(10) * 1000))),))
+            yield connection
+    finally:
+        _pool.putconn(connection, close=bool(connection.closed))
 
 
 def insert_document(meta: dict) -> int:
@@ -82,7 +109,7 @@ def insert_document(meta: dict) -> int:
         cur.execute(
             f"INSERT INTO documents ({','.join(cols)}) VALUES ({','.join(['%s']*len(cols))}) "
             "ON CONFLICT (sha256) DO UPDATE SET "
-            "file_path = EXCLUDED.file_path, raw_meta = EXCLUDED.raw_meta "
+            + ", ".join(f"{col} = EXCLUDED.{col}" for col in cols if col != "sha256") + " "
             "RETURNING id",
             vals,
         )
@@ -93,8 +120,9 @@ def insert_document(meta: dict) -> int:
 def get_documents(where_sql: str = "", params: tuple = (), limit: int = 500):
     sql = ("SELECT id, so_ky_hieu, ngay_ban_hanh, loai_vb, co_quan_ban_hanh, "
            "trich_yeu, full_text FROM documents")
+    sql += " WHERE ingest_status = 'ready'"
     if where_sql:
-        sql += " WHERE " + where_sql
+        sql += " AND (" + where_sql + ")"
     sql += " ORDER BY ngay_ban_hanh DESC NULLS LAST LIMIT %s"
     with pg() as c, c.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute(sql, params + (limit,))
@@ -145,29 +173,31 @@ def get_system_stats() -> dict:
 
     # 2. Thống kê từ Qdrant
     try:
-        collection_info = _q_stats.get_collection(config.QDRANT_COLLECTION)
+        collection_info = _q_stats.get_collection(config.RAG_COLLECTION)
         stats["total_vectors"] = collection_info.points_count
     except Exception as e:
         print(f"Lỗi đọc Qdrant: {e}")
 
     return stats
 
-def get_chunks_for_doc(doc_id: int, collection_name: str | None = None):
-    collection_name = collection_name or config.QDRANT_COLLECTION
-    if not collection_exists(collection_name):
-        return []
+def get_chunks_for_doc(doc_id: int, collection_name: str | None = None, indices: list[int] | None = None):
+    collection_name = collection_name or config.RAG_COLLECTION
+    conditions = [qm.FieldCondition(key="doc_id", match=qm.MatchValue(value=doc_id))]
+    if indices is not None:
+        if not indices:
+            return []
+        conditions.append(qm.FieldCondition(key="chunk_index", match=qm.MatchAny(any=indices)))
     records = []
     offset = None
     while True:
         batch, offset = _q.scroll(
             collection_name=collection_name,
-            scroll_filter=qm.Filter(must=[
-                qm.FieldCondition(key="doc_id", match=qm.MatchValue(value=doc_id))
-            ]),
+            scroll_filter=qm.Filter(must=conditions),
             limit=256,
             offset=offset,
             with_payload=True,
             with_vectors=False,
+            timeout=max(1, math.ceil(remaining(config.QDRANT_TIMEOUT_SECONDS))),
         )
         records.extend(batch)
         if offset is None:
@@ -184,10 +214,8 @@ def search_documents_by_reference(reference: str, limit: int = 5):
         try:
             cursor.execute(
                 f"SELECT {fields} FROM documents "
-                "WHERE normalized_so_ky_hieu = %s OR similarity(normalized_so_ky_hieu, %s) > 0.45 "
-                "ORDER BY (normalized_so_ky_hieu = %s) DESC, "
-                "similarity(normalized_so_ky_hieu, %s) DESC LIMIT %s",
-                (normalized, normalized, normalized, normalized, limit),
+                "WHERE normalized_so_ky_hieu = %s AND ingest_status = 'ready' LIMIT %s",
+                (normalized, limit),
             )
         except psycopg2.errors.UndefinedColumn:
             connection.rollback()
@@ -236,3 +264,44 @@ def log_rag_query(data: dict):
             )
     except Exception as exc:
         print(f"[rag-log] Không ghi được query log: {exc}")
+
+
+def matching_agencies(expected):
+    from src.services.document_fields import normalize_agency
+    with pg() as connection, connection.cursor() as cursor:
+        cursor.execute("SELECT DISTINCT co_quan_ban_hanh FROM documents WHERE ingest_status = 'ready' AND co_quan_ban_hanh IS NOT NULL")
+        return sorted({normalize_agency(row[0]) for row in cursor.fetchall() if expected in normalize_agency(row[0])})
+
+
+def indexed_document(digest):
+    with pg() as connection, connection.cursor() as cursor:
+        cursor.execute("SELECT id FROM documents WHERE sha256 = %s AND ingest_status = 'ready' AND index_version = %s", (digest, config.INGEST_VERSION))
+        row = cursor.fetchone()
+        return row[0] if row else None
+
+
+def ready_doc_ids(ids):
+    if not ids:
+        return set()
+    with pg() as connection, connection.cursor() as cursor:
+        cursor.execute("SELECT id FROM documents WHERE id = ANY(%s) AND ingest_status = 'ready' AND index_version = %s", (list(ids), config.INGEST_VERSION))
+        return {row[0] for row in cursor.fetchall()}
+
+
+def has_ready_documents():
+    with pg() as connection, connection.cursor() as cursor:
+        cursor.execute("SELECT 1 FROM documents WHERE ingest_status='ready' AND index_version=%s LIMIT 1", (config.INGEST_VERSION,))
+        return cursor.fetchone() is not None
+
+
+def set_ingest_status(doc_id, status, error=None):
+    with pg() as connection, connection.cursor() as cursor:
+        cursor.execute("UPDATE documents SET ingest_status=%s, index_version=%s, ingest_error=%s WHERE id=%s", (status, config.INGEST_VERSION, error, doc_id))
+
+
+def delete_document_chunks(doc_id, collection_name=None):
+    _q.delete(collection_name or config.RAG_COLLECTION, points_selector=qm.FilterSelector(filter=qm.Filter(must=[qm.FieldCondition(key="doc_id", match=qm.MatchValue(value=doc_id))])), wait=True)
+
+
+def publish_document_chunks(doc_id, collection_name=None):
+    _q.set_payload(collection_name or config.RAG_COLLECTION, payload={"ready": True}, points=qm.Filter(must=[qm.FieldCondition(key="doc_id", match=qm.MatchValue(value=doc_id))]), wait=True)

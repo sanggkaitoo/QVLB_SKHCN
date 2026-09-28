@@ -6,8 +6,23 @@ Hai hàm chính:
 """
 import json
 import re
+from contextlib import contextmanager
+from contextvars import ContextVar
 from openai import OpenAI
 from src.core import config
+from src.core.runtime import remaining
+
+_usage_trace = ContextVar("llm_usage_trace", default=None)
+
+
+@contextmanager
+def track_usage():
+    usage = {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "responses_with_usage": 0}
+    token = _usage_trace.set(usage)
+    try:
+        yield usage
+    finally:
+        _usage_trace.reset(token)
 
 _client = OpenAI(
     base_url=config.LLM_BASE_URL,
@@ -21,16 +36,31 @@ def chat(system: str, user: str, model: str | None = None,
          temperature: float = 0.1, stream: bool = False,
          timeout: float | None = None):
     model = model or config.LLM_MAIN
-    request_client = _client.with_options(timeout=timeout, max_retries=0) if timeout else _client
+    request_client = _client.with_options(timeout=remaining(timeout or 120), max_retries=0)
+    usage = _usage_trace.get()
+    if usage is not None:
+        usage["calls"] += 1
     resp = request_client.chat.completions.create(
         model=model,
         messages=[{"role": "system", "content": system},
                   {"role": "user", "content": user}],
         temperature=temperature,
         stream=stream,
+        max_tokens=config.LLM_MAX_OUTPUT_TOKENS,
     )
     if stream:
         return resp  # caller iterates chunks
+    provider_error = getattr(resp, "error", None)
+    if provider_error:
+        raise RuntimeError(f"Provider returned an error payload: {str(provider_error)[:500]}")
+    if not resp.choices:
+        raise RuntimeError("Provider returned no completion choices")
+    if usage is not None and resp.usage is not None:
+        usage["prompt_tokens"] += resp.usage.prompt_tokens or 0
+        usage["completion_tokens"] += resp.usage.completion_tokens or 0
+        usage["responses_with_usage"] += 1
+    if resp.choices[0].finish_reason == "length":
+        raise RuntimeError("Model output exceeded LLM_MAX_OUTPUT_TOKENS")
     return resp.choices[0].message.content
 
 

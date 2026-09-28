@@ -30,7 +30,8 @@ def run_aggregate_tool(query: str, plan: QueryPlan, started: float) -> AgentResu
                 f"Kết quả {data.get('agg', 'tổng hợp')} cho \"{data.get('metric', query)}\": "
                 f"{data.get('total')} ({data.get('n_docs_matched')} văn bản có bằng chứng)."
             )
-            confidence = "cao"
+            answer += "\n\nĐây là tổng hợp thử nghiệm trên tập văn bản được quét, không đại diện đầy đủ toàn bộ kho. Cần kiểm tra đơn vị, kỳ báo cáo và số liệu trùng trước khi sử dụng."
+            confidence = "thap"
         else:
             answer = "Không tìm thấy thông tin trong kho dữ liệu."
             confidence = "thap"
@@ -48,7 +49,7 @@ def run_aggregate_tool(query: str, plan: QueryPlan, started: float) -> AgentResu
         latency_ms = int((time.perf_counter() - started) * 1000)
         result = AgentResult(
             query=query,
-            answer="Không tìm thấy thông tin trong kho dữ liệu.\n\nMức độ tin cậy: thấp.",
+            answer="Không hoàn tất được việc tổng hợp do lỗi hoặc quá thời gian xử lý. Không được coi đây là kết quả bằng 0.",
             confidence="thap",
             attempts=1,
             plan=plan,

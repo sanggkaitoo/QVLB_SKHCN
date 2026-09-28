@@ -27,7 +27,10 @@ def create_plan(query: str, explicit_filters: dict | None = None, use_llm: bool 
         )
         if not isinstance(planned, dict):
             return base
-        planned["filters"] = {**base.filters, **(planned.get("filters") or {})}
+        planned["filters"] = {**base.filters, **(planned.get("filters") or {}), **(explicit_filters or {})}
+        planned["filters"] = {key: value for key, value in planned["filters"].items()
+                              if key in {"loai_vb", "huong", "date_from", "date_to", "co_quan_ban_hanh"}
+                              and isinstance(value, str) and value.strip()}
         planned["document_refs"] = planned.get("document_refs") or base.document_refs
         planned["sub_queries"] = planned.get("sub_queries") or base.sub_queries
         planned["max_attempts"] = min(config.AGENT_MAX_ATTEMPTS, int(planned.get("max_attempts") or 2))
@@ -36,12 +39,12 @@ def create_plan(query: str, explicit_filters: dict | None = None, use_llm: bool 
         return base
 
 
-def rewrite_query(query: str, plan: QueryPlan, attempt: int) -> str:
+def rewrite_query(query: str, plan: QueryPlan, attempt: int, missing: list[str] | None = None) -> str:
     try:
         result = llm.extract_json(
             "Viết lại truy vấn để tìm bằng chứng còn thiếu. Không trả lời câu hỏi.",
             f"Truy vấn gốc: {query}\nÝ định: {plan.intent.value}\n"
-            f"Bằng chứng cần có: {plan.required_evidence}\nTrả JSON: {{\"query\": \"...\"}}",
+            f"Bằng chứng còn thiếu: {missing or plan.required_evidence}\nTrả JSON: {{\"query\": \"...\"}}",
             model=config.LLM_CHEAP,
             timeout=config.AGENT_TIMEOUT_SECONDS,
         )

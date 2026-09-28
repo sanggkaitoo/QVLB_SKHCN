@@ -16,7 +16,10 @@ CÁC ĐOẠN LIÊN QUAN:
 
 
 def retrieve(query: str, top_k: int = 8, rerank_pool: int = 24,
-             loai_vb: str | None = None, huong: str | None = None):
+              loai_vb: str | None = None, huong: str | None = None):
+    if config.AGENTIC_RAG_ENABLED:
+        from src.services.retrieval_srv import hybrid_search
+        return hybrid_search(query, top_k=top_k, rerank_pool=rerank_pool, loai_vb=loai_vb, huong=huong)
     qv = embedder.encode_one(query)
 
     conds = []

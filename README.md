@@ -2,7 +2,7 @@
 
 DocNexus là web app hỗ trợ cán bộ, công chức và viên chức tra cứu, tổng hợp và kiểm tra văn bản hành chính. Hệ thống lưu dữ liệu gốc trong PostgreSQL, lập chỉ mục vector trên Qdrant, sử dụng RAG để trả lời có nguồn và dùng Playwright để thu thập văn bản Đi/Đến từ hệ thống QLVB.
 
-> Trạng thái hiện tại: RAG truyền thống đang là luồng mặc định. Agentic RAG v2 đã có endpoint riêng và feature flag, nhưng chưa nên bật mặc định cho đến khi re-index đầy đủ và đo lại trên bộ đánh giá lớn hơn. Tính năng tổng hợp số liệu hiện ở mức thử nghiệm.
+> Trạng thái hiện tại: Agentic RAG v3 có chọn lọc là luồng mặc định, dùng collection `docnexus_agentic_v3`. Câu hỏi đơn giản có đường nhanh; câu phức tạp hoặc thiếu bằng chứng chuyển sang agent. Tổng hợp số liệu vẫn thử nghiệm; baseline v1/v2 là lịch sử, không được coi là kết quả v3.
 
 ## Chức năng hiện có
 
@@ -14,7 +14,7 @@ DocNexus là web app hỗ trợ cán bộ, công chức và viên chức tra c�
 - Lọc theo loại văn bản, hướng Đi/Đến, thời gian và cơ quan ban hành trong luồng Agentic.
 - Trả lời dựa trên bằng chứng, kèm nguồn và mức độ tin cậy.
 
-### Agentic RAG v2
+### Agentic RAG v3
 
 - Phân loại ý định: tra cứu chính xác, hỏi đáp ngữ nghĩa, so sánh, tổng hợp và hiệu lực pháp lý.
 - Lập kế hoạch truy vấn có cấu trúc và tạo nhiều truy vấn tìm kiếm.
@@ -22,7 +22,7 @@ DocNexus là web app hỗ trợ cán bộ, công chức và viên chức tra c�
 - Tìm quan hệ căn cứ, sửa đổi, thay thế và bãi bỏ giữa các văn bản.
 - Thử lại có giới hạn, kiểm chứng câu trả lời và từ chối khi thiếu bằng chứng.
 - Ghi log kế hoạch, nguồn, điểm rerank, số vòng và thời gian xử lý.
-- Có endpoint A/B riêng để so sánh với RAG cũ.
+- Có công cụ đo đối chứng chế độ luôn chạy agent và chế độ chọn lọc trên cùng bộ câu hỏi/corpus.
 
 ### Tổng hợp số liệu
 
@@ -196,38 +196,44 @@ Docker đặt nofile của PostgreSQL và Qdrant ở 262144. Crawler xử lý th
 | Cấu hình | Ý nghĩa |
 |---|---|
 | /api/search_stream | Endpoint chính; dùng Agentic khi feature flag được bật |
-| /api/search_agent_stream | Endpoint Agentic để A/B test trực tiếp |
-| AGENTIC_RAG_ENABLED=false | Giữ RAG cũ làm mặc định |
-| RAG_COLLECTION=qlvb_docs_v2 | Collection structured chunks |
+| /api/search_agent_stream | Alias Agentic, dùng cùng cấu hình định tuyến |
+| AGENTIC_RAG_ENABLED=true | Agentic là luồng mặc định |
+| AGENT_ROUTING_MODE=selective | Đường nhanh có kiểm chứng; chuyển sang agent khi cần |
+| AGENT_ROUTING_MODE=always | Luôn dùng vòng agent, phục vụ đo đối chứng |
+| RAG_COLLECTION=docnexus_agentic_v3 | Kho dữ liệu mới, không ghi kép sang kho cũ |
 | AGENT_MAX_ATTEMPTS=2 | Số vòng retrieval tối đa |
 
-Re-index sang collection mới, không ghi đè collection cũ:
+Nhập lại từ các file gốc đã đăng ký trong PostgreSQL (không dùng lại text trích xuất cũ):
 
 ~~~bash
 ./venv/bin/python scripts/reindex_v2.py --limit 1
-./venv/bin/python scripts/reindex_v2.py --collection qlvb_docs_v2
+./venv/bin/python scripts/reindex_v2.py --collection docnexus_agentic_v3
 ~~~
 
-Chỉ chuyển cấu hình sau khi re-index hoàn tất và đã so sánh số văn bản/vector:
+Cấu hình mặc định:
 
 ~~~env
-RAG_COLLECTION=qlvb_docs_v2
+RAG_COLLECTION=docnexus_agentic_v3
 AGENTIC_RAG_ENABLED=true
+AGENT_ROUTING_MODE=selective
 ~~~
 
-Rollback không cần xóa dữ liệu:
+Chunk mới giới hạn 512 token, overlap 64 token; giữ trang PDF và ngữ cảnh bảng. Ingest theo lô 8 đoạn, chỉ công bố sau khi ghi vector xong. Tối đa 2 yêu cầu RAG nặng đồng thời; quá tải trả HTTP 503. Thời hạn 60 giây áp dụng cho các bước có thể ngắt và các lời gọi mạng; không cưỡng bức ngắt phép tính mô hình đang chạy.
+Mỗi lời gọi AI giới hạn đầu ra qua `LLM_MAX_OUTPUT_TOKENS=4096`, tránh dự trù số token quá lớn gây lỗi hạn mức. Phản hồi provider có lỗi hoặc bị cắt vì hết token không được coi là câu trả lời hợp lệ.
 
-~~~env
-AGENTIC_RAG_ENABLED=false
-~~~
+`run.sh` áp dụng migration và chuẩn bị collection, không xóa dữ liệu. Công cụ `scripts/reset_agentic_data.py --confirm-delete-qlvb` chỉ dành cho đặt lại chủ động; xóa dữ liệu PostgreSQL, các collection của project và checkpoint crawler, giữ file gốc. Không thể rollback về dữ liệu cũ sau khi reset nếu không có bản sao lưu riêng.
 
 Hướng dẫn vận hành chi tiết nằm tại [docs/agentic-rag.md](docs/agentic-rag.md).
 
 ## Đánh giá chất lượng
 
-Baseline trước nâng cấp được lưu tại [reports/baseline-v1.md](reports/baseline-v1.md), kết quả Agentic hiện tại tại [reports/baseline-agent-v2.md](reports/baseline-agent-v2.md).
+**V3 đã bật Agentic có chọn lọc và hoàn tất đo đối chứng trên mẫu 30 tài liệu, 18 câu hỏi (36 lượt).** Xem [báo cáo chi tiết](reports/baseline-agent-v3-selective.md) và [trạng thái dữ liệu đã lưu](reports/baseline-agent-v3-status.md). So với luôn chạy agent, chế độ chọn lọc có P50 5,99 giây thay vì 8,04 giây, trung bình 2,00 thay vì 3,33 lượt gọi AI; P95 gần như không đổi (43,09 / 43,61 giây).
 
-Trên bộ pilot 10 câu hỏi hiện có:
+Không có lỗi pipeline trong 36 kết quả cuối; 35/36 lượt có điểm chấm AI. Bộ chấm có trường hợp chấm khác nhau cho câu trả lời từ chối giống hệt nhau, nên chưa thể khẳng định độ chính xác tăng. Đây chưa phải phép đo toàn kho, tải đồng thời, Cloudflare hoặc tổng hợp số liệu.
+
+Baseline lịch sử được giữ nguyên tại [reports/baseline-v1.md](reports/baseline-v1.md) và [reports/baseline-agent-v2.md](reports/baseline-agent-v2.md). Database đã reset nên không thể so trực tiếp điểm v3 với các báo cáo này như cùng một tập dữ liệu.
+
+Kết quả lịch sử trên bộ pilot 10 câu hỏi (không phải v3):
 
 | Chỉ số | RAG v1 | Agentic v2 |
 |---|---:|---:|
@@ -238,21 +244,17 @@ Trên bộ pilot 10 câu hỏi hiện có:
 | Grounded claim ratio | 14,3% | 70,0% |
 | P95 latency | 13,8 giây | 66,1 giây |
 
-Bộ pilot còn nhỏ và độ trễ Agentic còn cao, vì vậy đây chưa phải bằng chứng đủ để bật mặc định trong production.
+Bộ pilot cũ nhỏ; các số đo trên không xác nhận chất lượng bản v3 hiện tại.
 
-Chạy lại đánh giá retrieval:
-
-~~~bash
-./venv/bin/python scripts/run_agent_retrieval_baseline.py
-~~~
-
-Đo đầy đủ qua API và tạo báo cáo:
+Đo v3 sau khi có dữ liệu ready (chọn đường dẫn mới cho mỗi lần chạy):
 
 ~~~bash
-./venv/bin/python scripts/run_baseline_api.py   --endpoint /api/search_agent_stream   --output reports/generated/baseline-agent-v2.jsonl   --judge --overwrite
-
-./venv/bin/python scripts/report_baseline.py   --input reports/generated/baseline-agent-v2.jsonl   --output reports/generated/baseline-agent-v2.md
+./venv/bin/python scripts/generate_eval_set.py --count 16 --comparison-count 2 --output reports/generated/v3-next/questions.jsonl
+./venv/bin/python scripts/benchmark_selective.py --input reports/generated/v3-next/questions.jsonl --output reports/generated/v3-next/paired-run
+./venv/bin/python scripts/report_selective.py --run reports/generated/v3-next/paired-run --input reports/generated/v3-next/questions.jsonl --output reports/baseline-agent-v3-next.md --retry-missing
 ~~~
+
+Phép đo này gọi trực tiếp pipeline, không mở server web. Hai chế độ chạy xen kẽ trên cùng snapshot, có làm nóng mô hình trước. Kết quả lưu câu trả lời/nguồn, quyết định định tuyến, thời gian, lượt gọi/token AI và đánh giá bằng LLM riêng. Token của bộ chấm không tính vào token pipeline. Đây không phải kiểm thử tải hoặc chấm bởi chuyên gia; câu hỏi tổng hợp số liệu chưa được kiểm định bởi bộ đo này.
 
 ## Lộ trình cải thiện độ chính xác
 

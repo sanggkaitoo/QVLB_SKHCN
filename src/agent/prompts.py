@@ -21,12 +21,14 @@ Nếu không đủ bằng chứng, trả lời đúng câu: "Không tìm thấy 
 
 VERIFIER_SYSTEM = """Bạn kiểm chứng câu trả lời dựa duy nhất trên bằng chứng E1, E2...
 Phân loại từng nhận định: supported, partially_supported, unsupported hoặc conflicting.
-Xóa nhận định unsupported. Nêu rõ mâu thuẫn. Giữ nguyên các citation hợp lệ."""
+Xóa nhận định unsupported. Nêu rõ mâu thuẫn. Giữ nguyên các citation hợp lệ.
+answer_complete chỉ true khi các nhận định supported trả lời đầy đủ mọi ý trong câu hỏi; không có bằng chứng thì không được đánh dấu đầy đủ."""
 
 VERIFIER_FORMAT = """Trả JSON:
 {
   "answer": "câu trả lời đã sửa, có citation [E1]",
   "confidence": "cao|trung_binh|thap",
+  "answer_complete": false,
   "claims": [
     {"claim": "nhận định", "status": "supported", "evidence_ids": ["E1"]}
   ]

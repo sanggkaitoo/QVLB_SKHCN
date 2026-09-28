@@ -1,6 +1,6 @@
 """Pipeline nạp: extract -> AI metadata -> chunk -> embed(dense+sparse) ->
 Qdrant + Postgres. GIỮ bản gốc (copy sang STORE_DIR).
-Tích hợp Thuật toán Lọc 4 Lớp: Ưu tiên _Signed, Giữ Excel, Dọn Dự Thảo & Cách ly Căn cứ.
+Giữ các phụ lục được hỗ trợ; chống trùng theo hash và cách ly tệp lỗi.
 """
 import os
 import json
@@ -17,6 +17,7 @@ from src.utils import extract, metadata
 from src.services.chunking import (
     build_structured_chunks, normalize_document_ref, stable_point_id,
 )
+from src.services.document_fields import normalize_agency, issued_day
 
 
 def split_text(text: str, size: int, overlap: int,
@@ -66,9 +67,14 @@ class ExtractionError(RuntimeError):
 
 
 def ingest_file(file_path: str, huong: str = "di", raw_meta: dict | None = None,
-                source_url: str | None = None) -> int:
+                source_url: str | None = None, force: bool = False) -> int:
     raw_meta = raw_meta or {}
     name = os.path.basename(file_path)
+    digest = _sha256(file_path)
+    if not force:
+        existing_id = store.indexed_document(digest)
+        if existing_id:
+            return existing_id
     print(f"\n⚙️  Đang xử lý: {name}")
 
     text, method = extract.extract(file_path)
@@ -97,8 +103,9 @@ def ingest_file(file_path: str, huong: str = "di", raw_meta: dict | None = None,
     if raw_meta.get("co_quan_ban_hanh"):
         meta["co_quan_ban_hanh"] = raw_meta.get("co_quan_ban_hanh")
 
-    digest = _sha256(file_path)
     archived_path = _archive_source(file_path, digest)
+    with open(archived_path + ".meta.json", "w", encoding="utf-8") as stream:
+        json.dump({**raw_meta, "huong": huong, "source_url": source_url}, stream, ensure_ascii=False)
     meta["normalized_so_ky_hieu"] = normalize_document_ref(meta.get("so_ky_hieu"))
     meta.update({
         "huong": huong, 
@@ -113,7 +120,8 @@ def ingest_file(file_path: str, huong: str = "di", raw_meta: dict | None = None,
 
 
     chunks = build_structured_chunks(
-        text, config.CHUNK_SIZE, config.CHUNK_OVERLAP, doc_key=digest,
+        text, config.CHUNK_TOKENS, config.CHUNK_OVERLAP_TOKENS, doc_key=digest,
+        max_parent_chars=4000, tokenizer=embedder.tokenizer(),
     )
     meta["n_chunks"] = len(chunks)
 
@@ -121,9 +129,31 @@ def ingest_file(file_path: str, huong: str = "di", raw_meta: dict | None = None,
     if doc_id == -1:
         raise RuntimeError("Không thể tạo hoặc lấy document_id cho tệp.")
 
-    vecs = embedder.encode([chunk.text for chunk in chunks])
+    store.set_ingest_status(doc_id, "pending")
+    try:
+        _write_chunks(doc_id, meta, chunks, huong, name, source_url)
+        store.set_ingest_status(doc_id, "ready")
+    except Exception as exc:
+        store.set_ingest_status(doc_id, "failed", f"{type(exc).__name__}: {exc}"[:1000])
+        raise
+    print(f"   Thành công: doc_id={doc_id}, {len(chunks)} đoạn Agentic")
+    return doc_id
+
+
+def _write_chunks(doc_id, meta, chunks, huong, name, source_url):
+    def vectors():
+        for offset in range(0, len(chunks), config.EMBED_BATCH_SIZE):
+            batch = chunks[offset:offset + config.EMBED_BATCH_SIZE]
+            texts = [f"{meta.get('so_ky_hieu') or ''}\n{chunk.section_path}\n{chunk.text}" for chunk in batch]
+            encoded = embedder.encode(texts)
+            if len(encoded) != len(batch):
+                raise RuntimeError("Embedding count does not match chunk count")
+            yield from encoded
+    vecs = vectors()
     points = []
     target_collection = config.RAG_COLLECTION
+    store.ensure_collection(target_collection)
+    store.delete_document_chunks(doc_id, target_collection)
     for chunk, vector in zip(chunks, vecs):
         payload = {
             "text": chunk.text,
@@ -150,6 +180,10 @@ def ingest_file(file_path: str, huong: str = "di", raw_meta: dict | None = None,
             "page_start": chunk.page_start,
             "page_end": chunk.page_end,
             "chunk_kind": "child",
+            "index_version": config.INGEST_VERSION,
+            "ready": False,
+            "agency_normalized": normalize_agency(meta.get("co_quan_ban_hanh")),
+            "issued_day": issued_day(meta.get("ngay_ban_hanh")),
         }
         points.append(qm.PointStruct(
             id=stable_point_id(target_collection, doc_id, chunk.chunk_index, chunk.text),
@@ -161,13 +195,11 @@ def ingest_file(file_path: str, huong: str = "di", raw_meta: dict | None = None,
             },
             payload=payload,
         ))
-    store.ensure_collection(target_collection)
+        if len(points) >= config.EMBED_BATCH_SIZE:
+            store.upsert_chunks(points, target_collection)
+            points.clear()
     store.upsert_chunks(points, target_collection)
-    if target_collection != config.QDRANT_COLLECTION:
-        store.ensure_collection(config.QDRANT_COLLECTION)
-        store.upsert_chunks(points, config.QDRANT_COLLECTION)
-    print(f"   ✓ Thành công! doc_id={doc_id}, sinh ra {len(chunks)} chunks -> Đã lưu Qdrant & Postgres")
-    return doc_id
+    store.publish_document_chunks(doc_id, target_collection)
 
 
 def _remove_download_pair(file_path: str) -> None:
@@ -264,58 +296,14 @@ def ingest_download_dir(download_dir: str | None = None) -> dict:
             f"\n[SÀNG LỌC] VB {direction.upper()}: "
             f"{document_ref or 'không số'} ({len(files)} files)"
         )
-        selected = []
-
-        pdfs = [item for item in files if item["ext"] == ".pdf"]
-        excels = [item for item in files if item["ext"] in {".xls", ".xlsx", ".csv"}]
-        words = [item for item in files if item["ext"] in {".doc", ".docx"}]
-
-        if direction == "di":
-            number_match = re.search(r"\d+", document_ref or "")
-            document_number = number_match.group(0) if number_match else ""
-            valid_pdfs = [
-                item for item in pdfs
-                if not any(token in item["name"] for token in ("can_cu", "cancu", "thamkhao"))
-                and (
-                    "signed" in item["name"]
-                    or not document_number
-                    or document_number in item["name"]
-                )
-            ]
-            if valid_pdfs:
-                signed_pdfs = [item for item in valid_pdfs if "signed" in item["name"]]
-                selected.append(
-                    max(signed_pdfs or valid_pdfs, key=lambda item: item["size"])
-                )
-            elif words:
-                selected.append(max(words, key=lambda item: item["size"]))
-            selected.extend(excels)
-        else:
-            selected.extend(excels)
-            filtered_pdfs = [
-                item for item in pdfs
-                if not any(
-                    token in item["name"]
-                    for token in ("phieu_gui", "phieu_chuyen", "ticket", "luanchuyen")
-                )
-            ]
-            selected.extend(filtered_pdfs)
-
-            def clean_basename(filename: str) -> str:
-                return re.sub(r"^\d+_", "", os.path.splitext(filename)[0])
-
-            pdf_basenames = {clean_basename(item["name"]) for item in filtered_pdfs}
-            selected.extend(
-                item for item in words
-                if clean_basename(item["name"]) not in pdf_basenames
-            )
-
-        selected_paths = {item["path"] for item in selected}
+        # Keep supported attachments, including annexes that filename heuristics may miss.
+        selected_paths = {item["path"] for item in files if item["ext"] in {".pdf", ".doc", ".docx", ".xls", ".xlsx", ".csv", ".png", ".jpg", ".jpeg", ".bmp", ".tiff"}}
         group_failed = False
         for file_info in files:
             if file_info["path"] not in selected_paths:
                 print(f"   [lọc] {file_info['name']}")
                 result["filtered_files"] += 1
+                _archive_source(file_info["path"], _sha256(file_info["path"]))
                 _remove_download_pair(file_info["path"])
                 continue
 

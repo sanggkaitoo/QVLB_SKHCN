@@ -40,6 +40,7 @@ class VerificationResult(BaseModel):
     answer: str
     confidence: str = "thap"
     claims: list[ClaimAssessment] = Field(default_factory=list)
+    answer_complete: bool = False
 
 
 class AgentResult(BaseModel):
@@ -52,3 +53,5 @@ class AgentResult(BaseModel):
     relations: list[dict[str, Any]] = Field(default_factory=list)
     latency_ms: int = 0
     error: str | None = None
+    route: str = "agent"
+    fallback_reason: str | None = None

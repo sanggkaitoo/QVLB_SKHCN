@@ -6,44 +6,47 @@ import subprocess
 import tempfile
 
 import docx
+from docx.text.paragraph import Paragraph
+from docx.table import Table
 import fitz
 import pandas as pd
 import pytesseract
-from pdf2image import convert_from_path
 from PIL import Image
 
 
 def extract_pdf(path: str):
-    text = ""
-    try:
-        with fitz.open(path) as document:
-            text = "\n".join(page.get_text("text") for page in document)
-    except Exception as exc:
-        print(f"  ! lỗi đọc PDF text {path}: {exc}")
-    text = text.strip()
-    if len(text) >= 50:
-        return text, "pdf_text"
-
-    print("  > PDF scan, chạy OCR tiếng Việt...")
-    images = []
-    try:
-        images = convert_from_path(path)
-        ocr = "\n".join(pytesseract.image_to_string(image, lang="vie") for image in images)
-        return ocr.strip(), "ocr_tesseract"
-    except Exception as exc:
-        print(f"  ! lỗi OCR PDF: {exc}")
-        return "", "ocr_failed"
-    finally:
-        for image in images:
-            image.close()
+    pages, used_ocr = [], False
+    with fitz.open(path) as document:
+        for number, page in enumerate(document, 1):
+            text = page.get_text("text", sort=True).strip()
+            # OCR only the pages that need it; never render the entire PDF in memory.
+            large_raster = any(fitz.Rect(info["bbox"]).get_area() >= page.rect.get_area() * 0.3 for info in page.get_image_info())
+            if len(text) < 50 or large_raster:
+                pixmap = page.get_pixmap(dpi=200, colorspace=fitz.csRGB, alpha=False)
+                with Image.frombytes("RGB", (pixmap.width, pixmap.height), pixmap.samples) as image:
+                    ocr = pytesseract.image_to_string(image, lang="vie", timeout=120).strip()
+                if len(ocr) > len(text):
+                    text = ocr
+                used_ocr = True
+            if text:
+                pages.append(f"[[PAGE {number}]]\n{text}")
+    return "\n\n".join(pages), "pdf_mixed_ocr" if used_ocr else "pdf_text"
 
 
 def extract_docx(path: str):
     document = docx.Document(path)
-    parts = [paragraph.text for paragraph in document.paragraphs]
-    for table in document.tables:
-        for row in table.rows:
-            parts.append("\t".join(cell.text for cell in row.cells))
+    parts = []
+    for element in document.element.body.iterchildren():
+        if element.tag.endswith("}p"):
+            parts.append(Paragraph(element, document).text)
+        elif element.tag.endswith("}tbl"):
+            table = Table(element, document)
+            rows = [" | ".join(cell.text for cell in row.cells) for row in table.rows]
+            if rows:
+                header = rows[0]
+                parts.extend(f"Bảng: {header}\nDòng: {row}" for row in rows[1:])
+                if len(rows) == 1:
+                    parts.append(header)
     return "\n".join(parts).strip(), "docx"
 
 
@@ -66,20 +69,19 @@ def extract_doc(path: str):
 
 
 def extract_excel(path: str):
-    output = ""
+    output = []
     extension = os.path.splitext(path)[1].lower()
     engine = "xlrd" if extension == ".xls" else "openpyxl"
     with pd.ExcelFile(path, engine=engine) as workbook:
         for sheet_name in workbook.sheet_names:
-            frame = pd.read_excel(workbook, sheet_name=sheet_name)
+            frame = pd.read_excel(workbook, sheet_name=sheet_name, dtype=str, keep_default_na=False)
             if frame.empty:
                 continue
-            output += (
-                f"\n--- Sheet: {sheet_name} ---\n"
-                + frame.to_csv(index=False, sep="\t")
-                + "\n"
-            )
-    return output.strip(), extension.lstrip(".")
+            columns = " | ".join(str(column) for column in frame.columns)
+            for number, row in enumerate(frame.itertuples(index=False, name=None), 2):
+                values = " | ".join(str(value) for value in row)
+                output.append(f"\nSheet: {sheet_name}; cột: {columns}\nDòng {number}: {values}\n")
+    return "".join(output).strip(), extension.lstrip(".")
 
 
 def extract_csv(path: str):

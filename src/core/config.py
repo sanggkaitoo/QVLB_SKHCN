@@ -13,7 +13,7 @@ QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
 QDRANT_PORT = int(os.getenv("QDRANT_PORT", 6333))
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION", "qlvb_docs")
-RAG_COLLECTION = os.getenv("RAG_COLLECTION", QDRANT_COLLECTION)
+RAG_COLLECTION = os.getenv("RAG_COLLECTION", "docnexus_agentic_v3")
 
 # --- Postgres ---
 PG_DSN = os.getenv(
@@ -36,10 +36,19 @@ LLM_CHEAP = os.getenv("LLM_CHEAP", "google/gemini-2.5-flash-lite")  # trích met
 LLM_MAIN  = os.getenv("LLM_MAIN",  "qwen/qwen-2.5-72b-instruct")    # trả lời search
 LLM_SMART = os.getenv("LLM_SMART", "google/gemini-2.5-pro")        # kiểm tra nội dung/pháp lý
 LLM_FALLBACK = os.getenv("LLM_FALLBACK", LLM_SMART)
+LLM_MAX_OUTPUT_TOKENS = max(256, int(os.getenv("LLM_MAX_OUTPUT_TOKENS", 4096)))
 
 # --- Chunking ---
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", 1000))
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", 200))
+CHUNK_TOKENS = max(64, int(os.getenv("CHUNK_TOKENS", 512)))
+CHUNK_OVERLAP_TOKENS = min(CHUNK_TOKENS // 4, max(0, int(os.getenv("CHUNK_OVERLAP_TOKENS", 64))))
+EMBED_BATCH_SIZE = max(1, int(os.getenv("EMBED_BATCH_SIZE", 8)))
+MODEL_CPU_THREADS = max(1, int(os.getenv("MODEL_CPU_THREADS", 4)))
+RAG_CONCURRENCY = max(1, int(os.getenv("RAG_CONCURRENCY", 2)))
+PG_POOL_SIZE = max(2, int(os.getenv("PG_POOL_SIZE", 8)))
+QDRANT_TIMEOUT_SECONDS = max(1, int(os.getenv("QDRANT_TIMEOUT_SECONDS", 10)))
+INGEST_VERSION = "agentic-v3"
 
 # --- Crawler reliability / bounded resources ---
 CRAWLER_BATCH_SIZE = max(1, int(os.getenv("CRAWLER_BATCH_SIZE", 20)))
@@ -57,9 +66,11 @@ def _env_bool(name: str, default: bool = False) -> bool:
     return os.getenv(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
 
 
-AGENTIC_RAG_ENABLED = _env_bool("AGENTIC_RAG_ENABLED", False)
+AGENTIC_RAG_ENABLED = _env_bool("AGENTIC_RAG_ENABLED", True)
+AGENT_ROUTING_MODE = os.getenv("AGENT_ROUTING_MODE", "selective").strip().lower()
+RAG_FAST_MIN_SCORE = float(os.getenv("RAG_FAST_MIN_SCORE", 0.65))
 AGENT_MAX_ATTEMPTS = max(1, min(3, int(os.getenv("AGENT_MAX_ATTEMPTS", 2))))
-AGENT_TIMEOUT_SECONDS = int(os.getenv("AGENT_TIMEOUT_SECONDS", 20))
+AGENT_TIMEOUT_SECONDS = int(os.getenv("AGENT_TIMEOUT_SECONDS", 60))
 RAG_MIN_RERANK_SCORE = float(os.getenv("RAG_MIN_RERANK_SCORE", 0.1))
 RAG_MIN_EVIDENCE = int(os.getenv("RAG_MIN_EVIDENCE", 2))
 RAG_MULTI_QUERY_COUNT = max(1, min(4, int(os.getenv("RAG_MULTI_QUERY_COUNT", 3))))

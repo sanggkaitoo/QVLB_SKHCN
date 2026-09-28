@@ -13,16 +13,14 @@ _LEGAL_WORDS = ("hiệu lực", "bãi bỏ", "thay thế", "sửa đổi", "còn
 
 def detect_intent(query: str) -> QueryIntent:
     lowered = query.lower()
-    if extract_document_refs(query):
-        if any(word in lowered for word in _LEGAL_WORDS):
-            return QueryIntent.LEGAL_STATUS
-        return QueryIntent.EXACT_LOOKUP
     if any(word in lowered for word in _AGGREGATE_WORDS):
         return QueryIntent.AGGREGATE
     if any(word in lowered for word in _COMPARE_WORDS):
         return QueryIntent.COMPARE
     if any(word in lowered for word in _LEGAL_WORDS):
         return QueryIntent.LEGAL_STATUS
+    if extract_document_refs(query):
+        return QueryIntent.EXACT_LOOKUP
     return QueryIntent.SEMANTIC_QA
 
 
@@ -47,8 +45,8 @@ def detect_filters(query: str) -> dict[str, str]:
         lowered,
     )
     if agency:
-        filters["co_quan_ban_hanh"] = agency.group(1).strip()
-    year = re.search(r"\b(20\d{2})\b", query)
+        filters["co_quan_ban_hanh"] = re.split(r"\s+(?:năm|trong|về|ban hành|ngày)\b", agency.group(1), maxsplit=1)[0].strip()
+    year = re.search(r"\b(?:trong năm|năm)\s+(20\d{2})\b", query, re.IGNORECASE)
     if year:
         filters["date_from"] = f"{year.group(1)}-01-01"
         filters["date_to"] = f"{year.group(1)}-12-31"

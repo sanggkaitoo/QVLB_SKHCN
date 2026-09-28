@@ -16,12 +16,12 @@ class SummarizeReq(BaseModel):
     text: str
 
 @router.post("/transcribe")
-async def api_transcribe_audio(file: UploadFile = File(...)):
+def api_transcribe_audio(file: UploadFile = File(...)):
     suffix = os.path.splitext(file.filename)[1] or ".mp3"
     
     # 1. Lưu file tạm xuống đĩa
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        tmp.write(await file.read())
+        tmp.write(file.file.read())
         path = tmp.name
         
     try:
@@ -50,7 +50,7 @@ async def api_transcribe_audio(file: UploadFile = File(...)):
 
 # --- LUỒNG TÓM TẮT DÙNG GEMINI PRO ---
 @router.post("/summarize")
-async def api_summarize_audio(req: SummarizeReq):
+def api_summarize_audio(req: SummarizeReq):
     sys_prompt = """Bạn là trợ lý AI cấp cao chuyên trách thẩm định và xử lý văn bản hành chính từ băng ghi âm (transcript).
 Văn bản gỡ băng gốc thường lủng củng, có độ nhiễu cao, sai chính tả do nhận diện âm thanh, từ ngữ lặp hoặc ngập ngừng.
 

@@ -20,14 +20,16 @@ def encode_image(image_path: str) -> dict:
     return {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{data}"}}
 
 @router.post("/process")
-async def process_ocr(file: UploadFile = File(...)):
+def process_ocr(file: UploadFile = File(...)):
     suffix = os.path.splitext(file.filename)[1] or ".pdf"
     
     # 1. Lưu file PDF tạm
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_pdf:
-        tmp_pdf.write(await file.read())
+        tmp_pdf.write(file.file.read())
         pdf_path = tmp_pdf.name
         
+    image_paths = []
+    tmp_img_dir = None
     try:
         # 2. Chuyển PDF thành list ảnh (DPI = 300)
         doc = fitz.open(pdf_path)
@@ -77,3 +79,5 @@ async def process_ocr(file: UploadFile = File(...)):
         for p in image_paths:
             if os.path.exists(p):
                 os.unlink(p)
+        if tmp_img_dir and os.path.isdir(tmp_img_dir):
+            os.rmdir(tmp_img_dir)

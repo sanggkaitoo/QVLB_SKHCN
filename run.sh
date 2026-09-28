@@ -60,6 +60,7 @@ wait_for_port "Qdrant" 6333
 
 echo "Dang ap dung migration..."
 "$PYTHON_BIN" scripts/apply_migrations.py
+"$PYTHON_BIN" -c 'from src.core import store; store.ensure_collection()'
 
 APP_HOST="${APP_HOST:-0.0.0.0}"
 APP_PORT="${APP_PORT:-8081}"

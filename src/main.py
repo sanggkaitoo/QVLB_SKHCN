@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from src.routers import web_routes, search, admin, check, aggregate, audio, ocr
-from src.core import store
+from src.core import store, config
 
 app = FastAPI(title="QLVB AI v3")
 app.mount("/static", StaticFiles(directory="src/static"), name="static")
@@ -30,4 +30,4 @@ async def offline_page():
     return FileResponse("src/static/pwa/offline.html", media_type="text/html")
 @app.get("/api/health")
 async def health():
-    return {"ok": True, "service": "qlvb_v3"}
+    return {"ok": True, "service": "qlvb_v3", "rag_engine": "agentic" if config.AGENTIC_RAG_ENABLED else "legacy", "routing_mode": config.AGENT_ROUTING_MODE, "collection": config.RAG_COLLECTION, "index_version": config.INGEST_VERSION}
