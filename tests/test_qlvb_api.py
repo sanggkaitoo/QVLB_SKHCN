@@ -103,50 +103,88 @@ class ClientTests(unittest.TestCase):
         self.assertTrue(qlvb_api.is_classified("Tối mật"))
 
 
+class PagedServer:
+    """Imitates QLVB: pages by page number, optionally returns one extra row per page, may cap page size."""
+
+    def __init__(self, rows, extra_row=False, cap=None):
+        self.rows, self.extra_row, self.cap, self.calls = rows, extra_row, cap, []
+
+    async def list_page(self, direction, page, length, skip, newest_first=False):
+        self.calls.append((page, length, newest_first))
+        size = min(length, self.cap or length)
+        start = (page - 1) * size
+        source = sorted(self.rows, key=lambda r: r["macongvan"], reverse=True) if newest_first else self.rows
+        return len(self.rows), source[start:start + size + (1 if self.extra_row else 0)]
+
+
+def run_sweep(server, page_size):
+    session = qlvb_api._Session()
+    session.client = server
+    upserted = []
+    with patch.object(qlvb_api, "_sweep", return_value=1), \
+         patch.object(qlvb_api, "_finish_sweep") as finish, \
+         patch.object(qlvb_api, "_mark_not_in_source") as mark, \
+         patch.object(qlvb_api, "upsert_list_rows", side_effect=lambda d, r: (upserted.extend(r) or (len(r), 0))), \
+         patch.object(config, "CRAWLER_API_DELAY_MS", 0):
+        result = asyncio.run(qlvb_api._full_sweep(session, "den", page_size=page_size))
+    return result, upserted, finish, mark
+
+
 class SweepTests(unittest.TestCase):
-    def test_sweep_adapts_to_server_page_cap_and_covers_all(self):
-        rows = [list_row(i) for i in range(25)]
-        calls = []
+    def test_extra_row_per_page_does_not_end_the_sweep_early(self):
+        rows = [list_row(i) for i in range(1000)]
+        for size in (50, 20):
+            result, upserted, finish, mark = run_sweep(PagedServer(rows, extra_row=True), size)
+            self.assertEqual(1000, len({row["macongvan"] for row in upserted}), size)
+            self.assertEqual(1000, result["seen"])
+            self.assertEqual(len(upserted), 1000)  # repeated boundary rows are not upserted twice
+            self.assertTrue(finish.call_args.kwargs["completed"])
+            mark.assert_called_once()
 
-        class FakeClient:
-            async def list_page(self, direction, page, length, skip):
-                calls.append((page, length, skip))
-                return 25, rows[skip:skip + min(length, 10)]  # server caps at 10 rows
-
-        session = qlvb_api._Session()
-        session.client = FakeClient()
-        upserted = []
-        with patch.object(qlvb_api, "_sweep", return_value=1), \
-             patch.object(qlvb_api, "_finish_sweep") as finish, \
-             patch.object(qlvb_api, "_mark_not_in_source") as mark, \
-             patch.object(qlvb_api, "upsert_list_rows", side_effect=lambda d, r: (upserted.extend(r) or (len(r), 0))), \
-             patch.object(config, "CRAWLER_API_DELAY_MS", 0):
-            result = asyncio.run(qlvb_api._full_sweep(session, "di"))
+    def test_server_page_cap_is_detected_on_first_page(self):
+        server = PagedServer([list_row(i) for i in range(25)], cap=10)
+        result, upserted, _, _ = run_sweep(server, 50)
         self.assertEqual(25, len({row["macongvan"] for row in upserted}))
-        self.assertEqual([(1, 50, 0), (2, 10, 10), (3, 10, 20)], calls)
-        self.assertTrue(result["completed"])
-        mark.assert_called_once()
-        self.assertTrue(finish.call_args.kwargs["completed"])
+        self.assertEqual([(1, 50, False), (2, 10, False), (3, 10, False)], server.calls)
 
-    def test_quick_check_skips_full_sweep_when_nothing_changed(self):
-        class FakeClient:
-            async def list_page(self, direction, page, length, skip):
-                return 2, [list_row(1), list_row(2)]
+    def test_genuine_duplicate_rows_are_counted_once(self):
+        rows = [list_row(i) for i in range(30)] + [list_row(3), list_row(7)]
+        result, _, _, _ = run_sweep(PagedServer(rows), 10)
+        self.assertEqual((32, 30), (result["total"], result["seen"]))
 
+    def test_page_size_is_bounded(self):
+        self.assertEqual(500, qlvb_api._page_size(5000))
+        self.assertEqual(10, qlvb_api._page_size(3))
+        self.assertEqual(config.CRAWLER_API_PAGE_SIZE, qlvb_api._page_size(None))
+
+    def _quick(self, server, known, previous_total):
         session = qlvb_api._Session()
-        session.client = FakeClient()
-        with patch.object(qlvb_api, "known_ids", return_value={"ID0001", "ID0002"}), \
-             patch.object(qlvb_api, "summary", return_value={"di": {"inventoried": 2}}), \
+        session.client = server
+        with patch.object(qlvb_api, "known_ids", side_effect=lambda d, ids: {i for i in ids if i in known}), \
+             patch.object(qlvb_api, "last_complete_total", return_value=previous_total), \
+             patch.object(qlvb_api, "upsert_list_rows", return_value=(0, 0)) as upsert, \
              patch.object(qlvb_api, "_sweep", return_value=1), patch.object(qlvb_api, "_finish_sweep"), \
-             patch.object(qlvb_api, "_full_sweep", new=AsyncMock()) as full:
-            result = asyncio.run(qlvb_api._quick_check(session, "di"))
-        full.assert_not_called()
-        self.assertTrue(result["quick"])
+             patch.object(qlvb_api, "_full_sweep", new=AsyncMock(return_value={"new": 0})) as full, \
+             patch.object(config, "CRAWLER_API_DELAY_MS", 0):
+            result = asyncio.run(qlvb_api._quick_check(session, "di", page_size=10))
+        return result, upsert, full
 
-        with patch.object(qlvb_api, "known_ids", return_value={"ID0001"}), \
-             patch.object(qlvb_api, "summary", return_value={"di": {"inventoried": 1}}), \
-             patch.object(qlvb_api, "_full_sweep", new=AsyncMock(return_value={"new": 1})) as full:
-            asyncio.run(qlvb_api._quick_check(session, "di"))
+    def test_quick_check_reads_newest_pages_only(self):
+        rows = [list_row(i) for i in range(100)]
+        known = {f"ID{i:04d}" for i in range(88)}          # 12 newest documents are new
+        server = PagedServer(rows)
+        result, upsert, full = self._quick(server, known, previous_total=88)
+        full.assert_not_called()
+        self.assertEqual(12, result["new"])
+        self.assertTrue(all(call[2] for call in server.calls))   # sorted newest first
+        self.assertEqual(3, len(server.calls))                    # 2 pages with new documents + 1 fully known page
+
+    def test_quick_check_falls_back_when_counts_disagree(self):
+        rows = [list_row(i) for i in range(100)]
+        known = {f"ID{i:04d}" for i in range(100)}
+        _, _, full = self._quick(PagedServer(rows), known, previous_total=97)   # something changed deeper in the list
+        full.assert_awaited_once()
+        _, _, full = self._quick(PagedServer(rows), known, previous_total=None)  # never swept fully
         full.assert_awaited_once()
 
 

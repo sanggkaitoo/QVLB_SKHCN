@@ -11,7 +11,7 @@
         <meta name="apple-mobile-web-app-title" content="DocNexus">
 
 <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<link rel="stylesheet" href="/static/css/admin.css?v=6">
+<link rel="stylesheet" href="/static/css/admin.css?v=7">
 </head>
 <body>
 <a class='skip-link' href='#main-content'>Bỏ qua điều hướng</a>
@@ -138,6 +138,9 @@
               <select class="input-field" id="apiDirection" aria-label="Phạm vi">
                 <option value="all">Đi và đến</option><option value="di">Văn bản đi</option><option value="den">Văn bản đến</option>
               </select>
+              <select class="input-field" id="apiPageSize" aria-label="Cỡ trang khi kiểm kê" title="Số văn bản mỗi lần đọc danh sách; lớn hơn thì kiểm kê nhanh hơn">
+                <option value="50">50 / trang</option><option value="100">100 / trang</option><option value="200">200 / trang</option><option value="500" selected>500 / trang</option>
+              </select>
               <button class="btn btn-primary crawl-action" type="button" onclick="apiSync('quick')" title="Chỉ đọc trang đầu và so sánh tổng số; quét lại khi có thay đổi">Kiểm tra văn bản mới</button>
               <button class="btn crawl-action" type="button" onclick="apiSync('full')">Kiểm kê đầy đủ</button>
             </div>
@@ -194,7 +197,7 @@
     </section>
   </div>
 </main>
-<script src="/static/js/admin.js?v=6" defer></script>
+<script src="/static/js/admin.js?v=8" defer></script>
         <script>
             if ("serviceWorker" in navigator) {
                 window.addEventListener("load", () => {

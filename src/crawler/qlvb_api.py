@@ -140,10 +140,13 @@ class QlvbApiClient:
             return payload.get("value") if isinstance(payload, dict) and "value" in payload else payload
         raise QlvbApiError(f"Không kết nối được API QLVB ({last_error}).")
 
-    async def list_page(self, direction: str, page: int, length: int, skip: int) -> tuple[int, list[dict]]:
+    async def list_page(self, direction: str, page: int, length: int, skip: int,
+                        newest_first: bool = False) -> tuple[int, list[dict]]:
         spec = DIRECTIONS[direction]
         params = {"page": page, "length": length, "term": "", "archiveSearch": "false", **spec.list_params,
                   "isLoading": "true", "defer": "true", "skip": skip}
+        if newest_first:
+            params.update(order_col=spec.date_field, order_type="desc")
         value = await self._get_value(spec.list_path, params) or {}
         rows = value.get("data") if isinstance(value, dict) else None
         if not isinstance(rows, list):
@@ -262,6 +265,15 @@ def _finish_sweep(sweep_id: int, **fields) -> None:
         cursor.execute(f"UPDATE crawl_sweeps SET {columns}, finished_at = now() WHERE id = %s", [*fields.values(), sweep_id])
 
 
+def last_complete_total(direction: str) -> int | None:
+    """Row total reported by QLVB in the latest complete sweep (the list may repeat a document)."""
+    with store.pg() as connection, connection.cursor() as cursor:
+        cursor.execute("SELECT source_total FROM crawl_sweeps WHERE direction = %s AND completed "
+                       "ORDER BY started_at DESC LIMIT 1", (direction,))
+        row = cursor.fetchone()
+        return int(row[0]) if row and row[0] is not None else None
+
+
 def _mark_not_in_source(direction: str, seen: set[str]) -> None:
     with store.pg() as connection, connection.cursor() as cursor:
         cursor.execute("UPDATE crawl_items SET in_source = (source_id = ANY(%s)) WHERE direction = %s",
@@ -289,6 +301,9 @@ def summary() -> dict:
                                  seen, new_items, completed, error
                           FROM crawl_sweeps WHERE finished_at IS NOT NULL ORDER BY direction, started_at DESC""")
         sweeps = {row["direction"]: row for row in cursor.fetchall()}
+        cursor.execute("""SELECT DISTINCT ON (direction) direction, source_total, seen FROM crawl_sweeps
+                          WHERE completed AND mode = 'full' ORDER BY direction, started_at DESC""")
+        full = {row["direction"]: row for row in cursor.fetchall()}
     output = {}
     for direction, spec in DIRECTIONS.items():
         by_status = counts.get(direction, {})
@@ -296,6 +311,9 @@ def summary() -> dict:
         output[direction] = {
             "label": spec.label,
             "source_total": sweep.get("source_total"),
+            # Distinct documents in the last complete full sweep (the list may repeat a document).
+            "source_documents": (full.get(direction) or {}).get("seen"),
+            "source_rows": (full.get(direction) or {}).get("source_total"),
             "inventoried": sum(by_status.values()),
             "done": by_status.get("done", 0),
             "pending": by_status.get("pending", 0) + by_status.get("processing", 0),
@@ -411,32 +429,44 @@ async def _pause() -> None:
         await asyncio.sleep(config.CRAWLER_API_DELAY_MS / 1000)
 
 
-async def _full_sweep(session: _Session, direction: str, mode: str = "full") -> dict:
+def _page_size(value: int | None) -> int:
+    return max(10, min(int(value or config.CRAWLER_API_PAGE_SIZE), config.CRAWLER_API_MAX_PAGE_SIZE))
+
+
+async def _full_sweep(session: _Session, direction: str, mode: str = "full", page_size: int | None = None) -> dict:
+    """Read the whole list in the server's default (stable) order.
+
+    The server pages by page number and may return one row more than requested (the list of văn bản
+    đến repeats the last row of each page as the first row of the next), so progress is counted in pages,
+    never in rows returned, and rows are de-duplicated by macongvan.
+    """
     spec = DIRECTIONS[direction]
     sweep_id = await asyncio.to_thread(_sweep, direction, mode)
-    length, skip, page, total = config.CRAWLER_API_PAGE_SIZE, 0, 1, None
+    length, page, total, rows_read = _page_size(page_size), 1, None, 0
     seen: set[str] = set()
     new = changed = 0
     try:
         while True:
             check_stop()
-            total, rows = await _call(session, lambda c, p=page, n=length, s=skip: c.list_page(direction, p, n, s))
+            total, rows = await _call(session, lambda c, p=page, n=length: c.list_page(direction, p, n, (p - 1) * n))
+            if page == 1 and rows and len(rows) < min(length, total):
+                length = len(rows)  # the server caps the page size; page 1 is the same with the smaller size
             if not rows:
                 break
-            if len(rows) < length and skip + len(rows) < total:
-                # The server caps the page size: continue with the size it actually returns.
-                length = len(rows)
-            added, updated = await asyncio.to_thread(upsert_list_rows, direction, rows)
+            rows_read += len(rows)
+            fresh = [row for row in rows if str(row["macongvan"]) not in seen]
+            added, updated = await asyncio.to_thread(upsert_list_rows, direction, fresh)
             new, changed = new + added, changed + updated
             seen.update(str(row["macongvan"]) for row in rows)
-            skip += len(rows)
-            page = skip // length + 1
-            crawler_state["message"] = f"Kiểm kê {spec.label}: {min(skip, total):,}/{total:,}".replace(",", ".")
-            crawler_state["progress"] = {"phase": "inventory", "direction": direction, "done": skip, "total": total}
-            if skip >= total:
+            covered = min(page * length, total)
+            crawler_state["message"] = (f"Kiểm kê {spec.label}: {covered:,}/{total:,} dòng, "
+                                        f"{len(seen):,} văn bản").replace(",", ".")
+            crawler_state["progress"] = {"phase": "inventory", "direction": direction, "done": covered, "total": total}
+            if page * length >= total:
                 break
+            page += 1
             await _pause()
-        completed = total is not None and skip >= total
+        completed = total is not None and (total == 0 or page * length >= total)
         if completed:
             await asyncio.to_thread(_mark_not_in_source, direction, seen)
         await asyncio.to_thread(_finish_sweep, sweep_id, source_total=total, seen=len(seen), new_items=new,
@@ -449,17 +479,43 @@ async def _full_sweep(session: _Session, direction: str, mode: str = "full") -> 
         raise
 
 
-async def _quick_check(session: _Session, direction: str) -> dict:
-    """1 request: compare the source total and first page with the inventory; full sweep only if different."""
-    total, rows = await _call(session, lambda c: c.list_page(direction, 1, config.CRAWLER_API_PAGE_SIZE, 0))
-    ids = [str(row["macongvan"]) for row in rows]
-    known = await asyncio.to_thread(known_ids, direction, ids)
-    inventory = (await asyncio.to_thread(summary))[direction]["inventoried"]
-    if total == inventory and len(known) == len(ids):
+async def _quick_check(session: _Session, direction: str, page_size: int | None = None) -> dict:
+    """Read the newest pages (sorted by date desc) until a page has no unknown document.
+
+    New documents are added directly. If the row total then matches the last complete sweep plus the new
+    rows, the inventory is up to date without a full sweep; otherwise fall back to a full sweep.
+    """
+    previous_total = await asyncio.to_thread(last_complete_total, direction)
+    if previous_total is None:
+        return await _full_sweep(session, direction, "full", page_size)
+    length, page, new_rows, new_ids, total = _page_size(page_size), 1, 0, set(), None
+    while page <= 20:
+        check_stop()
+        total, rows = await _call(session, lambda c, p=page, n=length: c.list_page(direction, p, n, (p - 1) * n,
+                                                                              newest_first=True))
+        ids = [str(row["macongvan"]) for row in rows]
+        known = await asyncio.to_thread(known_ids, direction, ids)
+        unknown = [row for row in rows if str(row["macongvan"]) not in known and str(row["macongvan"]) not in new_ids]
+        if unknown:
+            await asyncio.to_thread(upsert_list_rows, direction, unknown)
+            new_ids.update(str(row["macongvan"]) for row in unknown)
+            new_rows += len(unknown)
+        crawler_state["message"] = f"Kiểm tra {DIRECTIONS[direction].label}: trang {page}, {len(new_ids)} văn bản mới"
+        if not unknown or not rows or page * length >= total:
+            break
+        page += 1
+        await _pause()
+    if total == previous_total + new_rows:
         sweep_id = await asyncio.to_thread(_sweep, direction, "quick")
-        await asyncio.to_thread(_finish_sweep, sweep_id, source_total=total, seen=len(ids), completed=True)
-        return {"direction": direction, "total": total, "new": 0, "changed": 0, "completed": True, "quick": True}
-    return await _full_sweep(session, direction, "full")
+        await asyncio.to_thread(_finish_sweep, sweep_id, source_total=total, seen=len(new_ids), new_items=len(new_ids),
+                                completed=True)
+        return {"direction": direction, "total": total, "new": len(new_ids), "changed": 0, "completed": True,
+                "quick": True}
+    logger.info("Kiểm tra nhanh %s không khớp (tổng %s, trước %s, mới %s); quét toàn bộ",
+                direction, total, previous_total, new_rows)
+    result = await _full_sweep(session, direction, "full", page_size)
+    result["new"] += len(new_ids)
+    return result
 
 
 def _begin(job: str, message: str) -> None:
@@ -471,7 +527,7 @@ def _end(status: str, message: str) -> None:
     crawler_state.update({"status": status, "captcha_b64": None, "login_data": None, "message": message})
 
 
-async def run_sync(directions: list[str], mode: str = "quick") -> None:
+async def run_sync(directions: list[str], mode: str = "quick", page_size: int | None = None) -> None:
     """Kiểm kê danh sách văn bản (quick: chỉ quét lại khi có thay đổi; full: luôn quét hết)."""
     _begin("api_sync", "Chuẩn bị kiểm kê danh sách văn bản...")
     session = _Session()
@@ -479,9 +535,18 @@ async def run_sync(directions: list[str], mode: str = "quick") -> None:
     try:
         await asyncio.to_thread(recover_interrupted)
         for direction in directions:
-            results.append(await (_quick_check(session, direction) if mode == "quick" else _full_sweep(session, direction)))
-        parts = [f"{DIRECTIONS[r['direction']].label}: {r['total']:,} trên QLVB, {r['new']:,} mới".replace(",", ".")
-                 + (" (không đổi)" if r.get("quick") else "") for r in results]
+            results.append(await (_quick_check(session, direction, page_size) if mode == "quick"
+                                  else _full_sweep(session, direction, "full", page_size)))
+        parts = []
+        for r in results:
+            label = DIRECTIONS[r["direction"]].label
+            if r.get("quick"):
+                parts.append(f"{label}: {r['new']:,} văn bản mới".replace(",", "."))
+                continue
+            duplicates = (r["total"] or 0) - r["seen"]
+            parts.append((f"{label}: {r['seen']:,} văn bản trên QLVB"
+                          + (f" ({r['total']:,} dòng, {duplicates:,} dòng lặp)" if duplicates > 0 else "")
+                          + f", {r['new']:,} mới").replace(",", "."))
         _end("done", "Kiểm kê xong. " + "; ".join(parts) + ".")
     except (LoginCancelled, CrawlStopped) as exc:
         _end("cancelled", f"{exc} Phần đã kiểm kê được giữ nguyên.")

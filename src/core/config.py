@@ -100,7 +100,9 @@ QLVB_STORAGE_HOSTS = {host.strip() for host in os.getenv(
 # "CA Issuers" trong chứng chỉ máy chủ và thêm vào tệp này.
 QLVB_CA_BUNDLE = os.getenv("QLVB_CA_BUNDLE", os.path.join(os.path.dirname(__file__), "..", "..", "certs",
                                                           "qlvb-intermediates.pem"))
-CRAWLER_API_PAGE_SIZE = _env_int("CRAWLER_API_PAGE_SIZE", 50, 10, 200)
+# Cỡ trang mặc định khi kiểm kê; người dùng chọn lại trên trang admin (máy chủ QLVB cho tối đa 500).
+CRAWLER_API_PAGE_SIZE = _env_int("CRAWLER_API_PAGE_SIZE", 100, 10, 500)
+CRAWLER_API_MAX_PAGE_SIZE = 500
 CRAWLER_API_DELAY_MS = _env_int("CRAWLER_API_DELAY_MS", 300, 0)
 CRAWLER_API_TIMEOUT_SECONDS = _env_int("CRAWLER_API_TIMEOUT_SECONDS", 60, 10)
 CRAWLER_API_MAX_ATTEMPTS = _env_int("CRAWLER_API_MAX_ATTEMPTS", 5, 1)

@@ -102,6 +102,7 @@ async def api_crawl_cancel():
 class ApiSyncRequest(BaseModel):
     direction: Direction = "all"
     mode: Literal["quick", "full"] = "quick"
+    page_size: int = Field(config.CRAWLER_API_PAGE_SIZE, ge=10, le=config.CRAWLER_API_MAX_PAGE_SIZE)
 
 
 class ApiDownloadRequest(BaseModel):
@@ -117,7 +118,7 @@ async def api_qlvb_summary():
 
 @router.post("/qlvb/sync")
 async def api_qlvb_sync(req: ApiSyncRequest):
-    return await _launch(qlvb_api.run_sync(_directions(req.direction), req.mode), "crawler-api-sync")
+    return await _launch(qlvb_api.run_sync(_directions(req.direction), req.mode, req.page_size), "crawler-api-sync")
 
 
 @router.post("/qlvb/download")

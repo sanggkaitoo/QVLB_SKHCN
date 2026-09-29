@@ -300,7 +300,7 @@ async function loadInventory() {
     const data = await res.json();
     const rows = ['di', 'den'].map(key => {
       const d = data[key] || {};
-      const src = d.source_total == null ? '—' : fmt(d.source_total);
+      const src = d.source_documents == null ? '—' : fmt(d.source_documents);
       return `<tr><th>${esc(d.label || key)}</th><td>${src}</td><td>${fmt(d.inventoried)}</td><td class="ok">${fmt(d.done)}</td><td>${fmt(d.pending)}</td><td class="${d.failed ? 'bad' : ''}">${fmt(d.failed)}</td><td>${fmt(d.skipped)}</td></tr>`;
     });
     $('#invBody').innerHTML = rows.join('');
@@ -308,7 +308,8 @@ async function loadInventory() {
       const d = data[key] || {};
       if (!d.last_sweep_at) return `${esc(d.label || key)}: chưa kiểm kê`;
       const when = new Date(d.last_sweep_at).toLocaleString('vi-VN');
-      return `${esc(d.label || key)}: kiểm kê ${d.last_sweep_mode === 'quick' ? 'nhanh' : 'đầy đủ'} lúc ${esc(when)}${d.last_sweep_completed === false ? ' (chưa trọn vẹn)' : ''}`;
+      const dup = (d.source_rows || 0) - (d.source_documents || 0);
+      return `${esc(d.label || key)}: kiểm kê ${d.last_sweep_mode === 'quick' ? 'nhanh' : 'đầy đủ'} lúc ${esc(when)}${d.last_sweep_completed === false ? ' (chưa trọn vẹn)' : ''}${dup > 0 ? ` — danh sách QLVB có ${fmt(dup)} dòng lặp` : ''}`;
     });
     $('#invNote').innerHTML = notes.join(' · ');
   } catch (err) {
@@ -353,7 +354,9 @@ async function launchJob(url, payload, message) {
   }
 }
 function apiSync(mode) {
-  launchJob('/api/admin/qlvb/sync', { direction: $('#apiDirection').value, mode },
+  const pageSize = parseInt($('#apiPageSize').value, 10) || 100;
+  try { localStorage.setItem('qlvb-page-size', String(pageSize)); } catch (err) { /* không bắt buộc */ }
+  launchJob('/api/admin/qlvb/sync', { direction: $('#apiDirection').value, mode, page_size: pageSize },
             mode === 'quick' ? 'Đang kiểm tra văn bản mới...' : 'Đang kiểm kê đầy đủ...');
 }
 async function apiDownload() {
@@ -408,4 +411,8 @@ window.addEventListener('DOMContentLoaded', () => {
   checkCrawlerStatus();
   loadInventory();
   loadItems();
+  try {
+    const saved = localStorage.getItem('qlvb-page-size');
+    if (saved && $(`#apiPageSize option[value="${saved}"]`)) $('#apiPageSize').value = saved;
+  } catch (err) { /* không bắt buộc */ }
 });
