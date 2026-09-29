@@ -24,6 +24,8 @@ ENV/
 .env.*
 !.env.example
 *.pem
+# Chứng chỉ trung gian công khai GlobalSign (không phải khoá bí mật), cần để kết nối API QLVB.
+!certs/qlvb-intermediates.pem
 *.key
 *.crt
 secrets.*

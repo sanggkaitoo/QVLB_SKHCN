@@ -85,6 +85,28 @@ CRAWLER_DOWNLOAD_TIMEOUT_SECONDS = max(10, int(os.getenv("CRAWLER_DOWNLOAD_TIMEO
 CRAWLER_MAX_PAGES = max(0, int(os.getenv("CRAWLER_MAX_PAGES", 0)))
 # Hệ thống QLVB nội bộ có thể dùng chứng chỉ tự ký; đặt false khi chứng chỉ hợp lệ.
 CRAWLER_IGNORE_HTTPS_ERRORS = _env_bool("CRAWLER_IGNORE_HTTPS_ERRORS", True)
+QLVB_URL = os.getenv("QLVB_URL", "https://egov1.laocai.gov.vn").rstrip("/")
+# SSO không công bố thời hạn captcha: tự đổi mã sau khoảng này; trang đăng nhập (phiên SSO) được mở lại
+# sau CRAWLER_LOGIN_PAGE_MAX_AGE_SECONDS.
+CRAWLER_CAPTCHA_TTL_SECONDS = _env_int("CRAWLER_CAPTCHA_TTL_SECONDS", 180, 30)
+CRAWLER_LOGIN_PAGE_MAX_AGE_SECONDS = _env_int("CRAWLER_LOGIN_PAGE_MAX_AGE_SECONDS", 900, 120)
+
+# --- Crawler qua API QLVB (khuyến nghị) ---
+QLVB_API_BASE_URL = os.getenv("QLVB_API_BASE_URL", "https://egov-gateway.laocai.gov.vn").rstrip("/")
+QLVB_STORAGE_HOSTS = {host.strip() for host in os.getenv(
+    "QLVB_STORAGE_HOSTS", "egov-storage1.laocai.gov.vn,egov-storage.laocai.gov.vn").split(",") if host.strip()}
+# Chứng chỉ trung gian GlobalSign mà máy chủ QLVB không gửi kèm (gateway: GCC R46 OV TLS CA 2025,
+# máy lưu tệp: RSA OV SSL CA 2018). Khi QLVB đổi chứng chỉ, tải CA trung gian mới theo địa chỉ
+# "CA Issuers" trong chứng chỉ máy chủ và thêm vào tệp này.
+QLVB_CA_BUNDLE = os.getenv("QLVB_CA_BUNDLE", os.path.join(os.path.dirname(__file__), "..", "..", "certs",
+                                                          "qlvb-intermediates.pem"))
+CRAWLER_API_PAGE_SIZE = _env_int("CRAWLER_API_PAGE_SIZE", 50, 10, 200)
+CRAWLER_API_DELAY_MS = _env_int("CRAWLER_API_DELAY_MS", 300, 0)
+CRAWLER_API_TIMEOUT_SECONDS = _env_int("CRAWLER_API_TIMEOUT_SECONDS", 60, 10)
+CRAWLER_API_MAX_ATTEMPTS = _env_int("CRAWLER_API_MAX_ATTEMPTS", 5, 1)
+CRAWLER_MAX_FILE_MB = _env_int("CRAWLER_MAX_FILE_MB", 100, 1)
+# Văn bản có độ mật khác "Thường" không được tải/gửi sang AI.
+CRAWLER_SKIP_CLASSIFIED = _env_bool("CRAWLER_SKIP_CLASSIFIED", True)
 
 # --- Agentic RAG ---
 AGENT_ROUTING_MODE = os.getenv("AGENT_ROUTING_MODE", "selective").strip().lower()

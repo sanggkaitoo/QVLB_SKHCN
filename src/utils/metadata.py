@@ -74,6 +74,15 @@ QUY TẮC BẮT BUỘC CHO TRƯỜNG 'vai_tro_van_ban' (Từ góc nhìn của S�
 3. "khac": Giấy mời, thông báo chung, giấy ủy quyền không chứa nhiệm vụ."""
 
 
+def loai_from_label(label: str | None) -> str | None:
+    """'Công văn' / 'Tờ trình ' (tên loại trên QLVB) -> mã nội bộ, None nếu không thuộc danh mục."""
+    import unicodedata
+    text = str(label or "").strip().lower().replace("đ", "d")
+    text = "".join(c for c in unicodedata.normalize("NFD", text) if unicodedata.category(c) != "Mn")
+    code = re.sub(r"[^a-z0-9]+", "_", text).strip("_")
+    return code if code in _VALID_LOAI and code != "khac" else None
+
+
 def guess_loai_from_soky(so_ky_hieu: str | None) -> str | None:
     """Đoán loại VB từ phần viết tắt trong số ký hiệu: '215/KH-UBND' -> 'ke_hoach'."""
     if not so_ky_hieu:

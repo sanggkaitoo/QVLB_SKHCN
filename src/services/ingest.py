@@ -195,6 +195,12 @@ def _document_metadata(main_text: str, raw_meta: dict, reuse_metadata: dict | No
             meta[key] = value
     meta["so_ky_hieu"] = reconcile_reference(raw_meta.get("so_ky_hieu") or meta.get("so_ky_hieu"),
                                              meta.get("so_ky_hieu"), main_text)
+    # Crawler API cung cấp loại văn bản và người ký chính thức từ QLVB.
+    official_type = metadata.loai_from_label(raw_meta.get("loai_van_ban"))
+    if official_type:
+        meta["loai_vb"], meta["viet_tat_loai"] = official_type, metadata.LOAI_VB.get(official_type, "")
+    if clean_placeholder(raw_meta.get("nguoi_ky")):
+        meta["nguoi_ky"] = clean_placeholder(raw_meta.get("nguoi_ky"))
     if raw_meta.get("ngay_ban_hanh"):
         meta["ngay_ban_hanh"] = metadata.normalize_date(raw_meta["ngay_ban_hanh"]) or meta.get("ngay_ban_hanh")
     meta["normalized_so_ky_hieu"] = normalize_document_ref(meta.get("so_ky_hieu")) or None

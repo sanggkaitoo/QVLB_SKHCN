@@ -36,7 +36,7 @@ def main():
             cursor.execute("SELECT current_database()")
             assert cursor.fetchone()[0] == "qlvb"
             cursor.execute("SET LOCAL lock_timeout = '5s'")
-            cursor.execute("TRUNCATE documents, document_files, can_cu, document_relations, rag_query_logs RESTART IDENTITY CASCADE")
+            cursor.execute("TRUNCATE documents, document_files, can_cu, document_relations, rag_query_logs, crawl_items, crawl_sweeps RESTART IDENTITY CASCADE")
         print("PostgreSQL qlvb: cleared document data and query logs; schema retained")
     finally:
         connection.close()

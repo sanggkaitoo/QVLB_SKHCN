@@ -11,7 +11,7 @@
         <meta name="apple-mobile-web-app-title" content="DocNexus">
 
 <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<link rel="stylesheet" href="/static/css/admin.css?v=4">
+<link rel="stylesheet" href="/static/css/admin.css?v=6">
 </head>
 <body>
 <a class='skip-link' href='#main-content'>Bỏ qua điều hướng</a>
@@ -123,33 +123,70 @@
         <div class="control-stack">
           <article class="control-card">
             <div class="control-head">
-              <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v4"/><rect x="4" y="7" width="16" height="11" rx="2"/><path d="M8 12h.01M16 12h.01"/></svg></div>
-              <div class="control-info"><h3>Crawl toàn bộ hệ thống</h3><p>Chạy luồng tải mới cho văn bản đi, văn bản đến hoặc cả hai. Khi hệ thống yêu cầu SSO, bảng nhập captcha sẽ tự mở.</p></div>
+              <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
+              <div class="control-info"><h3>Đồng bộ qua API QLVB <span class="tag-rec">Khuyến nghị</span></h3>
+                <p>Kiểm kê toàn bộ văn bản đi và đến trên QLVB, theo dõi văn bản nào đã nạp, còn thiếu hoặc lỗi. Tiến độ được lưu sau từng văn bản; dừng giữa chừng hay mất mạng đều chạy tiếp được. Không đánh dấu văn bản là đã xem.</p></div>
+            </div>
+            <div class="inv-wrap">
+              <table class="inv">
+                <thead><tr><th></th><th>Trên QLVB</th><th>Đã kiểm kê</th><th>Đã nạp</th><th>Chờ tải</th><th>Lỗi</th><th>Bỏ qua</th></tr></thead>
+                <tbody id="invBody"><tr><td colspan="7" class="empty">Đang tải...</td></tr></tbody>
+              </table>
+              <div class="inv-note" id="invNote"></div>
             </div>
             <div class="control-actions">
-              <button class="btn btn-primary crawl-action" type="button" onclick="runFullCrawl('all')">Đi và đến</button>
-              <button class="btn crawl-action" type="button" onclick="runFullCrawl('di')">Văn bản đi</button>
-              <button class="btn crawl-action" type="button" onclick="runFullCrawl('den')">Văn bản đến</button>
+              <select class="input-field" id="apiDirection" aria-label="Phạm vi">
+                <option value="all">Đi và đến</option><option value="di">Văn bản đi</option><option value="den">Văn bản đến</option>
+              </select>
+              <button class="btn btn-primary crawl-action" type="button" onclick="apiSync('quick')" title="Chỉ đọc trang đầu và so sánh tổng số; quét lại khi có thay đổi">Kiểm tra văn bản mới</button>
+              <button class="btn crawl-action" type="button" onclick="apiSync('full')">Kiểm kê đầy đủ</button>
+            </div>
+            <div class="control-actions">
+              <input class="input-field" type="number" id="apiLimit" value="20" min="0" max="100000" aria-label="Số văn bản cần tải (0 = tất cả)" title="0 = tải tất cả văn bản còn thiếu">
+              <label class="check"><input type="checkbox" id="apiRetry"> Thử lại văn bản lỗi</label>
+              <button class="btn btn-primary crawl-action" type="button" onclick="apiDownload()">Tải phần còn thiếu</button>
+              <button class="btn btn-danger" type="button" id="b-stop" onclick="stopCrawl()" disabled>Dừng</button>
             </div>
           </article>
           <article class="control-card">
             <div class="control-head">
-              <div class="icon-box warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg></div>
-              <div class="control-info"><h3>Crawl kiểm thử</h3><p>Giới hạn số văn bản để kiểm tra luồng tải, ingest và ghi dữ liệu trước khi chạy toàn bộ.</p></div>
+              <div class="icon-box warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+              <div class="control-info"><h3>Danh sách theo dõi</h3><p>Xem văn bản theo trạng thái, tải lại từng văn bản hoặc xuất CSV danh sách còn thiếu.</p></div>
+            </div>
+            <div class="control-actions">
+              <select class="input-field" id="itemStatus" onchange="loadItems()" aria-label="Trạng thái">
+                <option value="failed">Lỗi</option><option value="pending">Chờ tải</option><option value="skipped">Bỏ qua</option><option value="done">Đã nạp</option><option value="">Tất cả</option>
+              </select>
+              <input class="input-field" type="text" id="itemQuery" placeholder="Số ký hiệu hoặc trích yếu" onkeydown="if(event.key==='Enter') loadItems()">
+              <button class="btn" type="button" onclick="loadItems()">Lọc</button>
+              <a class="btn" id="csvLink" href="/api/admin/qlvb/items.csv?status=pending" download>Xuất CSV</a>
+            </div>
+            <div class="evid-wrap items-wrap">
+              <table class="evid"><thead><tr><th>Số ký hiệu</th><th>Ngày</th><th>Trích yếu</th><th>Trạng thái</th><th></th></tr></thead>
+                <tbody id="itemsBody"><tr><td colspan="5" class="empty">Chưa có dữ liệu kiểm kê.</td></tr></tbody></table>
+            </div>
+          </article>
+          <details class="control-card legacy">
+            <summary><b>Crawler giao diện (dự phòng)</b> — thao tác trên trang web QLVB bằng trình duyệt tự động; chỉ dùng khi API không hoạt động.</summary>
+            <div class="control-actions">
+              <button class="btn crawl-action" type="button" onclick="runFullCrawl('all')">Đi và đến</button>
+              <button class="btn crawl-action" type="button" onclick="runFullCrawl('di')">Văn bản đi</button>
+              <button class="btn crawl-action" type="button" onclick="runFullCrawl('den')">Văn bản đến</button>
             </div>
             <div class="control-actions">
               <input class="input-field" type="number" id="demoLimit" value="5" min="1" max="1000" aria-label="Số lượng văn bản kiểm thử">
               <button class="btn btn-warning crawl-action" type="button" onclick="runDemoCrawl('di')">Demo VB đi</button>
               <button class="btn btn-warning crawl-action" type="button" onclick="runDemoCrawl('den')">Demo VB đến</button>
             </div>
-          </article>
+          </details>
         </div>
         <aside class="status-panel" aria-live="polite">
           <h3>Tiến trình crawler</h3>
+          <div class="progress" id="progressBox" hidden><div class="progress-bar"><i id="progressBar"></i></div><div class="progress-text" id="progressText"></div></div>
           <div class="timeline" id="timeline">
-            <div class="step" data-step="starting"><span class="step-dot"></span><div><b>Khởi động</b><br><span>Chuẩn bị trình duyệt và phiên làm việc.</span></div></div>
-            <div class="step" data-step="waiting_login"><span class="step-dot"></span><div><b>Xác thực SSO</b><br><span>Nhập tài khoản, mật khẩu và captcha khi được yêu cầu.</span></div></div>
-            <div class="step" data-step="crawling"><span class="step-dot"></span><div><b>Tải và ingest</b><br><span>Thu thập PDF mới và đưa vào kho dữ liệu.</span></div></div>
+            <div class="step" data-step="starting"><span class="step-dot"></span><div><b>Khởi động</b><br><span>Chuẩn bị phiên làm việc.</span></div></div>
+            <div class="step" data-step="waiting_login"><span class="step-dot"></span><div><b>Xác thực SSO</b><br><span>Nhập tài khoản, mật khẩu và captcha khi được yêu cầu (chỉ khi chưa có phiên).</span></div></div>
+            <div class="step" data-step="crawling"><span class="step-dot"></span><div><b>Kiểm kê / tải và nạp</b><br><span>Đọc danh sách, tải tệp, đưa vào kho dữ liệu.</span></div></div>
             <div class="step" data-step="done"><span class="step-dot"></span><div><b>Hoàn tất</b><br><span>Làm mới thống kê sau khi chạy xong.</span></div></div>
           </div>
         </aside>
@@ -157,7 +194,7 @@
     </section>
   </div>
 </main>
-<script src="/static/js/admin.js?v=4" defer></script>
+<script src="/static/js/admin.js?v=6" defer></script>
         <script>
             if ("serviceWorker" in navigator) {
                 window.addEventListener("load", () => {

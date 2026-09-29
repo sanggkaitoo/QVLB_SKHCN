@@ -168,24 +168,28 @@ PostgreSQL và Qdrant được bind mount tại data/postgres và data/qdrant. B
 
 ## Crawler
 
-Mở /admin, đăng nhập bằng ADMIN_USER và ADMIN_PASS, chọn phạm vi Đi/Đến/toàn bộ rồi bắt đầu crawl. Khi giao diện hiển thị captcha SSO, nhập tài khoản QLVB và captcha hiện tại.
+Mở /admin, tab Crawler. Có hai cách thu thập:
 
-Các cấu hình quan trọng:
+### Đồng bộ qua API QLVB (khuyến nghị)
 
-~~~env
-CRAWLER_BATCH_SIZE=20
-CRAWLER_NAVIGATION_RETRIES=3
-CRAWLER_LOGIN_RETRIES=5
-CRAWLER_PAGE_TIMEOUT_SECONDS=90
-CRAWLER_LOGIN_INPUT_TIMEOUT_SECONDS=600
-CRAWLER_MAX_PAGES=0
-~~~
+Dùng chính API mà giao diện QLVB gọi (danh sách Văn bản đi, danh sách văn thư Văn bản đến đã xử lý, chi tiết văn bản, tải tệp). Trình duyệt tự động chỉ dùng cho bước đăng nhập SSO. Crawler **không** gọi các API đánh dấu "đã xem", nên không làm thay đổi trạng thái đọc văn bản của người dùng.
 
-CRAWLER_MAX_PAGES=0 nghĩa là không giới hạn số trang. Checkpoint nằm tại CRAWLER_STATE_DB. Lịch sử JSON cũ được nhập tự động; do lịch sử cũ không có ngày ban hành, một số văn bản có thể được kiểm tra lại một lần để tránh bỏ sót văn bản trùng số ở năm khác.
+Hai pha, tiến độ lưu trong PostgreSQL (bảng `crawl_items`, khoá là mã văn bản nội bộ của QLVB theo hướng):
 
-Nếu một tệp không thể trích xuất hoặc ingest, crawler ghi lỗi, chuyển tệp cùng metadata vào STORE_DIR/failed_ingest và tiếp tục tệp kế tiếp. Văn bản lỗi không được checkpoint là thành công, nên có thể được tải và thử lại trong lần crawl sau.
+1. **Kiểm kê**: đọc danh sách, biết tổng số trên QLVB, đã nạp, chờ tải, lỗi, bỏ qua.
+   - *Kiểm tra văn bản mới*: chỉ đọc trang đầu và so sánh tổng số; khi có thay đổi mới quét lại hướng đó.
+   - *Kiểm kê đầy đủ*: lật hết danh sách (chỉ JSON, vài phút cho khoảng 17.000 văn bản).
+2. **Tải phần còn thiếu**: đọc chi tiết, tải tệp, nạp vào kho; văn bản mới nhất trước. Nhập số lượng hoặc 0 để tải tất cả.
 
-Docker đặt nofile của PostgreSQL và Qdrant ở 262144. Crawler xử lý theo lô và đóng tài nguyên sau từng tệp, nên số file mở được giữ ổn định thay vì tăng theo số lượng tài liệu. Với kho rất lớn, giới hạn thực tế còn phụ thuộc dung lượng đĩa, tốc độ QLVB, OCR, embedding và hạn mức LLM.
+Mỗi văn bản được ghi trạng thái ngay sau khi xử lý. Mất mạng, tắt máy hoặc bấm **Dừng** chỉ ảnh hưởng văn bản đang dở; lần chạy sau tự tiếp tục. Phiên QLVB hết hạn thì hộp đăng nhập hiện lại và tác vụ chạy tiếp sau khi nhập captcha. Văn bản lỗi được thử lại tối đa `CRAWLER_API_MAX_ATTEMPTS` lần; bảng "Danh sách theo dõi" cho phép lọc theo trạng thái, tải lại từng văn bản và xuất CSV. Văn bản mật và tệp không hỗ trợ (.rar, .zip) được ghi nhận là bỏ qua kèm lý do. Nếu danh sách của một văn bản thay đổi (thêm tệp), văn bản được đưa lại hàng chờ.
+
+Hộp đăng nhập có nút **Đổi mã** và **Huỷ đăng nhập**. SSO không công bố thời hạn captcha, nên mã tự đổi sau `CRAWLER_CAPTCHA_TTL_SECONDS` (mặc định 180 giây, có đồng hồ đếm ngược); trang đăng nhập được mở lại sau `CRAWLER_LOGIN_PAGE_MAX_AGE_SECONDS`.
+
+### Crawler giao diện (dự phòng)
+
+Thao tác trên trang QLVB bằng Playwright như trước; chỉ dùng khi API không hoạt động. Cấu hình `CRAWLER_*` và checkpoint SQLite `CRAWLER_STATE_DB` vẫn giữ nguyên. Tệp lỗi được chuyển vào `STORE_DIR/failed_ingest`.
+
+Khảo sát API được ghi bằng `scripts/record_qlvb_network.py` (mở trình duyệt để người dùng thao tác; token, cookie, mật khẩu được che trước khi lưu vào `data/captures/`).
 
 ## Agentic RAG
 

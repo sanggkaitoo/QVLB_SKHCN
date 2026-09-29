@@ -1,62 +1,24 @@
 from __future__ import annotations
 
 import asyncio
-import base64
 import json
 import os
 import re
 import unicodedata
-from pathlib import Path
-from typing import Any
-from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 from playwright.async_api import async_playwright
 
 from src.core import config
 from src.crawler.history import CrawlHistory, source_key
+from src.crawler.sso import (  # noqa: F401  (crawler_state re-exported for older imports)
+    CrawlStopped, LoginCancelled, check_stop, crawler_state, find_login_form as _find_login_form,
+    goto_with_retry as _goto_with_retry, login,
+)
 from src.services.document_fields import clean_placeholder
 from src.services.ingest import ingest_download_dir
 
 load_dotenv()
-
-crawler_state = {
-    "status": "idle",
-    "captcha_b64": None,
-    "login_data": None,
-    "message": "",
-}
-
-USERNAME_SELECTORS = (
-    "input#usernameUserInput",
-    "input[name='usernameUserInput']",
-    "input[autocomplete='username']",
-    "input[name='username']:not([type='hidden'])",
-    "input[type='email']",
-)
-PASSWORD_SELECTORS = (
-    "input#password",
-    "input[name='password']",
-    "input[type='password']",
-)
-CAPTCHA_INPUT_SELECTORS = (
-    "input#captcha",
-    "input[name='captcha']",
-    "input[placeholder*='xác thực' i]",
-    "input[placeholder*='captcha' i]",
-)
-CAPTCHA_IMAGE_SELECTORS = (
-    "img#captchaImage",
-    "img[id*='captcha' i]",
-    "img[src*='captcha' i]",
-)
-SUBMIT_SELECTORS = (
-    "button[type='submit']",
-    "input[type='submit']",
-    "button:has-text('Đăng nhập')",
-    "button:has-text('Login')",
-)
-
 
 def get_history_file(direction: str) -> str:
     filename = "downloaded_records_di.json" if direction == "di" else "downloaded_records_den.json"
@@ -68,181 +30,10 @@ def sanitize_filename(name: str) -> str:
     return cleaned[:180] or "khong_ten"
 
 
-def _safe_url(url: str) -> str:
-    parsed = urlparse(url)
-    return f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
-
-
 def _normalize_label(value: str) -> str:
     value = unicodedata.normalize("NFD", value or "")
     value = "".join(char for char in value if unicodedata.category(char) != "Mn")
     return re.sub(r"\s+", " ", value.lower()).strip()
-
-
-async def _first_visible(frame, selectors: tuple[str, ...]):
-    for selector in selectors:
-        locator = frame.locator(selector).first
-        try:
-            if await locator.count() and await locator.is_visible():
-                return locator
-        except Exception:
-            continue
-    return None
-
-
-async def _find_login_form(page) -> dict[str, Any] | None:
-    for frame in page.frames:
-        username = await _first_visible(frame, USERNAME_SELECTORS)
-        password = await _first_visible(frame, PASSWORD_SELECTORS)
-        captcha_input = await _first_visible(frame, CAPTCHA_INPUT_SELECTORS)
-        captcha_image = await _first_visible(frame, CAPTCHA_IMAGE_SELECTORS)
-        submit = await _first_visible(frame, SUBMIT_SELECTORS)
-        if username and password and captcha_input and captcha_image and submit:
-            return {
-                "frame": frame,
-                "username": username,
-                "password": password,
-                "captcha_input": captcha_input,
-                "captcha_image": captcha_image,
-                "submit": submit,
-            }
-    return None
-
-
-async def _wait_for_login_form(page, timeout_ms: int) -> dict[str, Any] | None:
-    deadline = asyncio.get_running_loop().time() + timeout_ms / 1000
-    while asyncio.get_running_loop().time() < deadline:
-        form = await _find_login_form(page)
-        if form:
-            return form
-        await asyncio.sleep(0.5)
-    return None
-
-
-async def _goto_with_retry(page, url: str, label: str) -> None:
-    last_error: Exception | None = None
-    for attempt in range(1, config.CRAWLER_NAVIGATION_RETRIES + 1):
-        crawler_state["message"] = f"Đang mở {label} (lần {attempt}/{config.CRAWLER_NAVIGATION_RETRIES})..."
-        try:
-            response = await page.goto(
-                url,
-                wait_until="domcontentloaded",
-                timeout=config.CRAWLER_PAGE_TIMEOUT_SECONDS * 1000,
-            )
-            if response and response.status >= 500:
-                raise RuntimeError(f"HTTP {response.status}")
-            return
-        except Exception as exc:
-            last_error = exc
-            if attempt < config.CRAWLER_NAVIGATION_RETRIES:
-                await asyncio.sleep(min(2 ** attempt, 10))
-    raise RuntimeError(f"Không mở được {label}: {last_error}")
-
-
-async def _capture_login_diagnostic(page) -> None:
-    try:
-        directory = Path(config.STORE_DIR) / "crawler_diagnostics"
-        directory.mkdir(parents=True, exist_ok=True)
-        await page.screenshot(path=str(directory / "login-page.png"), full_page=True)
-    except Exception:
-        pass
-
-
-async def _open_login_form(page, qlvb_url: str) -> dict[str, Any]:
-    last_location = qlvb_url
-    for attempt in range(1, config.CRAWLER_LOGIN_RETRIES + 1):
-        try:
-            await _goto_with_retry(page, qlvb_url, "cổng QLVB/SSO")
-            last_location = page.url
-            form = await _wait_for_login_form(
-                page,
-                config.CRAWLER_LOGIN_FORM_TIMEOUT_SECONDS * 1000,
-            )
-            if form:
-                return form
-        except Exception:
-            last_location = page.url
-        await _capture_login_diagnostic(page)
-        crawler_state["message"] = (
-            f"Chưa nhận được form SSO, đang thử lại ({attempt}/{config.CRAWLER_LOGIN_RETRIES})..."
-        )
-        await asyncio.sleep(min(2 ** attempt, 10))
-    raise RuntimeError(
-        "Không tìm thấy form đăng nhập SSO sau nhiều lần điều hướng. "
-        f"Trang cuối: {_safe_url(last_location)}. Ảnh chẩn đoán đã được lưu."
-    )
-
-
-async def _wait_for_login_data() -> dict[str, str]:
-    deadline = asyncio.get_running_loop().time() + config.CRAWLER_LOGIN_INPUT_TIMEOUT_SECONDS
-    while asyncio.get_running_loop().time() < deadline:
-        data = crawler_state.get("login_data")
-        if data:
-            crawler_state["login_data"] = None
-            return data
-        await asyncio.sleep(0.5)
-    raise TimeoutError("Hết thời gian chờ nhập tài khoản và captcha.")
-
-
-async def _wait_for_application(page, qlvb_url: str) -> bool:
-    target_host = urlparse(qlvb_url).hostname
-    deadline = asyncio.get_running_loop().time() + config.CRAWLER_LOGIN_RESULT_TIMEOUT_SECONDS
-    while asyncio.get_running_loop().time() < deadline:
-        parsed = urlparse(page.url)
-        path = parsed.path.lower()
-        if parsed.hostname == target_host and (
-            path.startswith("/home/") or path.startswith("/document/")
-        ):
-            return True
-        await asyncio.sleep(0.5)
-    return False
-
-
-async def login(page, qlvb_url: str) -> None:
-    form = await _find_login_form(page) or await _open_login_form(page, qlvb_url)
-    for attempt in range(1, config.CRAWLER_LOGIN_RETRIES + 1):
-        if not form:
-            form = await _open_login_form(page, qlvb_url)
-
-        captcha_bytes = await form["captcha_image"].screenshot()
-        crawler_state.update(
-            {
-                "captcha_b64": base64.b64encode(captcha_bytes).decode("utf-8"),
-                "login_data": None,
-                "status": "waiting_login",
-                "message": f"Nhập tài khoản và captcha SSO (lần {attempt}/{config.CRAWLER_LOGIN_RETRIES}).",
-            }
-        )
-        data = await _wait_for_login_data()
-        crawler_state.update(
-            {
-                "status": "logging_in",
-                "message": "Đang xác thực với cổng SSO...",
-                "captcha_b64": None,
-            }
-        )
-
-        await form["username"].fill(data.get("username", ""))
-        await form["password"].fill(data.get("password", ""))
-        await form["captcha_input"].fill(data.get("captcha", ""))
-        data.clear()
-        await form["submit"].click(timeout=15_000)
-
-        if await _wait_for_application(page, qlvb_url):
-            crawler_state["login_data"] = None
-            crawler_state["captcha_b64"] = None
-            return
-
-        crawler_state["message"] = "Đăng nhập chưa thành công; đang làm mới captcha..."
-        form = await _find_login_form(page)
-        if form:
-            try:
-                await form["captcha_image"].click(timeout=5_000)
-                await page.wait_for_timeout(1_500)
-            except Exception:
-                form = None
-
-    raise RuntimeError("Đăng nhập SSO thất bại sau số lần thử cho phép.")
 
 
 async def _close_modal(page, modal) -> None:
@@ -516,6 +307,7 @@ async def crawl_table(
         page_had_unseen = False
 
         for row in rows:
+            check_stop()
             if limit > 0 and total_downloaded >= limit:
                 break
             cells = row.locator("td")
@@ -617,15 +409,19 @@ async def run_spider(limit: int, mode: str = "all"):
     crawler_state.update(
         {
             "status": "starting",
+            "job": "spider",
             "login_data": None,
+            "login_action": None,
+            "stop_requested": False,
             "captcha_b64": None,
+            "progress": {},
             "message": "Đang khởi động Playwright...",
         }
     )
     os.makedirs(config.DOWNLOAD_DIR, exist_ok=True)
     os.makedirs(config.STORE_DIR, exist_ok=True)
 
-    qlvb_url = os.getenv("QLVB_URL", "https://egov1.laocai.gov.vn").rstrip("/")
+    qlvb_url = config.QLVB_URL.rstrip("/")
     url_di = f"{qlvb_url}/document/xem-di-index?statustype=published&type=vanbandi"
     url_den = f"{qlvb_url}/document/xem-den-index?type=all"
 
@@ -676,6 +472,9 @@ async def run_spider(limit: int, mode: str = "all"):
                 finally:
                     await context.close()
                     await browser.close()
+    except (LoginCancelled, CrawlStopped) as exc:
+        crawler_state.update({"status": "cancelled", "captcha_b64": None, "login_data": None,
+                              "message": f"{exc} Tiến độ đã tải được giữ nguyên trong checkpoint."})
     except Exception as exc:
         crawler_state.update(
             {
