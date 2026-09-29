@@ -1,5 +1,7 @@
 -- =====================================================================
---  QLVB v2 - System of record (Postgres)
+--  QLVB - System of record (Postgres), schema khởi tạo.
+--  Các thay đổi sau đó nằm trong db/migrations (run.sh tự áp dụng), ví dụ
+--  004_document_files.sql tách văn bản và tệp đính kèm.
 --  Giữ bản gốc + metadata có cấu trúc để LỌC và TỔNG HỢP.
 --  (Vector/chunk nằm ở Qdrant; Postgres giữ doc-level.)
 -- =====================================================================

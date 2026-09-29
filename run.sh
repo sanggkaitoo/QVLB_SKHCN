@@ -51,6 +51,16 @@ wait_for_port() {
   return 1
 }
 
+# Canh bao mat khau mac dinh (docker-compose dung gia tri nay neu .env khong dat).
+if [[ -f .env ]]; then
+  if grep -Eq '^(QDRANT_API_KEY=changeme_qdrant_key|PG_DSN=.*password=changeme_pg)' .env; then
+    echo "CANH BAO: QDRANT_API_KEY hoac mat khau PostgreSQL dang la gia tri mac dinh. Hay doi truoc khi mo dich vu ra Internet." >&2
+  fi
+  if ! grep -Eq '^ADMIN_PASS=.{10,}' .env || grep -Eq '^ADMIN_PASS=(matkhau123|admin|password|changeme)$' .env; then
+    echo "CANH BAO: ADMIN_PASS chua dat hoac qua yeu; trang /admin se bi khoa cho den khi doi mat khau (toi thieu 10 ky tu)." >&2
+  fi
+fi
+
 echo "Dang khoi dong PostgreSQL va Qdrant..."
 # Bind mounts in docker-compose.yml preserve data/postgres and data/qdrant.
 "${COMPOSE[@]}" up -d postgres qdrant

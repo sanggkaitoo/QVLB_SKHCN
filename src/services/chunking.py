@@ -6,6 +6,8 @@ import uuid
 from collections import defaultdict
 from dataclasses import dataclass
 
+from src.services.document_fields import normalize_document_ref  # noqa: F401  (re-export)
+
 
 @dataclass(frozen=True)
 class StructuredChunk:
@@ -30,12 +32,6 @@ _CHAPTER_RE = re.compile(r"^\s*(CHƯƠNG|Chương)\s+([IVXLCDM0-9]+)\b.*")
 _SECTION_RE = re.compile(r"^\s*(MỤC|Mục)\s+([IVXLCDM0-9]+)\b.*")
 _ARTICLE_RE = re.compile(r"^\s*(ĐIỀU|Điều)\s+(\d+[A-Za-z]?)\s*[.:]?\s*.*")
 _CLAUSE_RE = re.compile(r"^\s*(\d+)\s*[.)]\s+\S+")
-
-
-def normalize_document_ref(value: str | None) -> str:
-    value = (value or "").replace("đ", "d").replace("Đ", "D")
-    value = value.replace("–", "-").replace("—", "-")
-    return re.sub(r"\s+", "", value).upper()
 
 
 def split_text(

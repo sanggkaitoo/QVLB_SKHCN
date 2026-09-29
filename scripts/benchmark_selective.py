@@ -114,7 +114,7 @@ def main():
                 raise SystemExit(str(exc))
             started = time.perf_counter()
             with llm.track_usage() as usage:
-                result = run_agent(case["question"], **case.get("filters", {}), routing_mode=mode)
+                result = run_agent(case["question"], filters=case.get("filters") or {}, routing_mode=mode)
             elapsed = (time.perf_counter() - started) * 1000
             expected = set(case.get("expected_documents", []))
             retrieved = list(dict.fromkeys(s["metadata"].get("doc_id") for s in result.sources))

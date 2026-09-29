@@ -17,7 +17,8 @@ psycopg2-binary==2.9.9
 # --- Embedding + Rerank (bge-m3: dense + sparse) ---
 FlagEmbedding==1.2.10
 sentence-transformers==3.0.1
-torch  # Chỉ cài bản CPU cho nhẹ, phục vụ vector search
+transformers==4.57.6
+torch==2.12.1  # bản CPU là đủ cho embedding/rerank
 
 # --- Trích xuất văn bản & Hình ảnh ---
 PyMuPDF==1.24.5

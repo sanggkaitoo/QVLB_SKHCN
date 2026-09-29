@@ -1,83 +1,74 @@
-import os
-import tempfile
 import base64
-import json
-import requests
+import logging
+import os
+
 import fitz  # PyMuPDF
-from fastapi import APIRouter, UploadFile, File
+import requests
+from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
+from src.core import config, runtime
+from src.utils.uploads import remove_quietly, save_upload
+
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Cấu hình địa chỉ SGLang Server chạy Unlimited-OCR
-SGLANG_URL = os.getenv("OCR_SERVER_URL", "http://127.0.0.1:10000")
+_IMAGE_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}
 
-def encode_image(image_path: str) -> dict:
-    ext = os.path.splitext(image_path)[1].lower()
-    mime = "image/jpeg" if ext in (".jpg", ".jpeg") else f"image/{ext.lstrip('.')}"
-    with open(image_path, "rb") as f:
-        data = base64.b64encode(f.read()).decode("utf-8")
-    return {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{data}"}}
 
-@router.post("/process")
-def process_ocr(file: UploadFile = File(...)):
-    suffix = os.path.splitext(file.filename)[1] or ".pdf"
-    
-    # 1. Lưu file PDF tạm
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_pdf:
-        tmp_pdf.write(file.file.read())
-        pdf_path = tmp_pdf.name
-        
-    image_paths = []
-    tmp_img_dir = None
+def _page_images(path: str) -> list[dict]:
+    """Ảnh PNG (base64) của từng trang PDF, hoặc chính ảnh tải lên; giới hạn số trang."""
+    extension = os.path.splitext(path)[1].lower()
+    if extension in _IMAGE_TYPES:
+        with open(path, "rb") as stream:
+            data = base64.b64encode(stream.read()).decode("ascii")
+        return [{"type": "image_url", "image_url": {"url": f"data:{_IMAGE_TYPES[extension]};base64,{data}"}}]
+    images = []
     try:
-        # 2. Chuyển PDF thành list ảnh (DPI = 300)
-        doc = fitz.open(pdf_path)
-        tmp_img_dir = tempfile.mkdtemp(prefix="pdf_ocr_")
-        mat = fitz.Matrix(300 / 72, 300 / 72)
-        
-        image_paths = []
-        for i, page in enumerate(doc):
-            img_path = os.path.join(tmp_img_dir, f"page_{i + 1:04d}.png")
-            page.get_pixmap(matrix=mat).save(img_path)
-            image_paths.append(img_path)
-        doc.close()
-        
-        # 3. Chuẩn bị payload gửi sang Unlimited-OCR
-        content = [{"type": "text", "text": "Multi page parsing."}]
-        for path in image_paths:
-            content.append(encode_image(path))
-            
+        document = fitz.open(path)
+    except Exception as exc:
+        raise HTTPException(400, "Không đọc được tệp PDF.") from exc
+    with document:
+        if document.page_count > config.OCR_MAX_PAGES:
+            raise HTTPException(413, f"Tệp có {document.page_count} trang, vượt giới hạn {config.OCR_MAX_PAGES} trang.")
+        matrix = fitz.Matrix(config.OCR_DPI / 72, config.OCR_DPI / 72)
+        for page in document:
+            png = page.get_pixmap(matrix=matrix).tobytes("png")
+            images.append({"type": "image_url", "image_url": {"url": "data:image/png;base64," + base64.b64encode(png).decode("ascii")}})
+    return images
+
+
+def _ocr(path: str) -> str:
+    images = _page_images(path)
+    texts = []
+    # Gửi theo lô vài trang để payload và bộ nhớ không tăng theo độ dài tài liệu.
+    for start in range(0, len(images), config.OCR_PAGES_PER_REQUEST):
+        batch = images[start:start + config.OCR_PAGES_PER_REQUEST]
         payload = {
             "model": "Unlimited-OCR",
-            "messages": [{"role": "user", "content": content}],
+            "messages": [{"role": "user", "content": [{"type": "text", "text": "Multi page parsing."}, *batch]}],
             "temperature": 0.0,
-            "max_tokens": 16000 # Giới hạn token trả về
+            "max_tokens": 16000,
         }
-
-        # 4. Gửi Request tới SGLang
-        response = requests.post(
-            f"{SGLANG_URL}/v1/chat/completions",
-            headers={"Content-Type": "application/json"},
-            data=json.dumps(payload),
-            timeout=1200 # Timeout cao do OCR chạy lâu
-        )
+        response = requests.post(f"{config.OCR_SERVER_URL.rstrip('/')}/v1/chat/completions", json=payload,
+                                 timeout=config.OCR_REQUEST_TIMEOUT_SECONDS)
         response.raise_for_status()
-        
-        res_data = response.json()
-        ocr_text = res_data["choices"][0]["message"]["content"]
-        
-        return JSONResponse({"text": ocr_text})
-        
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
-        
+        texts.append(response.json()["choices"][0]["message"]["content"])
+    return "\n\n".join(texts)
+
+
+@router.post("/process")
+async def process_ocr(file: UploadFile = File(...)):
+    path = await save_upload(file, {".pdf", *_IMAGE_TYPES}, config.UPLOAD_MAX_MB)
+    try:
+        return {"text": await runtime.run_blocking(_ocr, path, slots=runtime.UPLOAD_SLOTS)}
+    except HTTPException:
+        raise
+    except requests.RequestException:
+        logger.exception("Máy chủ OCR lỗi")
+        return JSONResponse({"error": "Máy chủ OCR không phản hồi hoặc trả lỗi. Vui lòng thử lại sau."}, status_code=502)
+    except Exception:
+        logger.exception("OCR thất bại")
+        return JSONResponse({"error": "Không OCR được tệp này."}, status_code=500)
     finally:
-        # Dọn dẹp file tạm
-        if os.path.exists(pdf_path):
-            os.unlink(pdf_path)
-        for p in image_paths:
-            if os.path.exists(p):
-                os.unlink(p)
-        if tmp_img_dir and os.path.isdir(tmp_img_dir):
-            os.rmdir(tmp_img_dir)
+        remove_quietly(path)

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 import time
 from pathlib import Path
@@ -14,11 +13,11 @@ if str(ROOT) not in sys.path:
 
 from scripts._baseline_common import append_jsonl, as_int_set, normalize_text, now_iso, read_jsonl
 from src.core import config, llm
-from src.services import search_srv
+from src.agent import controller
+from src.services import retrieval_srv
 
 
 NO_ANSWER_TEXT = "Không tìm thấy thông tin trong kho dữ liệu."
-SOURCES_RE = re.compile(r"^\[SOURCES\](.*?)\[/SOURCES\]$", re.DOTALL)
 
 JUDGE_SYSTEM = """Bạn là bộ chấm độc lập cho hệ thống RAG văn bản hành chính.
 Chỉ chấm dựa trên đáp án chuẩn, bằng chứng chuẩn và nguồn mà hệ thống đã truy xuất.
@@ -50,39 +49,19 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def parse_sources(chunk: str) -> list[dict[str, Any]] | None:
-    match = SOURCES_RE.match(chunk.strip())
-    if not match:
-        return None
-    try:
-        parsed = json.loads(match.group(1))
-    except json.JSONDecodeError:
-        return []
-    return parsed if isinstance(parsed, list) else []
-
-
 def collect_answer(question: str, filters: dict[str, Any]) -> tuple[str, list[dict[str, Any]], dict[str, float | None]]:
     started = time.perf_counter()
-    stream = search_srv.answer_stream(
-        question,
-        loai_vb=filters.get("loai_vb"),
-        huong=filters.get("huong"),
-    )
-    answer_parts: list[str] = []
-    sources: list[dict[str, Any]] = []
+    answer, sources = "", []
     first_token_ms: float | None = None
-
-    for chunk in stream:
-        parsed_sources = parse_sources(chunk)
-        if parsed_sources is not None:
-            sources = parsed_sources
-            continue
-        if chunk and first_token_ms is None:
+    for event in controller.agent_events(question, filters=filters):
+        if event["type"] == "sources":
+            sources = event["sources"]
+        elif event["type"] == "token" and first_token_ms is None:
             first_token_ms = (time.perf_counter() - started) * 1000
-        answer_parts.append(chunk)
-
+        elif event["type"] == "answer":
+            answer = event["answer"]
     total_ms = (time.perf_counter() - started) * 1000
-    return "".join(answer_parts).strip(), sources, {
+    return answer.strip(), sources, {
         "time_to_first_token_ms": first_token_ms,
         "answer_total_ms": total_ms,
     }
@@ -177,12 +156,11 @@ def evaluate_case(case: dict[str, Any], args: argparse.Namespace) -> dict[str, A
     filters = case.get("filters") or {}
     expected_ids = as_int_set(case.get("expected_documents", []))
     started = time.perf_counter()
-    retrieved = search_srv.retrieve(
+    retrieved = retrieval_srv.hybrid_search(
         question,
         top_k=args.top_k,
         rerank_pool=args.rerank_pool,
-        loai_vb=filters.get("loai_vb"),
-        huong=filters.get("huong"),
+        filters=filters,
     )
     retrieval_ms = (time.perf_counter() - started) * 1000
 
@@ -241,7 +219,7 @@ def main() -> int:
         "started_at": now_iso(),
         "input": str(args.input),
         "case_count": len(cases),
-        "collection": config.QDRANT_COLLECTION,
+        "collection": config.RAG_COLLECTION,
         "embedding_model": config.EMBED_MODEL,
         "rerank_model": config.RERANK_MODEL,
         "answer_model": None if args.skip_answer else config.LLM_MAIN,

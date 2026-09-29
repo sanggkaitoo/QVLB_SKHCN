@@ -15,6 +15,7 @@ from playwright.async_api import async_playwright
 
 from src.core import config
 from src.crawler.history import CrawlHistory, source_key
+from src.services.document_fields import clean_placeholder
 from src.services.ingest import ingest_download_dir
 
 load_dotenv()
@@ -312,14 +313,16 @@ async def handle_download_modal(
                 with open(meta_path, "w", encoding="utf-8") as stream:
                     json.dump(
                         {
-                            "so_ky_hieu": document_ref,
-                            "ngay_ban_hanh": issued_date,
-                            "trich_yeu": subject,
+                            # QLVB đôi khi hiển thị "undefined" trong ô trống; history_key giữ giá trị gốc.
+                            "so_ky_hieu": clean_placeholder(document_ref),
+                            "ngay_ban_hanh": clean_placeholder(issued_date),
+                            "trich_yeu": clean_placeholder(subject),
                             "huong": direction,
-                            "co_quan_ban_hanh": agency,
+                            "co_quan_ban_hanh": clean_placeholder(agency),
                             "file_goc": download.suggested_filename,
                             "source_url": page.url,
                             "history_key": record_key,
+                            "file_index": index + 1,
                         },
                         stream,
                         ensure_ascii=False,
@@ -641,7 +644,7 @@ async def run_spider(limit: int, mode: str = "all"):
                 )
                 context = await browser.new_context(
                     viewport={"width": 1280, "height": 720},
-                    ignore_https_errors=True,
+                    ignore_https_errors=config.CRAWLER_IGNORE_HTTPS_ERRORS,
                     accept_downloads=True,
                 )
                 context.set_default_timeout(config.CRAWLER_ACTION_TIMEOUT_SECONDS * 1000)

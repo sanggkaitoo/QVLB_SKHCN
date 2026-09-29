@@ -4,7 +4,10 @@
 """
 import re
 import datetime as dt
+import logging
 from src.core import llm, config
+
+logger = logging.getLogger(__name__)
 
 # 29 loại văn bản hành chính theo Nghị định 30/2020/NĐ-CP (Điều 7)
 # Mã loại dùng viết tắt NĐ30 để gọn + dễ lọc.
@@ -75,7 +78,6 @@ def guess_loai_from_soky(so_ky_hieu: str | None) -> str | None:
     """Đoán loại VB từ phần viết tắt trong số ký hiệu: '215/KH-UBND' -> 'ke_hoach'."""
     if not so_ky_hieu:
         return None
-    import re
     m = re.search(r"[/\-]([A-ZĐa-zđ]+)", so_ky_hieu)
     if m:
         vt = m.group(1).upper()
@@ -91,17 +93,14 @@ def extract_metadata(full_text: str, fallback: dict | None = None) -> dict:
     try:
         data = llm.extract_json(_SYS, user, model=config.LLM_CHEAP) or {}
     except Exception as exc:
-        print(f"  ! LLM metadata tạm thời không khả dụng, dùng metadata crawler: {exc}")
+        logger.warning("LLM metadata tạm thời không khả dụng, dùng metadata crawler: %s", exc)
         data = {}
 
-    # --- THÊM KHỐI LỆNH NÀY ĐỂ ÉP KIỂU DỮ LIỆU ---
-    # Nếu AI trả về mảng list (VD: [{...}]), ta sẽ lấy phần tử đầu tiên
+    # Model đôi khi trả mảng [{...}] hoặc chuỗi; chỉ nhận dict.
     if isinstance(data, list):
         data = data[0] if len(data) > 0 and isinstance(data[0], dict) else {}
-    # Nếu AI trả về chuỗi hay thứ gì khác, ép về Dict rỗng
     elif not isinstance(data, dict):
         data = {}
-    # -----------------------------------------------
 
     # hợp nhất với metadata crawler (.meta.json) làm dự phòng
     for k in ("so_ky_hieu", "ngay_ban_hanh", "trich_yeu"):
@@ -109,6 +108,7 @@ def extract_metadata(full_text: str, fallback: dict | None = None) -> dict:
             data[k] = fallback[k]
 
     data["ngay_ban_hanh"] = _norm_date(data.get("ngay_ban_hanh"))
+    data["extract_confidence"] = 0.8 if data.get("so_ky_hieu") and data.get("trich_yeu") else 0.5
 
     # validate loai_vb: LLM -> viết tắt -> số ký hiệu -> khac
     loai = data.get("loai_vb")
@@ -134,6 +134,12 @@ def extract_metadata(full_text: str, fallback: dict | None = None) -> dict:
 
     return data
 
+
+
+def normalize_date(v):
+    if isinstance(v, dt.date):
+        return v.isoformat()
+    return _norm_date(str(v).strip() if v is not None else None)
 
 
 def _norm_date(v):

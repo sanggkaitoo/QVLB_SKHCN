@@ -20,7 +20,8 @@ def main():
     target = parse_dsn(config.PG_DSN)
     if target.get("dbname") != "qlvb" or target.get("host") not in {"localhost", "127.0.0.1"}:
         raise SystemExit("Refusing reset: expected local database qlvb")
-    if config.QDRANT_HOST not in {"localhost", "127.0.0.1"} or config.RAG_COLLECTION != "docnexus_agentic_v3":
+    allowed = {"qlvb_docs", "qlvb_docs_v2", "docnexus_agentic_v3", "docnexus_agentic_v4"}
+    if config.QDRANT_HOST not in {"localhost", "127.0.0.1"} or config.RAG_COLLECTION not in allowed:
         raise SystemExit("Refusing reset: unexpected Qdrant target")
     paths = [Path(config.CRAWLER_STATE_DB).resolve()] + [
         (Path(config.DOWNLOAD_DIR) / name).resolve()
@@ -29,14 +30,13 @@ def main():
     if any(not path.is_relative_to(ROOT / "data") for path in paths):
         raise SystemExit("Refusing reset: crawler state outside project data directory")
     collections = {c.name for c in store._q.get_collections().collections}
-    allowed = {"qlvb_docs", "qlvb_docs_v2", "docnexus_agentic_v3"}
     connection = psycopg2.connect(config.PG_DSN, connect_timeout=5)
     try:
         with connection, connection.cursor() as cursor:
             cursor.execute("SELECT current_database()")
             assert cursor.fetchone()[0] == "qlvb"
             cursor.execute("SET LOCAL lock_timeout = '5s'")
-            cursor.execute("TRUNCATE documents, can_cu, document_relations, rag_query_logs RESTART IDENTITY CASCADE")
+            cursor.execute("TRUNCATE documents, document_files, can_cu, document_relations, rag_query_logs RESTART IDENTITY CASCADE")
         print("PostgreSQL qlvb: cleared document data and query logs; schema retained")
     finally:
         connection.close()

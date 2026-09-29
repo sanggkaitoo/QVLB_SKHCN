@@ -1,57 +1,22 @@
+import logging
 import os
-import tempfile
-from fastapi import APIRouter, UploadFile, File
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+
 import google.generativeai as genai
+from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 
-from src.core import llm, config
+from src.core import config, llm, runtime
+from src.utils.uploads import remove_quietly, save_upload
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Cấu hình khởi tạo API Key của Google
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+_AUDIO_EXTENSIONS = {".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac", ".webm", ".mp4"}
+_TRANSCRIBE_PROMPT = ("Hãy bóc băng (transcribe) chính xác toàn bộ nội dung file âm thanh này sang văn bản tiếng Việt. "
+                      "CHỈ trả về đoạn văn bản nội dung, tuyệt đối không bình luận, không giải thích hay thêm bất kỳ từ ngữ nào khác của bạn.")
 
-class SummarizeReq(BaseModel):
-    text: str
-
-@router.post("/transcribe")
-def api_transcribe_audio(file: UploadFile = File(...)):
-    suffix = os.path.splitext(file.filename)[1] or ".mp3"
-    
-    # 1. Lưu file tạm xuống đĩa
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        tmp.write(file.file.read())
-        path = tmp.name
-        
-    try:
-        # 2. Upload file âm thanh lên server của Gemini (File API)
-        uploaded_audio = genai.upload_file(path=path)
-        
-        # 3. Dùng Gemini 2.5 Flash để bóc băng (Flash xử lý cực nhanh và rẻ)
-        model = genai.GenerativeModel('gemini-2.5-flash')
-        
-        response = model.generate_content([
-            "Hãy bóc băng (transcribe) chính xác toàn bộ nội dung file âm thanh này sang văn bản tiếng Việt. CHỈ trả về đoạn văn bản nội dung, tuyệt đối không bình luận, không giải thích hay thêm bất kỳ từ ngữ nào khác của bạn.",
-            uploaded_audio
-        ])
-        
-        # 4. Dọn dẹp: Xóa file âm thanh trên server Google ngay lập tức để bảo mật
-        genai.delete_file(uploaded_audio.name)
-        
-        return JSONResponse({"text": response.text})
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
-    finally:
-        # Dọn dẹp file tạm trên ổ cứng của mình
-        if os.path.exists(path):
-            os.unlink(path)
-
-
-# --- LUỒNG TÓM TẮT DÙNG GEMINI PRO ---
-@router.post("/summarize")
-def api_summarize_audio(req: SummarizeReq):
-    sys_prompt = """Bạn là trợ lý AI cấp cao chuyên trách thẩm định và xử lý văn bản hành chính từ băng ghi âm (transcript).
+_SUMMARY_PROMPT = """Bạn là trợ lý AI cấp cao chuyên trách thẩm định và xử lý văn bản hành chính từ băng ghi âm (transcript).
 Văn bản gỡ băng gốc thường lủng củng, có độ nhiễu cao, sai chính tả do nhận diện âm thanh, từ ngữ lặp hoặc ngập ngừng.
 
 NHIỆM VỤ CỦA BẠN:
@@ -63,10 +28,57 @@ NHIỆM VỤ CỦA BẠN:
    - **Nội dung trọng tâm:** Sử dụng các danh sách đầu dòng (bullet points) để phân rã các ý chính.
    - **Kết luận / Phân công:** Ghi rõ mốc thời gian, công việc và trách nhiệm (nếu có).
 5. Tuyệt đối trung thành với thông tin gốc, KHÔNG bịa đặt thêm số liệu."""
-    
+
+_gemini_configured = False
+
+
+class SummarizeReq(BaseModel):
+    text: str = Field(..., min_length=1, max_length=200_000)
+
+
+def _transcribe(path: str) -> str:
+    global _gemini_configured
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise HTTPException(503, "Chức năng gỡ băng chưa được cấu hình (thiếu GEMINI_API_KEY).")
+    if not _gemini_configured:
+        genai.configure(api_key=api_key)
+        _gemini_configured = True
+    uploaded = genai.upload_file(path=path)
     try:
-        # Vẫn sử dụng LLM_SMART (Gemini Pro) cấu hình qua OpenRouter để đảm bảo tính logic cao nhất
-        summary = llm.chat(system=sys_prompt, user=req.text, model=config.LLM_SMART)
-        return JSONResponse({"summary": summary})
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+        model = genai.GenerativeModel("gemini-2.5-flash")
+        return model.generate_content([_TRANSCRIBE_PROMPT, uploaded], request_options={"timeout": 600}).text
+    finally:
+        # Xóa tệp trên máy chủ Google cả khi gỡ băng lỗi.
+        try:
+            genai.delete_file(uploaded.name)
+        except Exception as exc:
+            logger.warning("Không xóa được tệp âm thanh trên Gemini: %s", exc)
+
+
+@router.post("/transcribe")
+async def api_transcribe_audio(file: UploadFile = File(...)):
+    path = await save_upload(file, _AUDIO_EXTENSIONS, config.AUDIO_MAX_MB)
+    try:
+        text = await runtime.run_blocking(_transcribe, path, slots=runtime.UPLOAD_SLOTS)
+        return {"text": text}
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Gỡ băng thất bại")
+        return JSONResponse({"error": "Không gỡ băng được tệp âm thanh. Vui lòng thử lại sau."}, status_code=502)
+    finally:
+        remove_quietly(path)
+
+
+@router.post("/summarize")
+async def api_summarize_audio(req: SummarizeReq):
+    try:
+        summary = await runtime.run_blocking(llm.chat, _SUMMARY_PROMPT, req.text, model=config.LLM_SMART,
+                                             slots=runtime.UPLOAD_SLOTS)
+        return {"summary": summary}
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Tóm tắt băng ghi âm thất bại")
+        return JSONResponse({"error": "Không tóm tắt được nội dung. Vui lòng thử lại sau."}, status_code=502)

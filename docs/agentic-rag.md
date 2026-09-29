@@ -1,60 +1,58 @@
-# Agentic RAG v3 operations
+# Agentic RAG v4 operations
 
 ## Active configuration
 
-- Both `/api/search_stream` and `/api/search_agent_stream` use the agent with the default configuration.
-- `AGENTIC_RAG_ENABLED=true`, `RAG_COLLECTION=docnexus_agentic_v3`.
-- `AGENT_ROUTING_MODE=selective` is the default; `always` runs the full agent loop for comparison.
+- Index version `agentic-v4`, collection `RAG_COLLECTION=docnexus_agentic_v4`.
+- `AGENT_ROUTING_MODE=selective` (default) lets rules decide when an LLM planner/grader is needed; `always` forces both for paired comparison.
+- `/api/search_stream` (alias `/api/search_agent_stream`) streams Server-Sent Events; `/api/search` returns the final JSON result.
 - `/api/health` reports engine, collection and index version without loading models.
 - `run.sh` starts databases, applies migrations and prepares the collection. It never resets data.
 
+## Data model
+
+- `documents` is one văn bản (identified by `source_key`: direction + crawler history key, or `sha256:` for single uploads).
+- `document_files` holds each file with `role`: `chinh` (main text), `ban_sao` (near-identical copy, not indexed, `duplicate_of` points at the indexed file) or `dinh_kem` (attachment, indexed).
+- Duplicate detection uses word 3-gram containment ≥ `DUPLICATE_FILE_SIMILARITY` (0.8) between files of similar length (ratio ≥ 0.6) within a document; the cleanest extraction (text PDF/DOCX over OCR) represents the cluster.
+- LLM metadata is extracted once per document from the main file; crawler metadata wins after placeholder cleanup, and references split by digital-signature layout are rebuilt from the "Số: …" header line.
+- `document_relations` is filled at ingest by rules (căn cứ, sửa đổi, thay thế, bãi bỏ, liên quan) with `verified=false`; verified relations are never overwritten.
+
 ## Ingestion and retrieval
 
-- PDF extraction preserves page markers and selectively OCRs scanned pages, one page in memory at a time.
-- DOCX tables retain document order. Table and spreadsheet rows repeat header context.
-- Chunking uses the embedding tokenizer: 512 tokens, 64 overlap by default. Parent windows surround the actual child, not the beginning of the document.
-- Embedding includes the document reference and section path; writes are batched with `EMBED_BATCH_SIZE=8`.
-- SHA-256 deduplication happens before extraction/LLM metadata calls. Failed files stay retryable.
-- Only ready documents from the current index version are retrieved. Pending/failed vector writes are excluded.
-- Reference lookup uses exact normalized PostgreSQL matches. Date/agency filters apply before vector candidate selection.
-- Multi-query retrieval fuses candidates with RRF and reranks the merged pool once. Neighbor retrieval is grouped by document and indexed chunk numbers.
+- PDF extraction preserves page markers and selectively OCRs scanned pages; DOCX tables keep order and repeat header context. `extract()` raises `ExtractionError` with the cause instead of returning empty text.
+- Chunking uses the embedding tokenizer (512 tokens, 64 overlap). Each chunk is embedded with a document header (reference, type, subject, attachment name) and section path; each document also gets one `document_summary` point.
+- Writes are tagged with an `ingest_run`; stale points are deleted and the document is published only after the new run is fully written.
+- Retrieval filters (lists for type/direction/field, date range, agency) are applied inside Qdrant. Multi-aspect search reranks every aspect against its own query in one reranker call and keeps a per-aspect quota.
+- Neighbours are fetched per file; parent sections are bounded to 2,500 characters around the child.
 
-## Resource limits and verification
+## Agent loop and streaming
 
-- Heavy RAG preparation runs outside the web event loop, at most `RAG_CONCURRENCY=2` requests concurrently; excess requests receive HTTP 503 and Retry-After.
-- Model inference is serialized per process, with configurable CPU threads and batch size. PostgreSQL connections use a bounded pool.
-- Agent attempts are bounded and evidence accumulates across attempts. The grader identifies missing requirements before a query rewrite.
-- A cooperative request deadline bounds subsequent work and network calls. Native model computations already running are not forcibly killed.
-- Answers are released only after verification; this is not token streaming during draft generation.
-- Verifier failures do not release an unverified draft. Confidence is conservative, not a calibrated probability.
-- Exact, unambiguous metadata question templates can be answered directly from PostgreSQL with a source, without an LLM call. Arbitrary questions containing a reference do not qualify.
-- Simple questions with strong retrieval may skip the initial grader only after answer verification confirms complete supported coverage. Otherwise the existing evidence is reused by the full agent; complex questions use the agent directly.
-- The `route` and `fallback_reason` are stored inside query log plans. Both HTTP search endpoints follow the configured mode; the paired benchmark overrides the mode per call.
-- Numeric aggregation remains experimental and is not a validated financial/statistical reporting engine.
+1. Rule analysis (intent, filters, references including `57-NQ/TW` and unique short numbers).
+2. Metadata templates answered directly from PostgreSQL.
+3. LLM planning only for complex questions (or `always` mode), exactly once.
+4. Retrieval → rule coverage gate (top score, named documents, each aspect). If insufficient, one LLM call grades the evidence and proposes follow-up queries.
+5. Answer tokens stream to the client; the verifier then labels each segment and the `answer` event replaces the draft with the verified text (unsupported segments removed, Markdown kept). Verifier failure withholds the draft.
 
-## Reset and re-import
+Capacity: at most `RAG_CONCURRENCY` heavy requests; the stream reserves capacity before responding (HTTP 503 when full) and releases it when the worker finishes even if the client disconnects. Keep-alive comments are sent every 15 seconds.
 
-The explicit reset command is destructive and restricted to the local `qlvb` database and project collections:
+## Aggregation v2
+
+See the README section. Key limits: `AGG_MAX_DOCS`, `AGG_CHUNKS_PER_DOC`, `AGG_CONCURRENCY`, `AGG_MIN_SCORE` (document relevance gate), `AGG_MIN_CONFIDENCE`, `AGG_TIMEOUT_SECONDS`. Results always list included facts with verbatim quotes and a review list with reasons.
+
+## Upgrade, reindex and reset
+
+```bash
+docker exec qlvb_postgres pg_dump -U qlvb qlvb > backup-before-v4.sql
+./venv/bin/python scripts/apply_migrations.py
+./venv/bin/python scripts/reindex.py            # reuses stored text + metadata
+./venv/bin/python scripts/reindex.py --start-id 500 --re-extract
+```
+
+The reset command remains destructive and restricted to the local `qlvb` database and project collections:
 
 ```bash
 ./venv/bin/python scripts/reset_agentic_data.py --confirm-delete-qlvb
 ```
 
-It clears document/relationship/query data, the project vector collections and crawler checkpoints, while preserving schemas, original source files and filesystem baseline reports. Stop web/crawl before invoking it. No old-data rollback is available without an independent backup.
-
-After reset, crawl/import documents again. Re-extraction of already registered source files can be resumed by document id:
-
-```bash
-./venv/bin/python scripts/reindex_v2.py --limit 1
-./venv/bin/python scripts/reindex_v2.py --start-id 500
-```
-
-Despite its historical filename, this script uses the active v3 ingestion pipeline and original files, not old extracted text. An empty database has no registered source files to reindex.
-
 ## Evaluation
 
-Existing v1/v2 baseline reports are historical and remain untouched. The paired v3 pilot on 30 retained documents (94 vectors) and 18 frozen questions is complete: 36 final pipeline results without errors, 35 with an LLM judge score. See [the report](../reports/baseline-agent-v3-selective.md) and [saved-run status](../reports/baseline-agent-v3-status.md). Selective routing reduced P50 from 8.04 to 5.99 seconds and mean AI calls from 3.33 to 2.00; P95 was nearly unchanged (43.61 versus 43.09 seconds). Results span the initial run and a credit-funded resume; earlier failed attempts are retained.
-
-Do not interpret the raw judge average as a proven accuracy improvement: identical abstentions received inconsistent scores, and one judge response exceeded its token cap. All six no-answer outputs abstained without citing sources. This pilot does not validate full-corpus performance, concurrent load, Cloudflare latency, or numeric aggregation. Reset changes IDs and the corpus snapshot, so v1/v2 scores are not a controlled comparison with v3.
-
-Use `scripts/benchmark_selective.py --input <frozen-questions.jsonl> --output <new-directory>` for the paired v3 evaluation. It refuses to overwrite a run, fingerprints the corpus/code/cases, alternates execution order, captures reported token usage and judges answers separately. Source files for a bounded pilot can be imported with `scripts/import_eval_sample.py --count 30 --output <new-manifest.jsonl>`; this prefers short text PDFs/DOCX and is not representative of scans or large tables.
+Historical v1/v2/v3 reports are untouched. v3 numbers (P50 5.99 s selective, P95 ≈ 43 s) predate streaming, grouping and the compact verifier; re-run `scripts/benchmark_selective.py` on the v4 index before comparing. Per-stage timings are stored in `rag_query_logs.plan.timings`.

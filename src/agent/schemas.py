@@ -21,6 +21,7 @@ class QueryPlan(BaseModel):
     required_evidence: list[str] = Field(default_factory=list)
     document_refs: list[str] = Field(default_factory=list)
     max_attempts: int = Field(default=2, ge=1, le=3)
+    planned_by: str = "rules"
 
 
 class Evidence(BaseModel):
@@ -41,6 +42,15 @@ class VerificationResult(BaseModel):
     confidence: str = "thap"
     claims: list[ClaimAssessment] = Field(default_factory=list)
     answer_complete: bool = False
+    changed: bool = False
+    verified: bool = False
+
+
+class EvidenceGrade(BaseModel):
+    sufficient: bool = False
+    missing: list[str] = Field(default_factory=list)
+    next_queries: list[str] = Field(default_factory=list)
+    graded_by: str = "llm"
 
 
 class AgentResult(BaseModel):
@@ -55,3 +65,6 @@ class AgentResult(BaseModel):
     error: str | None = None
     route: str = "agent"
     fallback_reason: str | None = None
+    verified: bool = False
+    timings: dict[str, int] = Field(default_factory=dict)
+    aggregation: dict[str, Any] | None = None

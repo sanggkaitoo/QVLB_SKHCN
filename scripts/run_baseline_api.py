@@ -55,34 +55,44 @@ def collect_api_answer(question: str, filters: dict[str, Any], api_base: str, en
     ) as response:
         response.raise_for_status()
         response.encoding = "utf-8"
-        chunks: list[str] = []
         first_token_ms = None
-        closing = "[/SOURCES]"
         stream_incomplete = False
+        buffer, answer, sources = "", "", []
         try:
             for chunk in response.iter_content(chunk_size=None, decode_unicode=True):
                 if not chunk:
                     continue
-                chunks.append(chunk)
-                current = "".join(chunks)
-                end = current.find(closing)
-                if end >= 0 and current[end + len(closing):].strip() and first_token_ms is None:
-                    first_token_ms = (time.perf_counter() - started) * 1000
+                buffer += chunk
+                while "\n\n" in buffer:
+                    block, buffer = buffer.split("\n\n", 1)
+                    event = parse_sse_block(block)
+                    if event is None:
+                        continue
+                    if event["type"] == "sources":
+                        sources = event.get("sources") or []
+                    elif event["type"] == "token" and first_token_ms is None:
+                        first_token_ms = (time.perf_counter() - started) * 1000
+                    elif event["type"] == "answer":
+                        answer = event.get("answer") or ""
         except requests.exceptions.ChunkedEncodingError:
             stream_incomplete = True
 
-    payload = "".join(chunks)
-    start = payload.find("[SOURCES]")
-    end = payload.find("[/SOURCES]")
-    if start < 0 or end < 0:
-        raise ValueError("API không trả marker SOURCES hợp lệ.")
-    sources = json.loads(payload[start + len("[SOURCES]"):end])
-    answer = payload[end + len("[/SOURCES]"):].strip()
-    return answer, sources if isinstance(sources, list) else [], {
+    return answer.strip(), sources if isinstance(sources, list) else [], {
         "time_to_first_token_ms": first_token_ms,
         "answer_total_ms": (time.perf_counter() - started) * 1000,
         "stream_incomplete": stream_incomplete,
     }
+
+
+def parse_sse_block(block: str) -> dict[str, Any] | None:
+    data = "\n".join(line[5:].lstrip() for line in block.splitlines() if line.startswith("data:"))
+    if not data:
+        return None
+    try:
+        event = json.loads(data)
+    except json.JSONDecodeError:
+        return None
+    return event if isinstance(event, dict) and "type" in event else None
 
 
 def complete_answer(question: str, sources: list[dict[str, Any]]) -> str:
@@ -191,7 +201,7 @@ def main() -> int:
         "started_at": now_iso(),
         "input": str(args.input),
         "case_count": len(cases),
-        "collection": config.QDRANT_COLLECTION,
+        "collection": config.RAG_COLLECTION,
         "embedding_model": config.EMBED_MODEL,
         "rerank_model": config.RERANK_MODEL,
         "answer_model": config.LLM_MAIN,

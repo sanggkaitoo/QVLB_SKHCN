@@ -4,10 +4,13 @@
   B. LLM: chính tả, lỗi logic, mâu thuẫn — GROUNDED trên ngữ cảnh pháp lý lấy
      từ kho (RAG), bắt buộc dẫn nguồn, không bịa.
 """
+import logging
 import re
 from src.core import store, llm, config
 from src.utils import extract
-from src.services import search_srv as search
+from src.services import retrieval_srv
+
+logger = logging.getLogger(__name__)
 
 # "Căn cứ <Loại> số 57-NQ/TW ngày 22/12/2024 ..."
 _CANCU_RE = re.compile(r"Căn cứ[^;\n]*", re.IGNORECASE)
@@ -24,7 +27,11 @@ _FMT = """Trả JSON:
 
 
 def _get_text(path: str) -> str:
-    text, _ = extract.extract(path)
+    try:
+        text, _ = extract.extract(path)
+    except extract.ExtractionError as exc:
+        logger.warning("Không đọc được dự thảo: %s", exc)
+        return ""
     return text
 
 
@@ -47,7 +54,7 @@ def check_can_cu(text: str) -> list[dict]:
     return out
 
 
-def check_content(docx_path: str) -> dict:
+def check_content(docx_path: str, display_name: str | None = None) -> dict:
     text = _get_text(docx_path)
     if not text:
         return {"error": "Không đọc được nội dung file."}
@@ -57,17 +64,25 @@ def check_content(docx_path: str) -> dict:
 
     # B. ngữ cảnh pháp lý từ kho (RAG) để soi nội dung
     probe = (re.sub(r"\s+", " ", text))[:600]
-    ctx_items = search.retrieve(probe, top_k=6, rerank_pool=20)
+    try:
+        ctx_items = retrieval_srv.hybrid_search(probe, top_k=6, rerank_pool=20)
+    except Exception as exc:
+        logger.warning("Không lấy được ngữ cảnh pháp lý: %s", exc)
+        ctx_items = []
     legal_ctx = "\n".join(
         f"[{c['payload'].get('so_ky_hieu','?')}] {c['text'][:500]}" for c in ctx_items)
 
     user = (f"DỰ THẢO CẦN RÀ SOÁT:\n{text[:12000]}\n\n"
             f"NGỮ CẢNH PHÁP LÝ THAM CHIẾU (từ kho văn bản):\n{legal_ctx}\n\n{_FMT}")
-    review = llm.extract_json(_SYS, user, model=config.LLM_SMART) or {
-        "loi": [], "nhan_xet_chung": "Không phân tích được."}
+    try:
+        review = llm.extract_json(_SYS, user, model=config.LLM_SMART)
+    except Exception as exc:
+        logger.warning("LLM rà soát nội dung lỗi: %s", exc)
+        review = None
+    review = review or {"loi": [], "nhan_xet_chung": "Không phân tích được."}
 
     return {
-        "file": docx_path,
+        "file": display_name or "du_thao",
         "kiem_tra_can_cu": cancu,
         "ra_soat_noi_dung": review,
     }

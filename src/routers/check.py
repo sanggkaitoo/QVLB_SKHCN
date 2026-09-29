@@ -1,29 +1,25 @@
-import os
-import tempfile
-from fastapi import APIRouter, UploadFile, File
-from fastapi.responses import JSONResponse
-from src.check import format_check, content_check
+from fastapi import APIRouter, File, UploadFile
+
+from src.check import content_check, format_check
+from src.core import config, runtime
+from src.utils.uploads import remove_quietly, save_upload
 
 router = APIRouter()
 
+
 @router.post("/format")
-def api_check_format(file: UploadFile = File(...)):
-    suffix = os.path.splitext(file.filename)[1] or ".docx"
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        tmp.write(file.file.read())
-        path = tmp.name
+async def api_check_format(file: UploadFile = File(...)):
+    path = await save_upload(file, {".docx"}, config.UPLOAD_MAX_MB)
     try:
-        return JSONResponse(format_check.check_format(path))
+        return await runtime.run_blocking(format_check.check_format, path, slots=runtime.UPLOAD_SLOTS)
     finally:
-        os.unlink(path)
+        remove_quietly(path)
+
 
 @router.post("/content")
-def api_check_content(file: UploadFile = File(...)):
-    suffix = os.path.splitext(file.filename)[1] or ".docx"
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        tmp.write(file.file.read())
-        path = tmp.name
+async def api_check_content(file: UploadFile = File(...)):
+    path = await save_upload(file, {".docx", ".doc", ".pdf"}, config.UPLOAD_MAX_MB)
     try:
-        return JSONResponse(content_check.check_content(path))
+        return await runtime.run_blocking(content_check.check_content, path, file.filename, slots=runtime.UPLOAD_SLOTS)
     finally:
-        os.unlink(path)
+        remove_quietly(path)

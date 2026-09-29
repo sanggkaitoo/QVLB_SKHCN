@@ -42,7 +42,7 @@ def main():
         sidecar = Path(str(path) + ".meta.json")
         metadata = json.loads(sidecar.read_text(encoding="utf-8")) if sidecar.exists() else {}
         try:
-            doc_id = ingest_file(str(path), huong=metadata.get("huong"), raw_meta=metadata, source_url=metadata.get("source_url"))
+            doc_id = ingest_file(str(path), huong=metadata.get("huong") or "di", raw_meta=metadata, source_url=metadata.get("source_url"))
             append_jsonl(args.output, {"path": str(path), "doc_id": doc_id, "status": "ready", "seed": args.seed})
             print(f"[sample] {index}/{len(selected)} ready doc_id={doc_id}", flush=True)
         except Exception as exc:

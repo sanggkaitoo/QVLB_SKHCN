@@ -1,62 +1,60 @@
-# DocNexus (QLVB AI v3)
+# DocNexus (QLVB AI v4)
 
-DocNexus là web app hỗ trợ cán bộ, công chức và viên chức tra cứu, tổng hợp và kiểm tra văn bản hành chính. Hệ thống lưu dữ liệu gốc trong PostgreSQL, lập chỉ mục vector trên Qdrant, sử dụng RAG để trả lời có nguồn và dùng Playwright để thu thập văn bản Đi/Đến từ hệ thống QLVB.
+DocNexus là web app hỗ trợ cán bộ, công chức và viên chức tra cứu, tổng hợp và kiểm tra văn bản hành chính. Hệ thống lưu dữ liệu gốc trong PostgreSQL, lập chỉ mục vector trên Qdrant, sử dụng Agentic RAG để trả lời có nguồn và dùng Playwright để thu thập văn bản Đi/Đến từ hệ thống QLVB.
 
-> Trạng thái hiện tại: Agentic RAG v3 có chọn lọc là luồng mặc định, dùng collection `docnexus_agentic_v3`. Câu hỏi đơn giản có đường nhanh; câu phức tạp hoặc thiếu bằng chứng chuyển sang agent. Tổng hợp số liệu vẫn thử nghiệm; baseline v1/v2 là lịch sử, không được coi là kết quả v3.
+> Trạng thái hiện tại: Agentic RAG v4 (index `agentic-v4`, collection `docnexus_agentic_v4`). Dữ liệu được tổ chức theo **văn bản** gồm nhiều **tệp** (bản chính, bản sao cùng nội dung, tệp đính kèm). Câu trả lời được **stream thật** rồi kiểm chứng từng đoạn. Tổng hợp số liệu dùng Aggregation v2 (LLM chỉ trích dữ kiện, code tính toán). Nâng cấp từ v3: xem mục [Nâng cấp lên v4](#nâng-cấp-lên-v4).
 
 ## Chức năng hiện có
 
 ### Tra cứu và hỏi đáp văn bản
 
-- Tìm kiếm hybrid bằng vector dense, sparse và Reciprocal Rank Fusion (RRF).
-- Rerank kết quả bằng BAAI/bge-reranker-v2-m3.
-- Tìm chính xác theo số ký hiệu từ PostgreSQL.
-- Lọc theo loại văn bản, hướng Đi/Đến, thời gian và cơ quan ban hành trong luồng Agentic.
-- Trả lời dựa trên bằng chứng, kèm nguồn và mức độ tin cậy.
+- Tìm kiếm hybrid bằng vector dense, sparse và Reciprocal Rank Fusion (RRF); rerank bằng BAAI/bge-reranker-v2-m3 kèm ngữ cảnh văn bản (số ký hiệu, trích yếu, mục).
+- Tìm chính xác theo số ký hiệu (kể cả dạng `57-NQ/TW`) và theo số rút gọn ("công văn 2072") khi số đó xác định duy nhất một văn bản.
+- Lọc nhiều giá trị theo loại văn bản, hướng Đi/Đến, lĩnh vực, thời gian (năm, quý, tháng, 6 tháng, khoảng ngày) và cơ quan ban hành; bộ lọc được đẩy xuống Qdrant/PostgreSQL trước khi truy xuất.
+- Trả lời stream theo thời gian thực (Server-Sent Events), kèm nguồn, trạng thái xử lý và mức độ tin cậy; nguồn ghi rõ tệp đính kèm.
 
-### Agentic RAG v3
+### Agentic RAG v4
 
-- Phân loại ý định: tra cứu chính xác, hỏi đáp ngữ nghĩa, so sánh, tổng hợp và hiệu lực pháp lý.
-- Lập kế hoạch truy vấn có cấu trúc và tạo nhiều truy vấn tìm kiếm.
-- Mở rộng chunk lân cận và section cha.
-- Tìm quan hệ căn cứ, sửa đổi, thay thế và bãi bỏ giữa các văn bản.
-- Thử lại có giới hạn, kiểm chứng câu trả lời và từ chối khi thiếu bằng chứng.
-- Ghi log kế hoạch, nguồn, điểm rerank, số vòng và thời gian xử lý.
-- Có công cụ đo đối chứng chế độ luôn chạy agent và chế độ chọn lọc trên cùng bộ câu hỏi/corpus.
+- Lập kế hoạch MỘT lần cho mỗi câu hỏi: luật trước; LLM chỉ được gọi để tách khía cạnh cho câu hỏi phức tạp (so sánh, hiệu lực, nhiều ý).
+- Truy xuất đa khía cạnh: mỗi khía cạnh được rerank với chính truy vấn của nó và có hạn mức kết quả, tránh để một ý lấn át.
+- Cổng độ phủ bằng luật (điểm rerank, văn bản được nêu tên, từng khía cạnh). Chỉ khi chưa đủ mới gọi LLM chấm bằng chứng; cùng lượt đó LLM đề xuất truy vấn bổ sung (corrective RAG, tối đa `AGENT_MAX_ATTEMPTS` vòng).
+- Mở rộng chunk lân cận (theo từng tệp) và mục cha có giới hạn độ dài.
+- Quan hệ căn cứ/sửa đổi/thay thế/bãi bỏ/liên quan được trích tự động khi nạp và dùng cho câu hỏi hiệu lực (đánh dấu chưa xác minh).
+- Kiểm chứng từng đoạn của câu trả lời; đoạn không có bằng chứng bị lược bỏ, định dạng Markdown được giữ nguyên. Verifier lỗi thì không phát hành bản nháp.
+- Log kế hoạch, nguồn, điểm rerank, số vòng, thời gian từng bước (`timings`) và đường xử lý.
 
-### Tổng hợp số liệu
+### Tổng hợp số liệu (Aggregation v2)
 
-Luồng hiện tại lập kế hoạch, chọn văn bản ứng viên, dùng LLM trích một giá trị từ từng văn bản rồi cộng hoặc đếm bằng code. Kết quả có bảng minh chứng theo văn bản.
+LLM là bộ trích xuất dữ kiện có trích dẫn, không phải máy tính:
 
-Tính năng này đang thử nghiệm và chưa phù hợp để dùng như số liệu quyết toán hoặc báo cáo chính thức nếu chưa kiểm tra lại bằng chứng. Các giới hạn hiện tại:
+1. Kế hoạch có kiểu: chỉ số, phép tính (sum, count, count_documents, avg, min, max, distinct_count), đơn vị, trạng thái (kế hoạch/thực hiện/lũy kế), phạm vi, group_by.
+2. PostgreSQL liệt kê đầy đủ văn bản trong phạm vi (phân trang; giới hạn `AGG_MAX_DOCS`, báo rõ khi bị cắt).
+3. Hybrid search theo nhóm văn bản lấy các đoạn liên quan trong toàn văn (không cắt 8.000 ký tự đầu); reranker loại văn bản không liên quan.
+4. Mỗi văn bản trả nhiều dữ kiện (kể cả từng dòng bảng), gắn đoạn nguồn, trích dẫn nguyên văn, trạng thái và độ tin cậy; trích song song có giới hạn.
+5. Code chuẩn hóa số kiểu Việt Nam (1.234,5; nghìn/triệu/tỷ; %) và kiểm tra trích dẫn có thật trong đoạn nguồn, con số có trong trích dẫn.
+6. Chống cộng trùng: dòng tổng thay dòng chi tiết trong cùng văn bản; fact lặp giữa đoạn/văn bản.
+7. Tính toán và nhóm bằng code; kiểm tra bất biến (tổng chi tiết so với dòng tổng, một đơn vị, tổng nhóm = tổng chung).
+8. Dữ kiện nghi vấn (độ tin cậy thấp, khác trạng thái, khác đơn vị, dấu phân cách mơ hồ, trích dẫn không khớp) đưa vào danh sách cần cán bộ xác nhận, không cộng vào kết quả.
 
-- Chỉ xét tối đa 60 văn bản ứng viên.
-- Mỗi văn bản chỉ đọc 8.000 ký tự đầu.
-- Mỗi văn bản chỉ trả về một giá trị, nên dễ bỏ sót bảng hoặc nhiều dòng số liệu.
-- Chưa chuẩn hóa đầy đủ đơn vị như đồng, nghìn đồng, triệu đồng, tỷ đồng và phần trăm.
-- Chưa phân biệt chắc chắn số kế hoạch, số thực hiện, số lũy kế và tổng cộng.
-- Chưa có cơ chế chống cộng trùng giữa dòng chi tiết và dòng tổng.
+Kết quả vẫn là tổng hợp tự động: cần kiểm tra đơn vị, kỳ báo cáo và phạm vi trước khi dùng cho báo cáo chính thức.
 
 ### Thu thập và nhập dữ liệu
 
-- Crawl Văn bản Đi, Văn bản Đến hoặc toàn bộ hệ thống QLVB.
-- Đăng nhập SSO qua captcha trên trang quản trị.
-- Dùng nhiều locator dự phòng, thử lại khi điều hướng chậm và tự đăng nhập lại khi phiên hết hạn.
-- Tự nhận diện cột theo tiêu đề bảng và kiểm soát lỗi phân trang.
-- Checkpoint bằng SQLite, có thể tiếp tục sau khi dừng hoặc gặp lỗi.
-- Nhận diện văn bản theo số ký hiệu kết hợp ngày ban hành.
-- Tải và ingest theo lô để số file đang mở không tăng theo tổng số văn bản.
-- Giữ bản gốc đã ingest trong data/store và chống nạp trùng bằng SHA-256.
-- Hỗ trợ PDF, DOC/DOCX, XLS/XLSX, CSV và OCR ảnh/PDF scan.
+- Crawl Văn bản Đi, Văn bản Đến hoặc toàn bộ hệ thống QLVB; đăng nhập SSO qua captcha trên trang quản trị.
+- Dùng nhiều locator dự phòng, thử lại khi điều hướng chậm và tự đăng nhập lại khi phiên hết hạn; checkpoint SQLite.
+- **Gom tệp theo văn bản**: các tệp của một văn bản (bản ký số, bản DOCX, phụ lục, văn bản kèm theo) được nạp cùng nhau. Metadata được AI trích **một lần** từ tệp chính.
+- **Phát hiện tệp trùng nội dung** (bản PDF ký số và DOCX của cùng văn bản): chỉ index một bản (ưu tiên bản trích xuất sạch nhất), các bản còn lại được ghi nhận là bản sao.
+- Làm sạch giá trị giữ chỗ "undefined" từ giao diện QLVB; dựng lại số ký hiệu từ dòng "Số: …" khi văn bản ký số tách con số khỏi ký hiệu.
+- Ghi index theo lượt: điểm mới ghi xong mới xóa lượt cũ và công bố, không để lộ trạng thái nửa vời.
+- Giữ bản gốc trong data/store, chống nạp trùng bằng SHA-256; hỗ trợ PDF, DOC/DOCX, XLS/XLSX, CSV và OCR ảnh/PDF scan. Tệp lỗi được cách ly kèm lý do cụ thể.
 
 ### Tiện ích nghiệp vụ
 
-- Kiểm tra thể thức và nội dung dự thảo văn bản.
-- OCR tài liệu qua máy chủ Unlimited-OCR/SGLang tùy chọn.
+- Kiểm tra thể thức (.docx) và nội dung dự thảo (.docx, .doc, .pdf).
+- OCR tài liệu (PDF hoặc ảnh) qua máy chủ Unlimited-OCR/SGLang tùy chọn, gửi theo lô trang.
 - Gỡ băng âm thanh bằng Gemini và tạo bản tóm tắt có cấu trúc.
-- Trang quản trị hiển thị thống kê, danh sách văn bản và trạng thái crawler.
-- Giao diện responsive, có chế độ sáng/tối.
-- PWA có offline fallback và có thể thêm vào màn hình chính.
+- Trang quản trị hiển thị thống kê (chỉ văn bản sẵn sàng, phân bố trạng thái, vai trò tệp), danh sách văn bản kèm số tệp/đoạn và trạng thái crawler.
+- Giao diện responsive, sáng/tối, PWA có offline fallback.
 
 ## Kiến trúc
 
@@ -107,7 +105,7 @@ flowchart LR
 
 ~~~bash
 python3 -m venv venv
-./venv/bin/pip install -r requirements.txt
+./venv/bin/pip install -r requirements.txt   # thêm requirements-dev.txt để chạy test/lint
 PLAYWRIGHT_BROWSERS_PATH="$HOME/.cache/ms-playwright" ./venv/bin/playwright install chromium
 cp .env.example .env
 ~~~
@@ -117,7 +115,7 @@ Sửa .env trước khi chạy. Tối thiểu cần cấu hình khóa LLM và th
 ~~~env
 OPENROUTER_API_KEY=...
 ADMIN_USER=admin
-ADMIN_PASS=mat-khau-manh
+ADMIN_PASS=<ít nhất 10 ký tự, không dùng mật khẩu mặc định>
 QDRANT_API_KEY=...
 QLVB_URL=https://dia-chi-he-thong-qlvb
 
@@ -191,43 +189,66 @@ Docker đặt nofile của PostgreSQL và Qdrant ở 262144. Crawler xử lý th
 
 ## Agentic RAG
 
-### Endpoint và feature flag
+### Endpoint
+
+| Endpoint | Ý nghĩa |
+|---|---|
+| GET /api/search_stream | Server-Sent Events: `status`, `sources`, `token` (bản nháp), `answer` (bản đã kiểm chứng), `done` (kết quả đầy đủ) |
+| GET /api/search_agent_stream | Alias của /api/search_stream |
+| GET /api/search | Kết quả hoàn chỉnh dạng JSON (tích hợp, đo đánh giá) |
+| GET /api/aggregate_stream | Tổng hợp số liệu: tiến độ `status` rồi `aggregation_result` |
+| GET /api/aggregate | Tổng hợp số liệu dạng JSON |
+
+Tham số lọc nhận nhiều giá trị cách nhau bằng dấu phẩy: `loai_vb=bao_cao,ke_hoach`, `huong=den`, `linh_vuc=cds`.
+
+### Cấu hình chính
 
 | Cấu hình | Ý nghĩa |
 |---|---|
-| /api/search_stream | Endpoint chính; dùng Agentic khi feature flag được bật |
-| /api/search_agent_stream | Alias Agentic, dùng cùng cấu hình định tuyến |
-| AGENTIC_RAG_ENABLED=true | Agentic là luồng mặc định |
-| AGENT_ROUTING_MODE=selective | Đường nhanh có kiểm chứng; chuyển sang agent khi cần |
-| AGENT_ROUTING_MODE=always | Luôn dùng vòng agent, phục vụ đo đối chứng |
-| RAG_COLLECTION=docnexus_agentic_v3 | Kho dữ liệu mới, không ghi kép sang kho cũ |
-| AGENT_MAX_ATTEMPTS=2 | Số vòng retrieval tối đa |
+| AGENT_ROUTING_MODE=selective | Luật quyết định khi nào cần LLM lập kế hoạch/chấm bằng chứng |
+| AGENT_ROUTING_MODE=always | Luôn lập kế hoạch và chấm bằng LLM, phục vụ đo đối chứng |
+| RAG_COLLECTION=docnexus_agentic_v4 | Collection của index agentic-v4 |
+| AGENT_MAX_ATTEMPTS=2 | Số vòng truy xuất tối đa |
+| RAG_RERANK_POOL=24 | Số ứng viên rerank cho mỗi câu hỏi (chia đều cho các khía cạnh) |
+| LLM_FAST_TIMEOUT_SECONDS=20 | Timeout lời gọi phụ trợ (planner, grader, verifier) |
+| WARMUP_MODELS=true | Nạp mô hình ngay khi khởi động |
 
-Nhập lại từ các file gốc đã đăng ký trong PostgreSQL (không dùng lại text trích xuất cũ):
+Chunk 512 token, overlap 64 token; giữ trang PDF, ngữ cảnh bảng và đường dẫn Chương/Mục/Điều/Khoản. Mỗi văn bản có thêm một điểm tóm tắt (số ký hiệu, loại, cơ quan, trích yếu, chủ trương, tệp đính kèm). Embedding của từng đoạn kèm ngữ cảnh văn bản. Tối đa `RAG_CONCURRENCY` yêu cầu nặng đồng thời; quá tải trả HTTP 503 trước khi stream bắt đầu. Hạn 60 giây áp dụng cho các bước có thể ngắt và lời gọi mạng.
+
+### Độ trễ
+
+Những thay đổi chính để giảm độ trễ cảm nhận và P95:
+
+- Stream token trả lời: người dùng thấy nội dung khi model bắt đầu sinh, không chờ hết pipeline.
+- Không còn chạy hai lần lập kế hoạch/soạn trả lời khi đường nhanh thất bại. Bằng chứng đủ theo luật thì bỏ qua LLM chấm; chấm và viết lại truy vấn gộp làm một lượt.
+- Verifier chỉ trả trạng thái từng đoạn (JSON rất ngắn) thay vì viết lại toàn bộ câu trả lời.
+- Bản sao cùng nội dung không còn chiếm chỗ bằng chứng hay thời gian rerank. Cache embedding truy vấn; truy vấn Qdrant song song; làm nóng mô hình khi khởi động.
+- Timings từng bước được lưu trong `rag_query_logs.plan.timings` để phân tích P95 thực tế.
+
+Chưa có số đo P95 mới cho v4; cần chạy lại `scripts/benchmark_selective.py` sau khi reindex.
+
+## Nâng cấp lên v4
+
+Migration `004_document_files.sql` tách văn bản và tệp, gom các bản ghi cũ (mỗi tệp một dòng) theo khóa crawler. Sau đó phải tạo index mới:
 
 ~~~bash
-./venv/bin/python scripts/reindex_v2.py --limit 1
-./venv/bin/python scripts/reindex_v2.py --collection docnexus_agentic_v3
+# 1. Sao lưu
+docker exec qlvb_postgres pg_dump -U qlvb qlvb > backup-before-v4.sql
+# 2. Áp dụng migration (run.sh cũng tự làm bước này)
+./venv/bin/python scripts/apply_migrations.py
+# 3. Đổi RAG_COLLECTION trong .env thành docnexus_agentic_v4, rồi tạo index
+./venv/bin/python scripts/reindex.py
 ~~~
 
-Cấu hình mặc định:
+`scripts/reindex.py` mặc định tái sử dụng văn bản đã trích xuất và metadata đã có (không gọi LLM, không OCR lại); thêm `--re-extract` hoặc `--refresh-metadata` khi cần. Có thể chạy tiếp bằng `--start-id`. Trong lúc reindex, văn bản chưa xong không được tìm thấy. Collection v3 cũ được giữ nguyên để đối chiếu; chỉ xóa khi không cần nữa.
 
-~~~env
-RAG_COLLECTION=docnexus_agentic_v3
-AGENTIC_RAG_ENABLED=true
-AGENT_ROUTING_MODE=selective
-~~~
-
-Chunk mới giới hạn 512 token, overlap 64 token; giữ trang PDF và ngữ cảnh bảng. Ingest theo lô 8 đoạn, chỉ công bố sau khi ghi vector xong. Tối đa 2 yêu cầu RAG nặng đồng thời; quá tải trả HTTP 503. Thời hạn 60 giây áp dụng cho các bước có thể ngắt và các lời gọi mạng; không cưỡng bức ngắt phép tính mô hình đang chạy.
-Mỗi lời gọi AI giới hạn đầu ra qua `LLM_MAX_OUTPUT_TOKENS=4096`, tránh dự trù số token quá lớn gây lỗi hạn mức. Phản hồi provider có lỗi hoặc bị cắt vì hết token không được coi là câu trả lời hợp lệ.
-
-`run.sh` áp dụng migration và chuẩn bị collection, không xóa dữ liệu. Công cụ `scripts/reset_agentic_data.py --confirm-delete-qlvb` chỉ dành cho đặt lại chủ động; xóa dữ liệu PostgreSQL, các collection của project và checkpoint crawler, giữ file gốc. Không thể rollback về dữ liệu cũ sau khi reset nếu không có bản sao lưu riêng.
+`scripts/reset_agentic_data.py --confirm-delete-qlvb` chỉ dành cho đặt lại chủ động; xóa dữ liệu PostgreSQL, các collection của project và checkpoint crawler, giữ file gốc.
 
 Hướng dẫn vận hành chi tiết nằm tại [docs/agentic-rag.md](docs/agentic-rag.md).
 
 ## Đánh giá chất lượng
 
-**V3 đã bật Agentic có chọn lọc và hoàn tất đo đối chứng trên mẫu 30 tài liệu, 18 câu hỏi (36 lượt).** Xem [báo cáo chi tiết](reports/baseline-agent-v3-selective.md) và [trạng thái dữ liệu đã lưu](reports/baseline-agent-v3-status.md). So với luôn chạy agent, chế độ chọn lọc có P50 5,99 giây thay vì 8,04 giây, trung bình 2,00 thay vì 3,33 lượt gọi AI; P95 gần như không đổi (43,09 / 43,61 giây).
+**Số đo dưới đây là của v3 (trước khi gom tệp và stream).** V3 đã hoàn tất đo đối chứng trên mẫu 30 tài liệu, 18 câu hỏi (36 lượt). Xem [báo cáo chi tiết](reports/baseline-agent-v3-selective.md) và [trạng thái dữ liệu đã lưu](reports/baseline-agent-v3-status.md). So với luôn chạy agent, chế độ chọn lọc có P50 5,99 giây thay vì 8,04 giây, trung bình 2,00 thay vì 3,33 lượt gọi AI; P95 gần như không đổi (43,09 / 43,61 giây).
 
 Không có lỗi pipeline trong 36 kết quả cuối; 35/36 lượt có điểm chấm AI. Bộ chấm có trường hợp chấm khác nhau cho câu trả lời từ chối giống hệt nhau, nên chưa thể khẳng định độ chính xác tăng. Đây chưa phải phép đo toàn kho, tải đồng thời, Cloudflare hoặc tổng hợp số liệu.
 
@@ -246,7 +267,7 @@ Kết quả lịch sử trên bộ pilot 10 câu hỏi (không phải v3):
 
 Bộ pilot cũ nhỏ; các số đo trên không xác nhận chất lượng bản v3 hiện tại.
 
-Đo v3 sau khi có dữ liệu ready (chọn đường dẫn mới cho mỗi lần chạy):
+Đo lại sau khi có dữ liệu ready (chọn đường dẫn mới cho mỗi lần chạy):
 
 ~~~bash
 ./venv/bin/python scripts/generate_eval_set.py --count 16 --comparison-count 2 --output reports/generated/v3-next/questions.jsonl
@@ -256,80 +277,39 @@ Bộ pilot cũ nhỏ; các số đo trên không xác nhận chất lượng b�
 
 Phép đo này gọi trực tiếp pipeline, không mở server web. Hai chế độ chạy xen kẽ trên cùng snapshot, có làm nóng mô hình trước. Kết quả lưu câu trả lời/nguồn, quyết định định tuyến, thời gian, lượt gọi/token AI và đánh giá bằng LLM riêng. Token của bộ chấm không tính vào token pipeline. Đây không phải kiểm thử tải hoặc chấm bởi chuyên gia; câu hỏi tổng hợp số liệu chưa được kiểm định bởi bộ đo này.
 
-## Lộ trình cải thiện độ chính xác
+## Lộ trình tiếp theo
 
-### 1. Đo chất lượng chunk trước khi đổi kích thước
+Đã làm trong v4: chunk theo token và cấu trúc có số trang PDF, embedding kèm ngữ cảnh văn bản, điểm tóm tắt văn bản, bộ lọc đẩy xuống trước truy xuất, truy xuất đa khía cạnh có hạn mức, gom tệp và loại bản trùng, trích quan hệ văn bản, Aggregation v2.
 
-Giả thuyết chunk quá ngắn hoặc quá dài là hợp lý, nhưng không nên chỉ thay CHUNK_SIZE rồi đánh giá bằng cảm giác. Cần tạo các collection thử nghiệm từ cùng một snapshot dữ liệu:
+Còn lại:
 
-| Biến thể | Child chunk | Parent context | Overlap |
-|---|---:|---:|---:|
-| A | 250-350 token | 1.500 token | 10% |
-| B | 400-600 token | 2.000 token | 12-15% |
-| C | 700-900 token | 3.000 token | 10% |
-
-So sánh theo từng nhóm câu hỏi bằng Hit@k, Recall@k, MRR, tỷ lệ nguồn đúng, grounded claim ratio, độ trễ và chi phí. Chọn cấu hình theo kết quả đo, không chọn một kích thước chung cho mọi loại tài liệu.
-
-### 2. Chunk theo cấu trúc và loại nội dung
-
-- Giữ ranh giới Chương, Mục, Điều, Khoản và Điểm; không overlap qua hai Điều khác nhau.
-- Gắn tiêu đề Điều/Khoản, số ký hiệu, loại văn bản, ngày và cơ quan vào nội dung dùng để embedding.
-- Tách bảng thành chunk riêng theo hàng/nhóm hàng nhưng giữ tiêu đề cột trong từng chunk.
-- Lưu số trang và vị trí ký tự để trích dẫn đúng đoạn gốc.
-- Dùng child chunk nhỏ để tìm kiếm, sau đó lấy parent section và chunk lân cận để trả lời.
-- Tạo representation riêng cho trích yếu/metadata, nội dung pháp lý và bảng số liệu thay vì dùng một vector cho mọi mục đích.
-
-Hiện tại structured chunker đã nhận diện Chương/Mục/Điều/Khoản, nhưng kích thước vẫn tính theo ký tự và page_start/page_end chưa có dữ liệu thực. Đây là phần nên ưu tiên nâng cấp tiếp theo.
-
-### 3. Nâng retrieval và rerank
-
-- Đẩy bộ lọc ngày và cơ quan vào Qdrant/PostgreSQL trước retrieval thay vì lọc sau khi lấy candidate.
-- Dùng candidate pool thích ứng theo intent; câu hỏi so sánh và tổng hợp cần nhiều văn bản hơn câu hỏi tra cứu chính xác.
-- Rerank theo hai tầng: chọn văn bản trước, chọn passage trong từng văn bản sau.
-- Hiệu chỉnh ngưỡng điểm riêng cho exact lookup, semantic QA, compare và legal status.
-- Đảm bảo đa dạng văn bản trong top-k nhưng cho phép lấy nhiều đoạn khi câu hỏi yêu cầu một văn bản cụ thể.
-- Bổ sung negative mining từ log truy vấn thật để tinh chỉnh reranker cho ngôn ngữ hành chính Việt Nam.
-
-### 4. Xây Aggregation v2
-
-Luồng tổng hợp mới nên coi LLM là bộ trích xuất dữ kiện, không phải máy tính và cũng không phải bộ chọn toàn bộ tập dữ liệu:
-
-1. Planner tạo schema có kiểu: chỉ số, phép tính, đơn vị, kỳ báo cáo, phạm vi, trạng thái kế hoạch/thực hiện và group_by.
-2. PostgreSQL liệt kê đầy đủ văn bản thuộc phạm vi bằng cursor, không giới hạn cứng 60.
-3. Retrieval lấy các chunk liên quan trong toàn bộ văn bản, không cắt full_text ở 8.000 ký tự đầu.
-4. Extractor trả về nhiều fact có cấu trúc từ đoạn văn và bảng, mỗi fact gắn doc_id, trang, section, đoạn bằng chứng và confidence.
-5. Bộ chuẩn hóa đổi nghìn/triệu/tỷ, dấu phân cách Việt Nam, phần trăm, khoảng giá trị và đơn vị thời gian về dạng chuẩn.
-6. Bộ chống trùng nhận diện dòng tổng, dòng chi tiết, số lũy kế và số của riêng kỳ báo cáo.
-7. Python hoặc SQL thực hiện sum, count, distinct_count, avg, min, max và nhóm dữ liệu.
-8. Verifier đối chiếu tổng với từng fact, kiểm tra đơn vị và các bất biến số học trước khi trả kết quả.
-9. Fact mâu thuẫn hoặc confidence thấp được đưa vào danh sách cần cán bộ xác nhận, không tự cộng vào kết quả chính.
-
-### 5. Bộ đánh giá cần bổ sung
-
-- Tăng từ 10 câu pilot lên ít nhất 100-300 câu đã được cán bộ xác nhận.
-- Có câu hỏi chứa bảng, nhiều trang, nhiều văn bản, số âm, số thập phân, phần trăm và đơn vị khác nhau.
-- Đo riêng document recall, passage recall, độ chính xác giá trị, độ chính xác đơn vị, độ đầy đủ tập văn bản và sai số tổng cuối.
-- Lưu expected facts thay vì chỉ expected document để biết lỗi nằm ở retrieval, extraction, normalization hay reduce.
-- Chỉ rollout khi chất lượng tăng trên cùng bộ test và độ trễ vẫn trong ngưỡng sử dụng thực tế.
+1. **Đo lại**: chạy benchmark ghép cặp trên index v4; mở rộng bộ câu hỏi lên 100–300 câu được cán bộ xác nhận, có câu về bảng, nhiều trang, nhiều văn bản, số âm/thập phân/phần trăm và expected facts cho tổng hợp số liệu.
+2. **Kích thước chunk**: so sánh 250–350 / 400–600 / 700–900 token trên cùng snapshot bằng Hit@k, MRR, grounded claim ratio và độ trễ trước khi đổi `CHUNK_TOKENS`.
+3. **Bảng biểu**: tách bảng thành chunk riêng theo nhóm dòng kèm tiêu đề cột; lưu vị trí ký tự để trích dẫn đúng đoạn gốc; số trang cho DOCX.
+4. **Rerank hai tầng** (chọn văn bản trước, đoạn sau) và ngưỡng riêng theo loại câu hỏi; negative mining từ log truy vấn thật.
+5. **Quan hệ văn bản**: màn hình để cán bộ xác minh quan hệ trích tự động, dùng làm căn cứ kết luận hiệu lực.
 
 ## An toàn dữ liệu
 
-- Nội dung dùng cho metadata, trả lời, kiểm chứng và âm thanh có thể được gửi tới OpenRouter hoặc Gemini theo cấu hình.
-- Chỉ dùng với dữ liệu được phép gửi ra dịch vụ bên ngoài.
+- Nội dung dùng cho metadata, trả lời, kiểm chứng và âm thanh có thể được gửi tới OpenRouter hoặc Gemini theo cấu hình. Chỉ dùng với dữ liệu được phép gửi ra dịch vụ bên ngoài.
 - Tài khoản QLVB/captcha chỉ dùng cho phiên crawler và không được ghi vào checkpoint.
-- Đổi ADMIN_PASS, QDRANT_API_KEY và mật khẩu PostgreSQL trước khi mở dịch vụ qua Internet.
-- Trang quản trị dùng HTTP Basic Auth; nên đặt Cloudflare Access hoặc một lớp SSO phía trước khi public domain.
+- Trang quản trị dùng HTTP Basic Auth và **bị khóa nếu ADMIN_PASS chưa đặt, dùng giá trị mặc định hoặc ngắn hơn 10 ký tự**. Đăng nhập sai nhiều lần bị khóa tạm theo IP (`ADMIN_MAX_FAILED_LOGINS`, `ADMIN_LOCKOUT_SECONDS`); đặt `TRUST_PROXY_HEADERS=true` khi chạy sau Cloudflare Tunnel. Nên đặt Cloudflare Access trước khi public domain.
+- Đổi QDRANT_API_KEY và mật khẩu PostgreSQL trước khi mở dịch vụ qua Internet; run.sh cảnh báo khi còn giá trị mặc định.
+- Tệp tải lên bị giới hạn định dạng và dung lượng (`UPLOAD_MAX_MB`, `AUDIO_MAX_MB`), xử lý với số luồng giới hạn (`UPLOAD_CONCURRENCY`); OCR giới hạn số trang và gửi theo lô.
+- Lỗi nội bộ được ghi log, không trả chi tiết cho người dùng. Markdown từ model được làm sạch (DOMPurify) trước khi hiển thị; ứng dụng gửi các header bảo mật cơ bản.
+- Tệp âm thanh tải lên Gemini được xóa cả khi gỡ băng lỗi.
 
 ## Cấu trúc thư mục
 
 ~~~text
-src/agent/              Agent controller, planner và verifier
+src/agent/              Planner, routing, controller (pipeline sự kiện), verifier, công cụ tổng hợp
 src/crawler/            Playwright crawler và SQLite checkpoint
-src/services/           Ingest, chunking, retrieval, aggregate
-src/templates/          Giao diện chính và quản trị
-src/static/pwa/         Manifest, service worker, icon và offline page
+src/services/           Ingest theo văn bản, chunking, retrieval, relations, numbers, aggregate
+src/templates/          Giao diện chính và quản trị (HTML)
+src/static/             CSS/JS của giao diện, PWA (manifest, service worker, icon, offline)
 db/migrations/          Migration có checksum
-scripts/                Re-index, baseline và công cụ vận hành
+scripts/                Reindex, baseline, benchmark và công cụ vận hành
+tests/                  Unit test (chạy: ./venv/bin/python -m unittest discover -s tests)
 reports/                Baseline đã lưu
 data/                   PostgreSQL, Qdrant và dữ liệu cục bộ khi được cấu hình
 ~~~

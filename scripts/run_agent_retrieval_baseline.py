@@ -29,7 +29,7 @@ def main() -> int:
     started = time.perf_counter()
     for index, case in enumerate(cases, start=1):
         plan = create_plan(case["question"], explicit_filters=case.get("filters"), use_llm=False)
-        items = _retrieve(case["question"], plan, plan.filters)
+        items = _retrieve(case["question"], plan, plan.sub_queries[1:])
         evidence = _to_evidence(items)
         doc_ids = [item.metadata.get("doc_id") for item in evidence]
         expected = {int(value) for value in case.get("expected_documents", [])}

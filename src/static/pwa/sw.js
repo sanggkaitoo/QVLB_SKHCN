@@ -1,4 +1,4 @@
-const CACHE_NAME = "docnexus-pwa-v1";
+const CACHE_NAME = "docnexus-pwa-v4";
 const APP_SHELL = ["/", "/offline.html", "/manifest.webmanifest", "/static/pwa/icon.svg"];
 
 self.addEventListener("install", (event) => {
@@ -33,6 +33,13 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (url.pathname.startsWith("/static/") || url.pathname === "/manifest.webmanifest") {
-    event.respondWith(caches.match(request).then((cached) => cached || fetch(request)));
+    // Stale-while-revalidate: serve cached assets immediately but refresh them in the background.
+    event.respondWith(caches.open(CACHE_NAME).then((cache) => cache.match(request).then((cached) => {
+      const network = fetch(request).then((response) => {
+        if (response.ok) cache.put(request, response.clone());
+        return response;
+      }).catch(() => cached);
+      return cached || network;
+    })));
   }
 });

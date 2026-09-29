@@ -5,13 +5,13 @@ nên phải resolve giá trị HIỆU LỰC, không chỉ đọc cấp run.
 """
 import yaml
 import docx
-from docx.shared import Pt, Emu
 
 EMU_PER_CM = 360000
 
 
 def load_rules(path="config/format_rules.yaml"):
-    return yaml.safe_load(open(path, encoding="utf-8"))
+    with open(path, encoding="utf-8") as stream:
+        return yaml.safe_load(stream)
 
 
 # ---- resolve giá trị hiệu lực: run -> style -> Normal ----
@@ -46,7 +46,10 @@ def _eff_size(run, para, doc):
 
 def check_format(docx_path: str, rules_path="config/format_rules.yaml") -> dict:
     rules = load_rules(rules_path)
-    doc = docx.Document(docx_path)
+    try:
+        doc = docx.Document(docx_path)
+    except Exception:
+        return {"error": "Không đọc được tệp .docx (tệp hỏng hoặc không đúng định dạng)."}
     issues = []
 
     # 1) Lề trang
@@ -98,5 +101,5 @@ def check_format(docx_path: str, rules_path="config/format_rules.yaml") -> dict:
             issues.append({"loai": "gian_dong", "vi_tri": f"đoạn {pi+1}",
                            "phat_hien": f"{ls}", "yeu_cau": f"≤ {ls_max}"})
 
-    return {"file": docx_path, "so_loi": len(issues), "loi": issues,
+    return {"so_loi": len(issues), "loi": issues,
             "ket_luan": "Đạt định dạng" if not issues else "Có lỗi định dạng cần sửa"}

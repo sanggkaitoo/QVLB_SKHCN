@@ -1,6 +1,7 @@
 """Trích xuất văn bản với vòng đời tài nguyên được giới hạn rõ ràng."""
 from __future__ import annotations
 
+import logging
 import os
 import subprocess
 import tempfile
@@ -12,6 +13,14 @@ import fitz
 import pandas as pd
 import pytesseract
 from PIL import Image
+
+logger = logging.getLogger(__name__)
+
+SUPPORTED_EXTENSIONS = {"pdf", "docx", "doc", "xlsx", "xls", "csv", "png", "jpg", "jpeg", "bmp", "tiff"}
+
+
+class ExtractionError(RuntimeError):
+    """A source file could not be converted into usable text."""
 
 
 def extract_pdf(path: str):
@@ -51,21 +60,22 @@ def extract_docx(path: str):
 
 
 def extract_doc(path: str):
-    try:
-        with tempfile.TemporaryDirectory(prefix="qlvb_convert_") as directory:
-            subprocess.run(
+    with tempfile.TemporaryDirectory(prefix="qlvb_convert_") as directory:
+        try:
+            completed = subprocess.run(
                 ["libreoffice", "--headless", "--convert-to", "docx", path, "--outdir", directory],
                 capture_output=True,
                 timeout=180,
                 check=False,
             )
-            docx_path = os.path.join(directory, os.path.basename(path) + "x")
-            if os.path.exists(docx_path):
-                text, _ = extract_docx(docx_path)
-                return text, "doc_libre"
-    except Exception as exc:
-        print(f"  ! lỗi chuyển DOC: {exc}")
-    return "", "doc_failed"
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise ExtractionError(f"Không chuyển được DOC bằng LibreOffice: {type(exc).__name__}") from exc
+        docx_path = os.path.join(directory, os.path.splitext(os.path.basename(path))[0] + ".docx")
+        if not os.path.exists(docx_path):
+            detail = (completed.stderr or b"").decode("utf-8", "ignore").strip()[:200]
+            raise ExtractionError(f"LibreOffice không tạo được DOCX (mã {completed.returncode}) {detail}".strip())
+        text, _ = extract_docx(docx_path)
+        return text, "doc_libre"
 
 
 def extract_excel(path: str):
@@ -98,17 +108,16 @@ def extract_csv(path: str):
 
 
 def extract_image(path: str):
-    try:
-        with Image.open(path) as image:
-            text = pytesseract.image_to_string(image, lang="vie")
-        return text.strip(), "ocr_tesseract"
-    except Exception as exc:
-        print(f"  ! lỗi OCR ảnh: {exc}")
-        return "", "ocr_failed"
+    with Image.open(path) as image:
+        text = pytesseract.image_to_string(image, lang="vie", timeout=120)
+    return text.strip(), "ocr_tesseract"
 
 
 def extract(path: str):
+    """Trả (text, method). Lỗi được ném ra dưới dạng ExtractionError có nguyên nhân rõ ràng."""
     extension = path.lower().rsplit(".", 1)[-1]
+    if extension not in SUPPORTED_EXTENSIONS:
+        raise ExtractionError(f"Định dạng .{extension} chưa được hỗ trợ")
     try:
         if extension == "pdf":
             return extract_pdf(path)
@@ -120,8 +129,9 @@ def extract(path: str):
             return extract_excel(path)
         if extension == "csv":
             return extract_csv(path)
-        if extension in ("png", "jpg", "jpeg", "bmp", "tiff"):
-            return extract_image(path)
+        return extract_image(path)
+    except ExtractionError:
+        raise
     except Exception as exc:
-        print(f"  ! lỗi trích xuất {path}: {exc}")
-    return "", "unsupported"
+        logger.warning("Lỗi trích xuất %s: %s", os.path.basename(path), exc)
+        raise ExtractionError(f"Không trích xuất được {os.path.basename(path)}: {type(exc).__name__}: {exc}"[:500]) from exc
