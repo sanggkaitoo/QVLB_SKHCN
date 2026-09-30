@@ -53,8 +53,9 @@
         return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
     }
     function srTable(caption, head, rows) {
-        return `<table class="sr-only"><caption>${esc(caption)}</caption><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead>
-            <tbody>${rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+        // Bọc trong div: bảng không co về 1px nên tự nó vẫn làm trang tràn ngang trên điện thoại.
+        return `<div class="sr-only"><table><caption>${esc(caption)}</caption><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead>
+            <tbody>${rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
     }
 
     /* ---------- biểu đồ cột (một chuỗi: không cần chú thích) ---------- */
