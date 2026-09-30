@@ -39,16 +39,41 @@ def tokenizer():
 
 
 @lru_cache(maxsize=1)
+def device() -> str:
+    """Thiết bị chạy mô hình: GPU (cuda) khi được cấu hình và có sẵn, không thì CPU.
+
+    Không có GPU / driver lỗi thì tự quay về CPU và ghi cảnh báo, để ứng dụng vẫn chạy được.
+    """
+    wanted = config.EMBED_DEVICE
+    if wanted == "cpu":
+        return "cpu"
+    try:
+        available = torch.cuda.is_available()
+    except Exception as exc:  # driver hỏng
+        logger.warning("Không kiểm tra được GPU (%s); dùng CPU", exc)
+        available = False
+    if not available:
+        if wanted != "auto":
+            logger.warning("EMBEDDING_DEVICE=%s nhưng không có GPU CUDA; dùng CPU", wanted)
+        return "cpu"
+    return "cuda" if wanted == "auto" else wanted
+
+
+def _fp16() -> bool:
+    # Nửa độ chính xác trên GPU: nhanh gấp đôi, tốn nửa bộ nhớ, sai khác không đáng kể với tìm kiếm.
+    return device().startswith("cuda")
+
+
+@lru_cache(maxsize=1)
 def _model():
-    logger.info("Loading embedding model %s", config.EMBED_MODEL)
-    return BGEM3FlagModel(config.EMBED_MODEL, use_fp16=False,
-                          device=config.EMBED_DEVICE)
+    logger.info("Loading embedding model %s on %s%s", config.EMBED_MODEL, device(), " (fp16)" if _fp16() else "")
+    return BGEM3FlagModel(config.EMBED_MODEL, use_fp16=_fp16(), device=device())
 
 
 @lru_cache(maxsize=1)
 def _reranker():
-    logger.info("Loading reranker %s", config.RERANK_MODEL)
-    return FlagReranker(config.RERANK_MODEL, use_fp16=False)
+    logger.info("Loading reranker %s on %s%s", config.RERANK_MODEL, device(), " (fp16)" if _fp16() else "")
+    return FlagReranker(config.RERANK_MODEL, use_fp16=_fp16(), device=device())
 
 
 def warmup() -> None:

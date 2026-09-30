@@ -362,15 +362,22 @@ def requeue(item_id: int | None = None) -> int:
         return cursor.rowcount
 
 
-def _next_items(directions: list[str], limit: int) -> list[dict]:
+def _next_items(directions: list[str], limit: int, item_ids: list[int] | None = None) -> list[dict]:
     with store.pg() as connection, connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cursor:
         cursor.execute(
             """SELECT * FROM crawl_items WHERE status = 'pending' AND in_source AND direction = ANY(%s)
-                   AND attempts < %s
+                   AND attempts < %s AND (%s::bigint[] IS NULL OR id = ANY(%s::bigint[]))
                ORDER BY ngay DESC NULLS LAST, id DESC LIMIT %s""",
-            (directions, config.CRAWLER_API_MAX_ATTEMPTS, limit),
+            (directions, config.CRAWLER_API_MAX_ATTEMPTS, item_ids, item_ids, limit),
         )
         return [dict(row) for row in cursor.fetchall()]
+
+
+def item_label(item_id: int) -> str | None:
+    with store.pg() as connection, connection.cursor() as cursor:
+        cursor.execute("SELECT COALESCE(so_ky_hieu, source_id) FROM crawl_items WHERE id = %s", (item_id,))
+        row = cursor.fetchone()
+        return row[0] if row else None
 
 
 def _update_item(item_id: int, **fields) -> None:
@@ -617,12 +624,14 @@ async def _process_item(session: _Session, item: dict) -> str:
             force=False, source_key=f"{direction}|qlvb:{source_id}",
         )
         failed = outcome.get("failed_files") or []
+        truncated = outcome.get("warnings") or []
         note = None
-        if failed or unsupported:
+        if failed or unsupported or truncated:
             note = "; ".join(filter(None, [
                 f"{len(failed)} tệp không trích xuất được" if failed else "",
                 f"bỏ qua {len(unsupported)} tệp không hỗ trợ ({', '.join(unsupported[:3])})" if unsupported else "",
-            ]))
+                *truncated[:2],
+            ]))[:500]
         await asyncio.to_thread(_update_item, item["id"], status="done", document_id=outcome["document_id"],
                                 n_files=len(attachments), n_files_ingested=len(sources) - len(failed),
                                 last_error=note, processed_at=True)
@@ -631,8 +640,12 @@ async def _process_item(session: _Session, item: dict) -> str:
         shutil.rmtree(work_dir, ignore_errors=True)
 
 
-async def run_download(directions: list[str], limit: int = 0, retry_failed: bool = False) -> None:
-    """Tải và nạp các văn bản chưa có trong kho (theo ngày mới nhất trước). limit=0: tất cả."""
+async def run_download(directions: list[str], limit: int = 0, retry_failed: bool = False,
+                       item_ids: list[int] | None = None) -> None:
+    """Tải và nạp các văn bản chưa có trong kho (theo ngày mới nhất trước). limit=0: tất cả.
+
+    item_ids: chỉ xử lý các văn bản này (nút "Tải lại" trên trang quản trị).
+    """
     _begin("api_download", "Chuẩn bị tải văn bản còn thiếu...")
     session = _Session()
     counts = {"done": 0, "failed": 0, "skipped": 0}
@@ -641,12 +654,14 @@ async def run_download(directions: list[str], limit: int = 0, retry_failed: bool
         await asyncio.to_thread(recover_interrupted)
         if retry_failed:
             await asyncio.to_thread(requeue)
-        remaining_total = sum(v["pending"] for k, v in (await asyncio.to_thread(summary)).items() if k in directions)
+        remaining_total = (len(item_ids) if item_ids else
+                           sum(v["pending"] for k, v in (await asyncio.to_thread(summary)).items() if k in directions))
         target = min(limit, remaining_total) if limit else remaining_total
         processed = 0
         while not limit or processed < limit:
             check_stop()
-            batch = await asyncio.to_thread(_next_items, directions, min(20, limit - processed) if limit else 20)
+            batch = await asyncio.to_thread(_next_items, directions, min(20, limit - processed) if limit else 20,
+                                            item_ids)
             if not batch:
                 break
             for item in batch:

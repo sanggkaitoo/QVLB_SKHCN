@@ -2,6 +2,7 @@ import json
 import os
 import tempfile
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from src.core import config
@@ -115,11 +116,14 @@ class IngestBatchTests(unittest.TestCase):
         self.assertEqual(3, ingest.file_index_from_name("2072_SKHCN-QLCN_03_Vanban.docx"))
 
     def test_legacy_xls_uses_xlrd_engine(self):
-        with patch.object(extractor.pd, "ExcelFile") as excel_file:
-            excel_file.return_value.__enter__.return_value.sheet_names = []
+        sheet = SimpleNamespace(name="Biểu 1", nrows=3,
+                                row_values=lambda i: [["STT", "Nội dung"], [1.0, "Tập huấn"], ["", ""]][i])
+        book = SimpleNamespace(nsheets=1, sheet_by_index=lambda i: sheet, unload_sheet=lambda i: None,
+                               release_resources=lambda: None)
+        with patch("xlrd.open_workbook", return_value=book) as open_workbook:
             text, method = extractor.extract_excel("legacy.xls")
-        excel_file.assert_called_once_with("legacy.xls", engine="xlrd")
-        self.assertEqual("", text)
+        open_workbook.assert_called_once_with("legacy.xls", on_demand=True)
+        self.assertIn("Dòng 2: 1 | Tập huấn", text)
         self.assertEqual("xls", method)
 
     def test_csv_is_extracted(self):

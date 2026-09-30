@@ -1,6 +1,7 @@
 """Trích xuất văn bản với vòng đời tài nguyên được giới hạn rõ ràng."""
 from __future__ import annotations
 
+import datetime as dt
 import logging
 import os
 import subprocess
@@ -13,6 +14,8 @@ import fitz
 import pandas as pd
 import pytesseract
 from PIL import Image
+
+from src.core import config
 
 logger = logging.getLogger(__name__)
 
@@ -78,20 +81,107 @@ def extract_doc(path: str):
         return text, "doc_libre"
 
 
+def _cell_text(value) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "Có" if value else "Không"
+    if isinstance(value, float) and value.is_integer():
+        value = int(value)
+    if isinstance(value, dt.datetime):
+        return value.date().isoformat() if value.time() == dt.time() else value.isoformat(sep=" ")
+    if isinstance(value, dt.date):
+        return value.isoformat()
+    return " ".join(str(value).split())
+
+
+_names_patched = False
+
+
+def _tolerate_broken_defined_names() -> None:
+    """Một số tệp có tên vùng / vùng in hỏng (vd "#N/A") khiến openpyxl từ chối mở cả tệp.
+    Tên vùng không ảnh hưởng nội dung ô nên bỏ qua lỗi đó thay vì bỏ cả tệp."""
+    global _names_patched
+    if _names_patched:
+        return
+    from openpyxl.reader.workbook import WorkbookParser
+    original = WorkbookParser.assign_names
+
+    def assign_names(self):
+        try:
+            original(self)
+        except Exception as exc:
+            logger.info("Bỏ qua tên vùng không hợp lệ trong bảng tính: %s", exc)
+
+    WorkbookParser.assign_names = assign_names
+    _names_patched = True
+
+
+def _excel_sheets(path: str, extension: str):
+    """Sinh (tên sheet, iterator các dòng giá trị) — đọc tuần tự, không nạp cả sheet vào bộ nhớ."""
+    if extension == ".xls":
+        import xlrd
+        book = xlrd.open_workbook(path, on_demand=True)
+        try:
+            for index in range(book.nsheets):
+                sheet = book.sheet_by_index(index)
+                yield sheet.name, (sheet.row_values(row) for row in range(sheet.nrows))
+                book.unload_sheet(index)
+        finally:
+            book.release_resources()
+        return
+    import openpyxl
+    _tolerate_broken_defined_names()
+    book = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    try:
+        for sheet in book.worksheets:
+            yield sheet.title, sheet.iter_rows(values_only=True)
+    finally:
+        book.close()
+
+
+def _sheet_lines(name: str, rows) -> list[str]:
+    """Bảng tính -> dòng chữ. Bỏ dòng/ô trống ở cuối, dừng khi gặp một dải dòng trống dài
+    (vùng "đã định dạng" kéo tới cuối sheet), nhắc lại tên cột theo từng nhóm dòng để mỗi đoạn
+    khi cắt nhỏ vẫn biết cột nào là gì."""
+    filled: list[tuple[int, list[str]]] = []  # (số dòng Excel, giá trị đã bỏ ô trống cuối)
+    empty_run = 0
+    for number, row in enumerate(rows, 1):
+        values = [_cell_text(value) for value in row]
+        while values and not values[-1]:
+            values.pop()
+        if not values:
+            empty_run += 1
+            if empty_run >= config.EXCEL_EMPTY_ROW_STOP:
+                break
+            continue
+        empty_run = 0
+        filled.append((number, values))
+    if not filled:
+        return []
+    # Dòng tiêu đề cột: dòng đầu tiên đủ "rộng" trong các dòng đầu; các dòng trước nó là tên biểu.
+    widest = max(sum(1 for value in values if value) for _, values in filled[:15])
+    header_at = next(index for index, (_, values) in enumerate(filled[:15])
+                     if sum(1 for value in values if value) >= max(2, widest / 2)) if widest > 1 else 0
+    titles = [" ".join(value for value in values if value) for _, values in filled[:header_at]]
+    header = [value or f"Cột {index}" for index, value in enumerate(filled[header_at][1], 1)]
+    header_text = " | ".join(header)
+    lines = [f"\nSheet: {name}" + (f" — {' / '.join(titles)}" if titles else "")]
+    for position, (number, values) in enumerate(filled[header_at + 1:]):
+        if position % config.EXCEL_HEADER_EVERY == 0:
+            lines.append(f"Sheet: {name}; cột: {header_text}")
+        lines.append(f"Dòng {number}: " + " | ".join(values))
+    if len(filled) == header_at + 1:  # chỉ có một dòng: in nguyên dòng đó
+        lines.append(header_text)
+    return lines
+
+
 def extract_excel(path: str):
-    output = []
     extension = os.path.splitext(path)[1].lower()
-    engine = "xlrd" if extension == ".xls" else "openpyxl"
-    with pd.ExcelFile(path, engine=engine) as workbook:
-        for sheet_name in workbook.sheet_names:
-            frame = pd.read_excel(workbook, sheet_name=sheet_name, dtype=str, keep_default_na=False)
-            if frame.empty:
-                continue
-            columns = " | ".join(str(column) for column in frame.columns)
-            for number, row in enumerate(frame.itertuples(index=False, name=None), 2):
-                values = " | ".join(str(value) for value in row)
-                output.append(f"\nSheet: {sheet_name}; cột: {columns}\nDòng {number}: {values}\n")
-    return "".join(output).strip(), extension.lstrip(".")
+    output: list[str] = []
+    for name, rows in _excel_sheets(path, extension):
+        output.extend(_sheet_lines(name, rows))
+    return "\n".join(output).strip(), extension.lstrip(".")
 
 
 def extract_csv(path: str):

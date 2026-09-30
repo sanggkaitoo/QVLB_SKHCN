@@ -37,7 +37,8 @@ PG_DSN = os.getenv(
 # --- Embedding / rerank ---
 EMBED_MODEL  = os.getenv("EMBEDDING_MODEL", "BAAI/bge-m3")
 RERANK_MODEL = os.getenv("RERANK_MODEL", "BAAI/bge-reranker-v2-m3")
-EMBED_DEVICE = os.getenv("EMBEDDING_DEVICE", "cpu")
+# auto | cuda | cpu — auto/cuda dùng GPU khi có, không có GPU thì tự quay về CPU (không lỗi).
+EMBED_DEVICE = os.getenv("EMBEDDING_DEVICE", "auto").strip().lower() or "auto"
 RERANK_MAX_LENGTH = _env_int("RERANK_MAX_LENGTH", 512, 128, 1024)
 WARMUP_MODELS = _env_bool("WARMUP_MODELS", True)
 
@@ -143,6 +144,15 @@ OCR_SERVER_URL = os.getenv("OCR_SERVER_URL", "http://127.0.0.1:10000")
 OCR_MAX_PAGES = _env_int("OCR_MAX_PAGES", 40, 1)
 OCR_PAGES_PER_REQUEST = _env_int("OCR_PAGES_PER_REQUEST", 4, 1, 16)
 OCR_DPI = _env_int("OCR_DPI", 200, 100, 400)
+
+# --- Giới hạn trích xuất (chặn tệp "phình" bất thường làm hỏng lần nạp) ---
+# Mỗi tệp / mỗi văn bản tối đa bấy nhiêu ký tự; vượt thì cắt bớt kèm ghi chú, không làm lỗi cả văn bản.
+EXTRACT_MAX_FILE_CHARS = _env_int("EXTRACT_MAX_FILE_CHARS", 3_000_000, 50_000)
+EXTRACT_MAX_DOCUMENT_CHARS = _env_int("EXTRACT_MAX_DOCUMENT_CHARS", 6_000_000, 100_000)
+# Bảng tính: gặp chừng này dòng trống liên tiếp thì coi như hết sheet (vùng định dạng thừa tới cuối sheet).
+EXCEL_EMPTY_ROW_STOP = _env_int("EXCEL_EMPTY_ROW_STOP", 500, 20)
+# Nhắc lại tên cột sau mỗi chừng này dòng dữ liệu (thay vì lặp ở mọi dòng).
+EXCEL_HEADER_EVERY = _env_int("EXCEL_HEADER_EVERY", 20, 1)
 OCR_REQUEST_TIMEOUT_SECONDS = _env_int("OCR_REQUEST_TIMEOUT_SECONDS", 300, 30)
 
 # --- Admin Auth ---

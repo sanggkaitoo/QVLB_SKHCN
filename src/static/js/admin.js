@@ -417,15 +417,34 @@ async function loadItems() {
         <td class="mono">${esc(r.ngay || '')}</td>
         <td>${esc(r.trich_yeu || '')}${(r.last_error || r.skip_reason) ? `<div class="sub ${r.status === 'failed' ? 'bad' : ''}">${esc(r.last_error || r.skip_reason)}</div>` : ''}</td>
         <td><span class="st st-${esc(r.status)}">${esc(STATUS_TEXT[r.status] || r.status)}</span>${r.attempts ? `<div class="sub">${fmt(r.attempts)} lần thử</div>` : ''}</td>
-        <td>${['failed', 'done', 'skipped'].includes(r.status) ? `<button class="btn btn-sm" type="button" onclick="retryItem(${Number(r.id)})">Tải lại</button>` : ''}</td>
+        <td>${['failed', 'done', 'skipped'].includes(r.status) ? `<button class="btn btn-sm" type="button" onclick="retryItem(${Number(r.id)}, this)">Tải lại</button>` : ''}</td>
       </tr>`).join('') : '<tr><td colspan="5" class="empty">Không có văn bản nào ở trạng thái này.</td></tr>';
   } catch (err) {
     $('#itemsBody').innerHTML = '<tr><td colspan="5" class="error">Không tải được danh sách.</td></tr>';
   }
 }
-async function retryItem(id) {
-  try { await postAdmin(`/api/admin/qlvb/items/${id}/retry`); loadItems(); loadInventory(); }
-  catch (err) { toast('Không thể đưa lại hàng chờ: ' + err.message, 'bad'); }
+async function retryItem(id, button) {
+  if (button) { button.disabled = true; button.innerHTML = '<span class="spin dark"></span>Đang gửi'; }
+  try {
+    const data = await postAdmin(`/api/admin/qlvb/items/${id}/retry`);
+    // Giữ dòng trong danh sách, đổi trạng thái để người dùng thấy văn bản đang được xử lý.
+    const row = button && button.closest('tr');
+    if (row) {
+      const cell = row.querySelector('.st');
+      if (cell) { cell.className = 'st st-processing'; cell.textContent = data.started ? 'Đang tải lại' : 'Chờ tải'; }
+      button.remove();
+    }
+    toast(data.message || 'Đã đưa văn bản vào hàng chờ.', data.started ? 'info' : 'warn', { duration: 6000 });
+    if (data.started) {
+      lastStatus = 'starting';
+      startPolling();
+      checkCrawlerStatus({ notify: true });
+    }
+    loadInventory();
+  } catch (err) {
+    if (button) { button.disabled = false; button.textContent = 'Tải lại'; }
+    toast('Không thể tải lại: ' + err.message, 'bad');
+  }
 }
 async function launchJob(url, payload, message) {
   try {

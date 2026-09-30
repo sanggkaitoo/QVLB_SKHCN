@@ -55,6 +55,7 @@ class _PreparedFile:
     text: str = ""
     method: str | None = None
     error: str | None = None
+    warning: str | None = None           # tệp đọc được nhưng đã bị cắt bớt vì quá lớn
     role: str = "dinh_kem"
     duplicate_of: int | None = None      # index trong danh sách prepared
     file_id: int | None = None
@@ -148,6 +149,17 @@ def assign_roles(prepared: list[_PreparedFile], threshold: float | None = None) 
             prepared[index].role = "chinh" if rep == main_cluster else "dinh_kem"
 
 
+def _truncate(text: str, limit: int, what: str) -> tuple[str, str | None]:
+    """Cắt văn bản quá dài (kèm ghi chú trong nội dung) thay vì để cả lần nạp thất bại."""
+    if len(text) <= limit:
+        return text, None
+    cut = text.rfind("\n", 0, limit)
+    cut = cut if cut > limit * 0.9 else limit
+    note = (f"{what} có {len(text):,} ký tự, vượt giới hạn {limit:,}; chỉ nạp phần đầu "
+            f"({cut:,} ký tự)").replace(",", ".")
+    return text[:cut] + f"\n\n[[ĐÃ CẮT BỚT: {note}. Xem tệp gốc để có đầy đủ nội dung.]]", note
+
+
 def _prepare(files: list[SourceFile]) -> list[_PreparedFile]:
     prepared = []
     for source in sorted(files, key=lambda item: (item.file_index, os.path.basename(item.path))):
@@ -165,6 +177,10 @@ def _prepare(files: list[SourceFile]) -> list[_PreparedFile]:
                     item.error = "Tệp không có nội dung văn bản trích xuất được"
             except ExtractionError as exc:
                 item.error = str(exc)
+        if item.text:
+            item.text, item.warning = _truncate(item.text, config.EXTRACT_MAX_FILE_CHARS, f"Tệp {name}")
+            if item.warning:
+                logger.warning("%s", item.warning)
         prepared.append(item)
     return prepared
 
@@ -367,6 +383,10 @@ def ingest_document(files: list[SourceFile], huong: str | None = "di", raw_meta:
     indexed = [item for item in prepared if item.text and item.role != "ban_sao"]
     full_text = main.text + "".join(f"\n\n[[TỆP ĐÍNH KÈM: {item.name}]]\n{item.text}"
                                     for item in indexed if item is not main)
+    full_text, document_warning = _truncate(full_text, config.EXTRACT_MAX_DOCUMENT_CHARS, "Nội dung ghép các tệp")
+    warnings = [item.warning for item in prepared if item.warning] + ([document_warning] if document_warning else [])
+    if warnings:
+        raw_meta["extract_warnings"] = warnings
     document_fields = {
         **{column: meta.get(column) for column in (
             "so_ky_hieu", "normalized_so_ky_hieu", "ngay_ban_hanh", "loai_vb", "viet_tat_loai",
@@ -410,7 +430,7 @@ def ingest_document(files: list[SourceFile], huong: str | None = "di", raw_meta:
         raise
     logger.info("Đã nạp doc_id=%s: %d đoạn, %d tệp trùng nội dung, %d quan hệ", doc_id, total_chunks,
                 sum(item.role == "ban_sao" for item in prepared), len(relations))
-    return {"document_id": doc_id, "skipped": False, "failed_files": failed}
+    return {"document_id": doc_id, "skipped": False, "failed_files": failed, "warnings": warnings}
 
 
 def ingest_file(file_path: str, huong: str | None = "di", raw_meta: dict | None = None,
