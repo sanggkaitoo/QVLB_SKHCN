@@ -38,6 +38,8 @@ openai>=1.40.0
 httpx>=0.27.0
 requests>=2.31.0  # MỚI: Dùng để gọi sang SGLang/Unlimited-OCR Server
 google-generativeai==0.8.3
+anthropic==1.9.0  # gọi Claude trực tiếp (SDK chính thức, có fallback phía máy chủ)
+cryptography>=42  # mã hoá khoá API lưu trên trang quản trị
 
 # --- RPA Crawler ---
 playwright==1.44.0

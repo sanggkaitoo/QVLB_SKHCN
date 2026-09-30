@@ -51,7 +51,7 @@ def create_plan(query: str, explicit_filters: dict | None = None, use_llm: bool 
         planned = llm.extract_json(
             PLANNER_SYSTEM,
             f"CÂU HỎI: {query}\n\n{PLANNER_FORMAT}",
-            model=config.LLM_CHEAP,
+            model=llm.PLAN,
             timeout=config.LLM_FAST_TIMEOUT_SECONDS,
             max_tokens=800,
         )
@@ -95,7 +95,7 @@ def grade_evidence(query: str, plan: QueryPlan, evidence: list[Evidence]) -> Evi
         result = llm.extract_json(
             GRADER_SYSTEM,
             f"Câu hỏi: {query}\nCác ý cần có: {plan.required_evidence}\n\nBẰNG CHỨNG:\n{context}\n\n{GRADER_FORMAT}",
-            model=config.LLM_CHEAP, timeout=config.LLM_FAST_TIMEOUT_SECONDS, max_tokens=600,
+            model=llm.PLAN, timeout=config.LLM_FAST_TIMEOUT_SECONDS, max_tokens=600,
         )
         if isinstance(result, dict) and isinstance(result.get("sufficient"), bool):
             return EvidenceGrade(

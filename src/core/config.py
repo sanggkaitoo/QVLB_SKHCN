@@ -51,6 +51,9 @@ LLM_CHEAP = os.getenv("LLM_CHEAP", "google/gemini-2.5-flash-lite")  # metadata, 
 LLM_MAIN  = os.getenv("LLM_MAIN",  "qwen/qwen-2.5-72b-instruct")    # trả lời search
 LLM_SMART = os.getenv("LLM_SMART", "google/gemini-2.5-pro")        # kiểm tra nội dung/pháp lý
 LLM_FALLBACK = os.getenv("LLM_FALLBACK", LLM_SMART)
+# Tính năng cần loại đầu vào đặc biệt: gỡ băng cần model nhận âm thanh, OCR cần model nhận ảnh.
+LLM_TRANSCRIBE = os.getenv("LLM_TRANSCRIBE", "gemini:gemini-2.5-flash")
+LLM_OCR = os.getenv("LLM_OCR", "local:Unlimited-OCR")
 LLM_MAX_OUTPUT_TOKENS = max(256, int(os.getenv("LLM_MAX_OUTPUT_TOKENS", 4096)))
 # Lời gọi phụ trợ (planner, grader, verifier) có đầu ra ngắn; timeout riêng tránh một lượt chậm kéo dài P95.
 LLM_FAST_TIMEOUT_SECONDS = _env_int("LLM_FAST_TIMEOUT_SECONDS", 20, 5)
@@ -155,3 +158,7 @@ _WEAK_ADMIN_PASSWORDS = {"", "admin", "matkhau123", "password", "123456", "12345
 
 def admin_password_is_weak() -> bool:
     return ADMIN_PASS.strip().lower() in _WEAK_ADMIN_PASSWORDS or len(ADMIN_PASS) < 10
+
+SESSION_HOURS = _env_int("SESSION_HOURS", 12, 1, 24 * 7)
+SESSION_REMEMBER_DAYS = _env_int("SESSION_REMEMBER_DAYS", 30, 1, 365)
+USD_TO_VND = _env_int("USD_TO_VND", 26000, 1000)

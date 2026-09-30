@@ -2,12 +2,12 @@ import logging
 import threading
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse
+from fastapi import Depends, FastAPI, Request
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from src.core import config
-from src.routers import admin, aggregate, audio, check, ocr, search, web_routes
+from src.core import config, security
+from src.routers import admin, aggregate, ai_settings, audio, auth, check, ocr, overview, search, users, web_routes
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("docnexus")
@@ -23,8 +23,8 @@ def _warmup():
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    if config.admin_password_is_weak():
-        logger.warning("ADMIN_PASS chưa đặt hoặc quá yếu: trang quản trị sẽ bị khóa cho đến khi đổi mật khẩu.")
+    # Lần chạy đầu: tạo super admin từ ADMIN_USER/ADMIN_PASS (sau đó quản lý tài khoản trên trang quản trị).
+    threading.Thread(target=security.ensure_super_admin, name="seed-super-admin", daemon=True).start()
     if config.WARMUP_MODELS:
         # Nạp mô hình nền để yêu cầu đầu tiên không phải chờ khởi động nguội.
         threading.Thread(target=_warmup, name="model-warmup", daemon=True).start()
@@ -36,11 +36,20 @@ app.mount("/static", StaticFiles(directory="src/static"), name="static")
 
 app.include_router(web_routes.router)
 app.include_router(search.router, prefix="/api", tags=["Search"])
-app.include_router(aggregate.router, prefix="/api", tags=["Aggregate"])
-app.include_router(check.router, prefix="/api/check", tags=["Check"])
+app.include_router(overview.router, prefix="/api", tags=["Overview"])
+app.include_router(aggregate.router, prefix="/api", tags=["Aggregate"],
+                   dependencies=[Depends(security.require("tools.aggregate"))])
+app.include_router(check.router, prefix="/api/check", tags=["Check"],
+                   dependencies=[Depends(security.require("tools.check"))])
+app.include_router(audio.router, prefix="/api/audio", tags=["Audio"],
+                   dependencies=[Depends(security.require("tools.audio"))])
+app.include_router(ocr.router, prefix="/api/ocr", tags=["OCR"],
+                   dependencies=[Depends(security.require("tools.ocr"))])
+app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
+app.include_router(ai_settings.public_router, prefix="/api/models", tags=["Models"])
+app.include_router(users.router, prefix="/api/admin/users", tags=["Users"])
+app.include_router(ai_settings.router, prefix="/api/admin/ai", tags=["AI settings"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
-app.include_router(audio.router, prefix="/api/audio", tags=["Audio"])
-app.include_router(ocr.router, prefix="/api/ocr", tags=["OCR"])
 
 _SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
@@ -52,10 +61,12 @@ _SECURITY_HEADERS = {
 
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
+    if request.url.path.startswith("/api/") and not security.csrf_ok(request):
+        return JSONResponse({"detail": "Thiếu header chống giả mạo yêu cầu (X-Requested-With)."}, status_code=403)
     response = await call_next(request)
     for header, value in _SECURITY_HEADERS.items():
         response.headers.setdefault(header, value)
-    if request.url.path.startswith("/api/admin") or request.url.path == "/admin":
+    if request.url.path.startswith(("/api/admin", "/api/auth")) or request.url.path in {"/admin", "/login"}:
         response.headers["Cache-Control"] = "no-store"
     return response
 

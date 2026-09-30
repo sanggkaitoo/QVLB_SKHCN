@@ -142,6 +142,8 @@ def _finish(result: AgentResult, mode: str) -> Iterator[dict]:
             "latency_ms": result.latency_ms,
             "answer_status": "ok" if not result.error else "error",
             "error_text": result.error,
+            "user_id": llm.current_scope().get("user_id"),
+            "model": llm.current_scope().get("served_model"),
         })
     yield {"type": "done", "result": result.model_dump(mode="json")}
 
@@ -219,8 +221,7 @@ def _answer_pipeline(query: str, base: QueryPlan, explicit: dict, mode: str, sta
             yield _status("answering", "Đang soạn câu trả lời…")
             draft = ""
             with timer("answer"):
-                for text in llm.chat_stream(ANSWER_SYSTEM, _answer_prompt(query, evidence, relations),
-                                            models=[config.LLM_MAIN, config.LLM_FALLBACK]):
+                for text in llm.chat_stream(ANSWER_SYSTEM, _answer_prompt(query, evidence, relations)):
                     draft += text
                     yield {"type": "token", "text": text}
             yield _status("verifying", "Đang kiểm chứng từng nhận định với nguồn…")
@@ -252,7 +253,14 @@ def _answer_pipeline(query: str, base: QueryPlan, explicit: dict, mode: str, sta
 
 
 def agent_events(query: str, loai_vb=None, huong=None, filters: dict | None = None,
-                 routing_mode: str | None = None) -> Iterator[dict]:
+                 routing_mode: str | None = None, user_id: int | None = None,
+                 answer_model: str | None = None) -> Iterator[dict]:
+    """answer_model: model người dùng chọn cho bước trả lời (None = theo cấu hình admin)."""
+    with llm.request_scope(user_id=user_id, answer_model=answer_model):
+        yield from _agent_events(query, loai_vb, huong, filters, routing_mode)
+
+
+def _agent_events(query: str, loai_vb, huong, filters: dict | None, routing_mode: str | None) -> Iterator[dict]:
     started = time.perf_counter()
     mode = routing_mode or config.AGENT_ROUTING_MODE
     if mode not in {"always", "selective"}:
@@ -285,10 +293,12 @@ def agent_events(query: str, loai_vb=None, huong=None, filters: dict | None = No
 
 
 def run_agent(query: str, loai_vb: str | None = None, huong: str | None = None,
-              routing_mode: str | None = None, filters: dict | None = None) -> AgentResult:
+              routing_mode: str | None = None, filters: dict | None = None,
+              user_id: int | None = None, answer_model: str | None = None) -> AgentResult:
     """Non-streaming entry point (benchmarks, scripts): consumes the same event pipeline."""
     result = None
-    for event in agent_events(query, loai_vb=loai_vb, huong=huong, filters=filters, routing_mode=routing_mode):
+    for event in agent_events(query, loai_vb=loai_vb, huong=huong, filters=filters, routing_mode=routing_mode,
+                              user_id=user_id, answer_model=answer_model):
         if event["type"] == "done":
             result = AgentResult.model_validate(event["result"])
     if result is None:

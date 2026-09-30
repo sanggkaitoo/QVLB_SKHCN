@@ -1,322 +1,419 @@
 <!DOCTYPE html>
 <html lang="vi" data-theme="light">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>DocNexus — Sở Khoa học và Công nghệ Lào Cai</title>
-        <link rel="manifest" href="/manifest.webmanifest">
-        <link rel="icon" href="/static/pwa/icon.svg" type="image/svg+xml">
-        <meta name="theme-color" content="#0369A1">
-        <meta name="apple-mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-title" content="DocNexus">
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link
-            rel="preconnect"
-            href="https://fonts.gstatic.com"
-            crossorigin="crossorigin">
-        <link
-            href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
-            rel="stylesheet">
-        <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
-        <link rel="stylesheet" href="/static/css/app.css?v=4">
-    </head>
-    <body>
-        <a class='skip-link' href='#main-content'>Bỏ qua điều hướng</a>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>DocNexus — Sở Khoa học và Công nghệ Lào Cai</title>
+    <meta name="description" content="Trợ lý AI tra cứu, tổng hợp và kiểm tra văn bản hành chính có dẫn nguồn.">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" href="/static/pwa/icon.svg" type="image/svg+xml">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="DocNexus">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+    <link rel="stylesheet" href="/static/css/theme.css?v=6">
+    <link rel="stylesheet" href="/static/css/app.css?v=6">
+</head>
+<body data-tab="overview">
+<a class="skip-link" href="#main-content">Bỏ qua điều hướng</a>
 
-        <!-- SVG seal definition (signature element) -->
-        <svg width="0" height="0" style="position:absolute">
-            <defs>
-                <g id="sealmark">
-                    <circle cx="50" cy="50" r="47" fill="none" stroke="#E0463B" stroke-width="2"/>
-                    <circle cx="50" cy="50" r="40" fill="none" stroke="#E0463B" stroke-width="1"/>
-                    <path
-                        id="ring"
-                        d="M50,50 m-33,0 a33,33 0 1,1 66,0 a33,33 0 1,1 -66,0"
-                        fill="none"/>
-                    <text
-                        fill="#E0463B"
-                        font-family="'Be Vietnam Pro',sans-serif"
-                        font-size="7.4"
-                        font-weight="600"
-                        letter-spacing="1.2">
-                        <textpath href="#ring" startoffset="0">SỞ KHOA HỌC VÀ CÔNG NGHỆ · TỈNH LÀO CAI ·</textpath>
-                    </text>
-                    <polygon
-                        points="50,37 53.5,47.2 64.3,47.4 55.7,53.9 58.8,64.1 50,58 41.2,64.1 44.3,53.9 35.7,47.4 46.5,47.2"
-                        fill="#E0463B"/>
-                </g>
-            </defs>
-        </svg>
-        <svg class="watermark" viewbox="0 0 100 100"><use href="#sealmark"/></svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+        <g id="sealmark">
+            <circle cx="50" cy="50" r="47" fill="none" stroke="#d6453b" stroke-width="2"/>
+            <circle cx="50" cy="50" r="40" fill="none" stroke="#d6453b" stroke-width="1"/>
+            <path id="ring" d="M50,50 m-33,0 a33,33 0 1,1 66,0 a33,33 0 1,1 -66,0" fill="none"/>
+            <text fill="#d6453b" font-family="'Be Vietnam Pro',sans-serif" font-size="7.4" font-weight="600" letter-spacing="1.2">
+                <textPath href="#ring" startOffset="0">SỞ KHOA HỌC VÀ CÔNG NGHỆ · TỈNH LÀO CAI ·</textPath>
+            </text>
+            <polygon points="50,37 53.5,47.2 64.3,47.4 55.7,53.9 58.8,64.1 50,58 41.2,64.1 44.3,53.9 35.7,47.4 46.5,47.2" fill="#d6453b"/>
+        </g>
+        <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></symbol>
+        <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+        <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+        <symbol id="i-shield" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 5-3.5 7.5-8.5 9C7.5 19.5 4 17 4 12V6l8-3 8 3z"/></symbol>
+        <symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></symbol>
+        <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></symbol>
+        <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/></symbol>
+        <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+        <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+        <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></symbol>
+        <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M17.9 17.9A10 10 0 0 1 12 20c-7 0-10-8-10-8a18 18 0 0 1 5.1-5.9M9.9 4.2A9 9 0 0 1 12 4c7 0 10 8 10 8a18 18 0 0 1-2.2 3.2M3 3l18 18"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></symbol>
+        <symbol id="i-server" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></symbol>
+        <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    </defs>
+</svg>
 
-        <!-- ============ SIDEBAR ============ -->
-        <aside class="rail">
-            <div class="brand">
-                <svg class="seal" viewbox="0 0 100 100"><use href="#sealmark"/></svg>
-                <div>
-                    <h1>DocNexus</h1>
-                    <div class="sub">Trợ lý AI · Sở KH&CN</div>
-                </div>
+<div class="app">
+    <!-- ============ ĐIỀU HƯỚNG ============ -->
+    <aside class="rail" aria-label="Điều hướng chính">
+        <div class="brand">
+            <svg class="seal" viewBox="0 0 100 100" aria-hidden="true"><use href="#sealmark"/></svg>
+            <div class="brand-text">
+                <h1>DocNexus</h1>
+                <div class="sub">Trợ lý AI · Sở KH&amp;CN Lào Cai</div>
             </div>
-            <nav class="nav">
-                <div class="nav-label">Nghiệp vụ</div>
-                <button class="tab active" type="button" data-tab="search">
-                    <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-                    <span>Tra cứu văn bản</span></button>
-                <button class="tab" type="button" data-tab="agg">
-                    <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
-                    <span>Tổng hợp số liệu</span></button>
-                <button class="tab" type="button" data-tab="check">
-                    <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 5-3.5 7.5-8.5 9C7.5 19.5 4 17 4 12V6l8-3 8 3z"/></svg>
-                    <span>Kiểm tra dự thảo</span></button>
-                <button class="tab" type="button" data-tab="audio">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
-                    <span>Chuyển audio thành văn bản</span>
-                </button>
-                <button class="tab" type="button" data-tab="ocr">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                    <span>Nhận dạng văn bản (OCR)</span>
-                </button>
-            </nav>
-            <div class="spacer"></div>
-
-            <div class="rail-actions">
-                <a class="utility-link" href="/admin" aria-label="Mở trang quản trị" title="Quản trị">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
-                    <span class="action-label">Quản trị</span>
-                </a>
-                <button class="utility-link install-pwa-btn" id="installPwaBtn" type="button" aria-label="Cài DocNexus" title="Cài ứng dụng DocNexus">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/><path d="M6 17v2h12v-2"/></svg>
-                    <span class="action-label">Cài ứng dụng</span>
-                </button>
-                <button class="theme-toggle" id="themeBtn" type="button" onclick="toggleTheme()" aria-label="Đổi giao diện sáng tối" title="Đổi giao diện">
-                    <span id="themeIcon">☀</span><span id="themeText" class="action-label">Giao diện Sáng</span>
-                </button>
-            </div>
-
-            <div class="telemetry">
-                <div class="tel-row">
-                    <span class="dot" id="d-q"></span>Vector · Qdrant<span class="mono" id="s-q">—</span></div>
-                <div class="tel-row">
-                    <span class="dot" id="d-p"></span>CSDL · Postgres<span class="mono" id="s-p">—</span></div>
-                <div class="tel-row">
-                    <span class="dot" id="d-l"></span>Mô hình · LLM<span class="mono" id="s-l">—</span></div>
-            </div>
-        </aside>
-
-        <div class="ios-install-guide" id="iosInstallGuide" role="dialog" aria-live="polite" aria-label="Hướng dẫn cài DocNexus trên iPhone">
-            <button class="guide-close" id="iosGuideClose" type="button" aria-label="Đóng hướng dẫn">×</button>
-            <h3>Cài DocNexus trên iPhone</h3>
-            <p>Mở bằng Safari, bấm nút Chia sẻ, chọn Thêm vào Màn hình chính, rồi bấm Thêm.</p>
         </div>
-        <!-- ============ MAIN ============ -->
-        <main class="main" id="main-content" tabindex="-1">
-            <div class="topbar">
-                <div id="hd">
-                    <div class="eyebrow">Tra cứu</div>
-                    <h2>Tìm trong toàn bộ kho văn bản</h2>
-                    <p>Tìm theo từ khóa hoặc ý nghĩa trên văn bản đi và đến. Mọi câu trả lời đều dẫn
-                        nguồn số ký hiệu.</p>
+
+        <nav class="nav" aria-label="Chức năng">
+            <div class="nav-label">Không gian làm việc</div>
+            <button class="tab active" type="button" data-tab="overview"><svg class="ico"><use href="#i-home"/></svg><span class="l-long">Tổng quan</span><span class="l-short">Tổng quan</span></button>
+            <button class="tab" type="button" data-tab="search"><svg class="ico"><use href="#i-search"/></svg><span class="l-long">Tra cứu văn bản</span><span class="l-short">Tra cứu</span></button>
+            <button class="tab" type="button" data-tab="agg"><svg class="ico"><use href="#i-chart"/></svg><span class="l-long">Tổng hợp số liệu</span><span class="l-short">Tổng hợp</span></button>
+            <button class="tab" type="button" data-tab="check"><svg class="ico"><use href="#i-shield"/></svg><span class="l-long">Kiểm tra dự thảo</span><span class="l-short">Kiểm tra</span></button>
+            <button class="tab" type="button" data-tab="audio"><svg class="ico"><use href="#i-mic"/></svg><span class="l-long">Gỡ băng ghi âm</span><span class="l-short">Gỡ băng</span></button>
+            <button class="tab" type="button" data-tab="ocr"><svg class="ico"><use href="#i-doc"/></svg><span class="l-long">Nhận dạng văn bản (OCR)</span><span class="l-short">OCR</span></button>
+        </nav>
+
+        <div class="rail-foot">
+            <div class="telemetry" aria-label="Trạng thái hệ thống">
+                <div class="tel-row"><span class="dot" id="d-q"></span>Vector · Qdrant<span class="mono" id="s-q">—</span></div>
+                <div class="tel-row"><span class="dot" id="d-p"></span>CSDL · Postgres<span class="mono" id="s-p">—</span></div>
+                <div class="tel-row"><span class="dot" id="d-l"></span>Mô hình · LLM<span class="mono" id="s-l">—</span></div>
+            </div>
+            <div class="account" id="account"></div>
+            <div class="rail-actions">
+                <button class="utility-link install-pwa-btn" id="installPwaBtn" type="button" title="Cài ứng dụng DocNexus">
+                    <svg class="ico" viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg><span class="action-label">Cài ứng dụng</span>
+                </button>
+                <button class="utility-link theme-toggle" id="themeBtn" type="button" onclick="toggleTheme()" aria-label="Đổi giao diện sáng tối" title="Đổi giao diện">
+                    <span id="themeIcon" aria-hidden="true">☀</span><span id="themeText" class="action-label">Giao diện Sáng</span>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ============ NỘI DUNG ============ -->
+    <main class="main" id="main-content" tabindex="-1">
+        <header class="topbar">
+            <div id="hd">
+                <div class="eyebrow">Tổng quan</div>
+                <h2>Kho văn bản trong một cái nhìn</h2>
+                <p>Số liệu trực tiếp từ kho dữ liệu.</p>
+            </div>
+            <div class="demo-badge" id="demo"><span class="dot warn"></span>Chế độ xem thử</div>
+        </header>
+
+        <div class="panel-wrap">
+            <!-- ---- TỔNG QUAN ---- -->
+            <section class="panel active" id="p-overview" aria-labelledby="heroTitle">
+                <div class="hero">
+                    <div class="hero-copy reveal">
+                        <span class="pill hero-pill"><span class="dot live"></span>Sở Khoa học và Công nghệ tỉnh Lào Cai</span>
+                        <h1 id="heroTitle">Tra cứu văn bản hành chính <span class="grad">nhanh, chính xác, có dẫn nguồn</span></h1>
+                        <p class="lead">DocNexus đọc toàn bộ văn bản đi và đến trên QLVB, trả lời bằng tiếng Việt kèm số ký hiệu và tự kiểm chứng từng nhận định trước khi hiển thị.</p>
+                        <form class="hero-search glass" id="heroSearch" role="search">
+                            <svg class="ico" aria-hidden="true"><use href="#i-search"/></svg>
+                            <input id="heroQ" type="search" autocomplete="off" aria-label="Câu hỏi tra cứu" placeholder="Hỏi về bất kỳ văn bản nào…">
+                            <button class="btn btn-primary" type="submit">Tra cứu<svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+                        </form>
+                        <div class="prompt-row" aria-label="Câu hỏi gợi ý">
+                            <button class="chip prompt" type="button">Văn bản mới nhất về chuyển đổi số</button>
+                            <button class="chip prompt" type="button">Kế hoạch triển khai Nghị quyết 57</button>
+                            <button class="chip prompt" type="button">Lịch nghỉ lễ Quốc khánh năm 2026</button>
+                        </div>
+                        <ul class="trust-row" aria-label="Cam kết">
+                            <li><svg class="ico"><use href="#i-link"/></svg>Dẫn nguồn số ký hiệu</li>
+                            <li><svg class="ico"><use href="#i-check"/></svg>Tự kiểm chứng câu trả lời</li>
+                            <li><svg class="ico"><use href="#i-server"/></svg>Dữ liệu lưu nội bộ</li>
+                        </ul>
+                    </div>
+
+                    <div class="hero-live glass reveal" aria-live="polite">
+                        <div class="live-head">
+                            <div>
+                                <div class="eyebrow">Kho văn bản</div>
+                                <div class="live-meta"><span class="dot live" id="liveDot"></span><span id="liveStamp">Đang tải số liệu…</span></div>
+                            </div>
+                            <button class="btn btn-ghost btn-sm" type="button" id="liveRefresh" aria-label="Làm mới số liệu">
+                                <svg class="ico" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>Làm mới
+                            </button>
+                        </div>
+                        <div class="hero-figure">
+                            <div class="hero-num" id="ovDocs">—</div>
+                            <div class="hero-cap">văn bản sẵn sàng tra cứu</div>
+                        </div>
+                        <div class="tiles">
+                            <div class="tile"><div class="tile-l">Tệp đính kèm</div><div class="tile-v" id="ovFiles">—</div></div>
+                            <div class="tile"><div class="tile-l">Đoạn đã lập chỉ mục</div><div class="tile-v" id="ovChunks">—</div></div>
+                            <div class="tile"><div class="tile-l">Đã đồng bộ QLVB</div><div class="tile-v" id="ovSync">—</div></div>
+                        </div>
+                        <div class="viz-block">
+                            <div class="viz-title">Văn bản theo tháng ban hành <span>12 tháng gần nhất</span></div>
+                            <div class="viz" id="chartMonths"></div>
+                        </div>
+                    </div>
                 </div>
-                <div class="demo-badge" id="demo" style="margin-left:auto;">
-                    <span class="dot warn"></span>Chế độ xem thử</div>
-            </div>
 
-            <div class="panel-wrap">
-                <!-- ---- SEARCH ---- -->
-                <section class="panel active" id="p-search">
-                    <div class="qbar">
-                        <input id="q-search" aria-label="Câu hỏi tra cứu" placeholder="Ví dụ: tiến độ triển khai Đề án 06 trong các báo cáo quý..." autocomplete="off">
-                        <button class="btn" id="b-search">
-                            <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Tra cứu</button>
-                    </div>
-                    <p style="font-size: 12.5px; color: var(--faint); margin-top: 10px; margin-bottom: 0;">
-                        💡 <strong>Mẹo tra cứu:</strong> Hãy gõ từ khóa hoặc câu hỏi rõ nghĩa (VD: <em>"Tiến độ giải ngân vốn đầu tư công năm 2026"</em>) và kết hợp chọn các thẻ lọc bên dưới để AI tìm chính xác nhất.
-                    </p>
-                    <div class="filters-wrap">
-                        <div class="filter-row">
-                            <div class="lbl">Hướng:</div>
-                            <div class="chip-group">
-                                <button class="chip" type="button" data-f="huong" data-v="den" aria-pressed="false">Văn bản đến</button>
-                                <button class="chip" type="button" data-f="huong" data-v="di" aria-pressed="false">Văn bản đi</button>
-                            </div>
+                <div class="section-head reveal">
+                    <div class="eyebrow">Số liệu trực tiếp</div>
+                    <h2>Kho dữ liệu đang vận hành ra sao</h2>
+                </div>
+                <div class="grid-3">
+                    <article class="card viz-card reveal">
+                        <div class="viz-title">Tiến độ đồng bộ QLVB</div>
+                        <div class="viz" id="chartSync"></div>
+                    </article>
+                    <article class="card viz-card reveal">
+                        <div class="viz-title">Loại văn bản trong kho</div>
+                        <div class="viz" id="chartTypes"></div>
+                    </article>
+                    <article class="card viz-card reveal">
+                        <div class="viz-title">Lượt tra cứu 24 giờ qua</div>
+                        <div class="viz" id="chartQueries"></div>
+                        <div class="mini-tiles">
+                            <div><span>Thời gian phản hồi (trung vị)</span><strong id="ovP50">—</strong></div>
+                            <div><span>95% câu hỏi xong trong</span><strong id="ovP95">—</strong></div>
                         </div>
+                    </article>
+                </div>
 
-                        <div class="filter-row">
-                            <div class="lbl">Loại:</div>
-                            <div class="chip-group">
-                                <button class="chip" type="button" data-f="loai_vb" data-v="cong_van" aria-pressed="false">Công văn</button>
-                                <button class="chip" type="button" data-f="loai_vb" data-v="ke_hoach" aria-pressed="false">Kế hoạch</button>
-                                <button class="chip" type="button" data-f="loai_vb" data-v="bao_cao" aria-pressed="false">Báo cáo</button>
-                                <button class="chip" type="button" data-f="loai_vb" data-v="quyet_dinh" aria-pressed="false">Quyết định</button>
-                                <button class="chip" type="button" data-f="loai_vb" data-v="to_trinh" aria-pressed="false">Tờ trình</button>
-                                <button class="chip" type="button" data-f="loai_vb" data-v="thong_bao" aria-pressed="false">Thông báo</button>
-                                <button class="chip" type="button" data-f="loai_vb" data-v="nghi_quyet" aria-pressed="false">Nghị quyết</button>
-                                <button class="chip" type="button" data-f="loai_vb" data-v="chuong_trinh" aria-pressed="false">Chương trình</button>
-                                <button class="chip" type="button" data-f="loai_vb" data-v="de_an" aria-pressed="false">Đề án</button>
-                                <button class="chip" type="button" data-f="loai_vb" data-v="chi_thi" aria-pressed="false">Chỉ thị</button>
-                                <select class="chip-select" id="more-loai">
-                                    <option value="">Loại khác ▾</option>
-                                    <option value="quy_che">Quy chế</option>
-                                    <option value="quy_dinh">Quy định</option>
-                                    <option value="thong_cao">Thông cáo</option>
-                                    <option value="huong_dan">Hướng dẫn</option>
-                                    <option value="phuong_an">Phương án</option>
-                                    <option value="du_an">Dự án</option>
-                                    <option value="bien_ban">Biên bản</option>
-                                    <option value="hop_dong">Hợp đồng</option>
-                                    <option value="cong_dien">Công điện</option>
-                                    <option value="ban_ghi_nho">Bản ghi nhớ</option>
-                                    <option value="ban_thoa_thuan">Bản thỏa thuận</option>
-                                    <option value="giay_uy_quyen">Giấy ủy quyền</option>
-                                    <option value="giay_moi">Giấy mời</option>
-                                    <option value="giay_gioi_thieu">Giấy giới thiệu</option>
-                                    <option value="giay_nghi_phep">Giấy nghỉ phép</option>
-                                    <option value="phieu_gui">Phiếu gửi</option>
-                                    <option value="phieu_chuyen">Phiếu chuyển</option>
-                                    <option value="phieu_bao">Phiếu báo</option>
-                                    <option value="thu_cong">Thư công</option>
-                                </select>
-                            </div>
-                        </div>
+                <div class="section-head reveal">
+                    <div class="eyebrow">Tính năng</div>
+                    <h2>Mọi nghiệp vụ văn bản trong một nơi</h2>
+                </div>
+                <div class="features">
+                    <a class="card feature reveal" href="#search" data-go="search">
+                        <span class="f-ico c-blue"><svg class="ico"><use href="#i-search"/></svg></span>
+                        <h3>Tra cứu có dẫn nguồn</h3>
+                        <p>Hỏi bằng ngôn ngữ tự nhiên; câu trả lời kèm số ký hiệu, đoạn trích và tệp đính kèm liên quan.</p>
+                        <span class="f-go">Mở tra cứu<svg class="ico"><use href="#i-arrow"/></svg></span>
+                    </a>
+                    <a class="card feature reveal" href="#search" data-go="search">
+                        <span class="f-ico c-violet"><svg class="ico"><use href="#i-spark"/></svg></span>
+                        <h3>Agentic RAG tự kiểm chứng</h3>
+                        <p>Tách câu hỏi nhiều ý, tự tìm bổ sung khi thiếu bằng chứng và loại bỏ nhận định không có nguồn.</p>
+                        <span class="f-go">Thử ngay<svg class="ico"><use href="#i-arrow"/></svg></span>
+                    </a>
+                    <a class="card feature reveal" href="#agg" data-go="agg">
+                        <span class="f-ico c-teal"><svg class="ico"><use href="#i-chart"/></svg></span>
+                        <h3>Tổng hợp số liệu</h3>
+                        <p>Trích số liệu có trích dẫn từ từng văn bản, tính bằng code, tách riêng dữ kiện cần xác nhận.</p>
+                        <span class="f-go">Mở tổng hợp<svg class="ico"><use href="#i-arrow"/></svg></span>
+                    </a>
+                    <a class="card feature reveal" href="#check" data-go="check">
+                        <span class="f-ico c-red"><svg class="ico"><use href="#i-shield"/></svg></span>
+                        <h3>Kiểm tra dự thảo</h3>
+                        <p>Đối chiếu thể thức theo Nghị định 30/2020, kiểm tra căn cứ pháp lý, chính tả và logic.</p>
+                        <span class="f-go">Kiểm tra tệp<svg class="ico"><use href="#i-arrow"/></svg></span>
+                    </a>
+                    <a class="card feature reveal" href="#audio" data-go="audio">
+                        <span class="f-ico c-amber"><svg class="ico"><use href="#i-mic"/></svg></span>
+                        <h3>Gỡ băng ghi âm</h3>
+                        <p>Chuyển ghi âm cuộc họp thành văn bản và tóm tắt thành ghi chú có chủ đề, kết luận, phân công.</p>
+                        <span class="f-go">Tải ghi âm<svg class="ico"><use href="#i-arrow"/></svg></span>
+                    </a>
+                    <a class="card feature reveal" href="#ocr" data-go="ocr">
+                        <span class="f-ico c-green"><svg class="ico"><use href="#i-doc"/></svg></span>
+                        <h3>Nhận dạng văn bản (OCR)</h3>
+                        <p>Trích nội dung từ PDF scan hoặc ảnh chụp thành văn bản Markdown để chỉnh sửa, lưu trữ.</p>
+                        <span class="f-go">Nhận dạng<svg class="ico"><use href="#i-arrow"/></svg></span>
+                    </a>
+                </div>
 
-                        <div class="filter-row">
-                            <div class="lbl">Lĩnh vực:</div>
-                            <div class="chip-group">
-                                <button class="chip" type="button" data-f="linh_vuc" data-v="cds" aria-pressed="false">Chuyển đổi số</button>
-                                <button class="chip" type="button" data-f="linh_vuc" data-v="khoa_hoc" aria-pressed="false">Khoa học</button>
-                                <button class="chip" type="button" data-f="linh_vuc" data-v="cong_nghe" aria-pressed="false">Công nghệ</button>
-                                <button class="chip" type="button" data-f="linh_vuc" data-v="dmst" aria-pressed="false">Đổi mới sáng tạo</button>
-                                <button class="chip" type="button" data-f="linh_vuc" data-v="tdđlcl" aria-pressed="false">Tiêu chuẩn - Đo lường - Chất lượng</button>
-                                <button class="chip" type="button" data-f="linh_vuc" data-v="bcvt" aria-pressed="false">Bưu chính - Viễn thông</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="split">
-                        <div class="answer" id="answer">
-                            <div class="ph">Nhập câu hỏi để bắt đầu. Trợ lý chỉ trả lời dựa trên văn bản
-                                trong kho, kèm trích dẫn số ký hiệu — không suy đoán.</div>
-                        </div>
-                        <div class="aside">
-                            <h3>Nguồn trích dẫn</h3>
-                            <div id="sources">
-                                <div class="empty" style="padding:30px 10px">Nguồn sẽ hiện ở đây sau khi tra cứu.</div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
+                <div class="section-head reveal">
+                    <div class="eyebrow">Mô hình AI &amp; chi phí</div>
+                    <h2>Chọn mô hình phù hợp, biết trước chi phí</h2>
+                    <p>Tìm kiếm, lập chỉ mục và kiểm tra thể thức chạy trên máy chủ nội bộ. Phần soạn câu trả lời dùng mô hình do quản trị viên chọn: qua OpenRouter hoặc trực tiếp ChatGPT, Claude, Gemini.</p>
+                </div>
+                <div class="pricing" id="pricing" aria-live="polite">
+                    <div class="card price"><div class="shimmer" style="width:60%"></div><div class="shimmer" style="width:40%;height:34px"></div><div class="shimmer"></div><div class="shimmer" style="width:80%"></div></div>
+                    <div class="card price"><div class="shimmer" style="width:60%"></div><div class="shimmer" style="width:40%;height:34px"></div><div class="shimmer"></div><div class="shimmer" style="width:80%"></div></div>
+                    <div class="card price"><div class="shimmer" style="width:60%"></div><div class="shimmer" style="width:40%;height:34px"></div><div class="shimmer"></div><div class="shimmer" style="width:80%"></div></div>
+                </div>
+                <p class="footnote" id="pricingNote">Đang tải bảng giá từ OpenRouter…</p>
 
-                <!-- ---- AGGREGATE ---- -->
-                <section class="panel" id="p-agg">
-                    <div class="qbar">
-                        <input id="q-agg" aria-label="Câu hỏi tổng hợp số liệu" placeholder="Ví dụ: tổng số buổi tập huấn chuyển đổi số trong tất cả báo cáo của các xã..." autocomplete="off">
-                        <button class="btn" id="b-agg">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Tổng hợp</button>
-                    </div>
-                    
-                    <p style="font-size: 12.5px; color: var(--faint); margin-top: 10px; margin-bottom: 4px;">
-                        💡 <strong>Mẹo tổng hợp:</strong> Hãy đặt câu hỏi yêu cầu đếm hoặc cộng số liệu cụ thể (VD: <em>"Tổng kinh phí các dự án nguồn chi thường xuyên trong các Tờ trình"</em>) để AI bóc tách chính xác nhất.
-                    </p>
-                    
-                    <p style="font-size:12.5px;color:var(--faint);margin-top:0">Hệ thống trích số liệu từ
-                        <em>từng</em>
-                        văn bản rồi cộng lại — luôn kèm minh chứng, không để mô hình tự tính tổng.</p>
-                    <div id="agg-out">
-                        <div class="empty">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
-                            <div>Đặt một câu hỏi đếm/cộng để tổng hợp trên nhiều văn bản.</div>
-                        </div>
-                    </div>
-                </section>
+                <div class="trust-band glass reveal">
+                    <div class="t-item"><span class="t-ico"><svg class="ico"><use href="#i-link"/></svg></span><div><strong>Luôn có nguồn</strong><span>Mỗi nhận định gắn trích dẫn tới văn bản gốc</span></div></div>
+                    <div class="t-item"><span class="t-ico"><svg class="ico"><use href="#i-check"/></svg></span><div><strong>Kiểm chứng trước khi hiển thị</strong><span>Đoạn không có bằng chứng bị lược bỏ</span></div></div>
+                    <div class="t-item"><span class="t-ico"><svg class="ico"><use href="#i-lock"/></svg></span><div><strong>Văn bản mật không rời máy chủ</strong><span>Không tải, không gửi sang AI</span></div></div>
+                    <div class="t-item"><span class="t-ico"><svg class="ico"><use href="#i-eye-off"/></svg></span><div><strong>Không làm đổi trạng thái QLVB</strong><span>Đồng bộ không đánh dấu “đã xem”</span></div></div>
+                </div>
+            </section>
 
-                <!-- ---- CHECK ---- -->
-                <section class="panel" id="p-check">
-                    <div class="subtabs">
-                        <button class="subtab active" type="button" data-sub="format">Định dạng (NĐ 30/2020)</button>
-                        <button class="subtab" type="button" data-sub="content">Nội dung &amp; căn cứ</button>
-                    </div>
-                    <div class="drop" id="drop">
-                        <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 16V4m0 0 4 4m-4-4L8 8"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
-                        <div class="t">Kéo thả hoặc chọn dự thảo (.docx)</div>
-                        <div class="s" id="drop-sub">Kiểm tra font, cỡ chữ, lề, giãn dòng theo Nghị định 30/2020</div>
-                        <div class="file" id="drop-file"></div>
-                        <input type="file" id="file" accept=".docx,.doc,.pdf" hidden="hidden">
-                    </div>
-                    <div id="check-out"></div>
-                </section>
-
-                <!-- ---- TRANSCRIPT ---- -->
-                <section class="panel" id="p-audio">
-                    <div class="drop" id="drop-audio">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
-                        <div class="t">Kéo thả hoặc chọn file Audio (.mp3, .wav, .m4a)</div>
-                        <div class="s">Hệ thống sẽ gửi file lên Whisper-large-v3-turbo để convert audio</div>
-                        <div class="file" id="audio-file"></div>
-                        <input type="file" id="inp-audio" accept="audio/*" hidden="hidden">
-                    </div>
-
-                    <div class="audio-split">
-                        <div class="answer" style="display: flex; flex-direction: column;">
-                            <h3 style="margin-top:0">Văn bản gốc (Transcript)</h3>
-                            
-                            <div id="audio-loading" style="display: none; align-items: center; gap: 10px; color: var(--azure); font-weight: 500; font-size: 13.5px; margin-bottom: 10px;">
-                                <span class="spin" style="border-top-color: var(--azure);"></span>
-                                Đang tải lên và convert âm thanh (Vui lòng chờ)...
-                            </div>
-
-                            <textarea id="ta-transcript" class="audio-ta" placeholder="Kết quả gỡ băng sẽ hiển thị ở đây. Bạn có thể tự chỉnh sửa thủ công nếu muốn trước khi bấm Tóm tắt..."></textarea>
-                            
-                            <button class="btn" id="b-summarize" style="margin-top: 16px; align-self: flex-start;" disabled>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                                Tóm tắt & Tổng hợp
-                            </button>
-                        </div>
-
-                        <div class="answer" style="display: flex; flex-direction: column;">
-                            <h3 style="margin-top:0">Ghi chú (Note hoàn chỉnh)</h3>
-                            <div id="audio-out" style="flex: 1; padding: 16px; border: 1.5px dashed var(--line-strong); border-radius: var(--r-sm); background: var(--surface-2); overflow-y: auto; margin-top: 10px;">
-                                <div class="empty" style="padding: 20px 0;">Bấm "Tóm tắt & Tổng hợp" để AI Qwen lược bỏ từ thừa và cấu trúc lại.</div>
-                            </div>
+            <!-- ---- TRA CỨU ---- -->
+            <section class="panel" id="p-search">
+                <div class="qbar glass">
+                    <svg class="ico q-ico" aria-hidden="true"><use href="#i-search"/></svg>
+                    <input id="q-search" aria-label="Câu hỏi tra cứu" placeholder="Ví dụ: tiến độ triển khai Đề án 06 trong các báo cáo quý…" autocomplete="off">
+                    <button class="btn" id="b-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Tra cứu</button>
+                </div>
+                <div class="search-meta">
+                    <p class="hint">Gõ câu hỏi rõ nghĩa (ví dụ <em>“Tiến độ giải ngân vốn đầu tư công năm 2026”</em>), có thể kết hợp các bộ lọc bên dưới.</p>
+                    <label class="model-pick" id="modelPick" hidden>
+                        <svg class="ico" aria-hidden="true"><use href="#i-spark"/></svg><span>Mô hình</span>
+                        <select id="modelSel" class="chip-select" aria-label="Mô hình AI trả lời"></select>
+                    </label>
+                </div>
+                <details class="filters-wrap glass" open>
+                    <summary>Bộ lọc <span class="muted">— hướng, loại văn bản, lĩnh vực</span></summary>
+                    <div class="filter-row">
+                        <div class="lbl">Hướng</div>
+                        <div class="chip-group">
+                            <button class="chip" type="button" data-f="huong" data-v="den" aria-pressed="false">Văn bản đến</button>
+                            <button class="chip" type="button" data-f="huong" data-v="di" aria-pressed="false">Văn bản đi</button>
                         </div>
                     </div>
-                </section>
-
-                <!-- ---- OCR ---- -->
-                <section class="panel" id="p-ocr">
-                    <div class="drop" id="drop-ocr">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                        <div class="t">Kéo thả hoặc chọn file PDF cần nhận dạng</div>
-                        <div class="s">Hệ thống sẽ chạy qua Unlimited-OCR để trích xuất văn bản (Markdown)</div>
-                        <div class="file" id="ocr-file"></div>
-                        <input type="file" id="inp-ocr" accept="application/pdf,image/png,image/jpeg" hidden="hidden">
-                    </div>
-
-                    <div class="answer" style="margin-top: 24px; display: flex; flex-direction: column;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                            <h3 style="margin:0">Kết quả trích xuất</h3>
-                            <button class="btn" id="b-download-ocr" style="min-height: 36px; font-size: 13px;" disabled>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Tải file .md
-                            </button>
+                    <div class="filter-row">
+                        <div class="lbl">Loại</div>
+                        <div class="chip-group">
+                            <button class="chip" type="button" data-f="loai_vb" data-v="cong_van" aria-pressed="false">Công văn</button>
+                            <button class="chip" type="button" data-f="loai_vb" data-v="ke_hoach" aria-pressed="false">Kế hoạch</button>
+                            <button class="chip" type="button" data-f="loai_vb" data-v="bao_cao" aria-pressed="false">Báo cáo</button>
+                            <button class="chip" type="button" data-f="loai_vb" data-v="quyet_dinh" aria-pressed="false">Quyết định</button>
+                            <button class="chip" type="button" data-f="loai_vb" data-v="to_trinh" aria-pressed="false">Tờ trình</button>
+                            <button class="chip" type="button" data-f="loai_vb" data-v="thong_bao" aria-pressed="false">Thông báo</button>
+                            <button class="chip" type="button" data-f="loai_vb" data-v="nghi_quyet" aria-pressed="false">Nghị quyết</button>
+                            <button class="chip" type="button" data-f="loai_vb" data-v="chuong_trinh" aria-pressed="false">Chương trình</button>
+                            <button class="chip" type="button" data-f="loai_vb" data-v="de_an" aria-pressed="false">Đề án</button>
+                            <button class="chip" type="button" data-f="loai_vb" data-v="chi_thi" aria-pressed="false">Chỉ thị</button>
+                            <select class="chip-select" id="more-loai" aria-label="Loại văn bản khác">
+                                <option value="">Loại khác</option>
+                                <option value="quy_che">Quy chế</option>
+                                <option value="quy_dinh">Quy định</option>
+                                <option value="thong_cao">Thông cáo</option>
+                                <option value="huong_dan">Hướng dẫn</option>
+                                <option value="phuong_an">Phương án</option>
+                                <option value="du_an">Dự án</option>
+                                <option value="bien_ban">Biên bản</option>
+                                <option value="hop_dong">Hợp đồng</option>
+                                <option value="cong_dien">Công điện</option>
+                                <option value="ban_ghi_nho">Bản ghi nhớ</option>
+                                <option value="ban_thoa_thuan">Bản thỏa thuận</option>
+                                <option value="giay_uy_quyen">Giấy ủy quyền</option>
+                                <option value="giay_moi">Giấy mời</option>
+                                <option value="giay_gioi_thieu">Giấy giới thiệu</option>
+                                <option value="giay_nghi_phep">Giấy nghỉ phép</option>
+                                <option value="phieu_gui">Phiếu gửi</option>
+                                <option value="phieu_chuyen">Phiếu chuyển</option>
+                                <option value="phieu_bao">Phiếu báo</option>
+                                <option value="thu_cong">Thư công</option>
+                            </select>
                         </div>
-                        
-                        <div id="ocr-loading" style="display: none; align-items: center; gap: 10px; color: var(--azure); font-weight: 500; font-size: 13.5px; margin-bottom: 10px;">
-                            <span class="spin" style="border-top-color: var(--azure);"></span>
-                            AI đang phân tích và đọc văn bản (Quá trình này có thể mất vài phút)...
-                        </div>
-
-                        <textarea id="ta-ocr" class="audio-ta" style="min-height: 400px;" placeholder="Văn bản trích xuất sẽ hiển thị tại đây..."></textarea>
                     </div>
-                </section>
-            </div>
-        </main>
+                    <div class="filter-row">
+                        <div class="lbl">Lĩnh vực</div>
+                        <div class="chip-group">
+                            <button class="chip" type="button" data-f="linh_vuc" data-v="cds" aria-pressed="false">Chuyển đổi số</button>
+                            <button class="chip" type="button" data-f="linh_vuc" data-v="khoa_hoc" aria-pressed="false">Khoa học</button>
+                            <button class="chip" type="button" data-f="linh_vuc" data-v="cong_nghe" aria-pressed="false">Công nghệ</button>
+                            <button class="chip" type="button" data-f="linh_vuc" data-v="dmst" aria-pressed="false">Đổi mới sáng tạo</button>
+                            <button class="chip" type="button" data-f="linh_vuc" data-v="tdđlcl" aria-pressed="false">Tiêu chuẩn - Đo lường - Chất lượng</button>
+                            <button class="chip" type="button" data-f="linh_vuc" data-v="bcvt" aria-pressed="false">Bưu chính - Viễn thông</button>
+                        </div>
+                    </div>
+                </details>
+                <div class="split">
+                    <div class="answer glass" id="answer">
+                        <div class="ph">Nhập câu hỏi để bắt đầu. Trợ lý chỉ trả lời dựa trên văn bản trong kho, kèm trích dẫn số ký hiệu — không suy đoán.</div>
+                    </div>
+                    <div class="aside">
+                        <h3>Nguồn trích dẫn</h3>
+                        <div id="sources"><div class="empty">Nguồn sẽ hiện ở đây sau khi tra cứu.</div></div>
+                    </div>
+                </div>
+            </section>
 
-        <script src="/static/js/app.js?v=4" defer></script>
-            <script>
-            if ("serviceWorker" in navigator) {
-                window.addEventListener("load", () => {
-                    navigator.serviceWorker.register("/sw.js").catch(() => {});
-                });
-            }
-        </script>    </body>
+            <!-- ---- TỔNG HỢP ---- -->
+            <section class="panel" id="p-agg">
+                <div class="qbar glass">
+                    <svg class="ico q-ico" aria-hidden="true"><use href="#i-chart"/></svg>
+                    <input id="q-agg" aria-label="Câu hỏi tổng hợp số liệu" placeholder="Ví dụ: tổng số buổi tập huấn chuyển đổi số trong các báo cáo năm 2026…" autocomplete="off">
+                    <button class="btn" id="b-agg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Tổng hợp</button>
+                </div>
+                <p class="hint">Hỏi cụ thể điều cần đếm hoặc cộng (ví dụ <em>“Có bao nhiêu công văn đi trong năm 2026?”</em>). Số được trích nguyên văn từ từng văn bản rồi tính bằng code; dữ kiện nghi vấn được tách riêng để cán bộ xác nhận.</p>
+                <div id="agg-out">
+                    <div class="empty glass-empty">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+                        <div>Đặt một câu hỏi đếm hoặc cộng để tổng hợp trên nhiều văn bản.</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ---- KIỂM TRA ---- -->
+            <section class="panel" id="p-check">
+                <div class="subtabs" role="tablist">
+                    <button class="subtab active" type="button" data-sub="format">Thể thức (NĐ 30/2020)</button>
+                    <button class="subtab" type="button" data-sub="content">Nội dung &amp; căn cứ</button>
+                </div>
+                <div class="drop glass" id="drop" tabindex="0" role="button" aria-label="Chọn tệp dự thảo">
+                    <span class="drop-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4m0 0 4 4m-4-4L8 8"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></span>
+                    <div class="t">Kéo thả hoặc bấm để chọn dự thảo (.docx)</div>
+                    <div class="s" id="drop-sub">Kiểm tra font, cỡ chữ, lề, giãn dòng theo Nghị định 30/2020</div>
+                    <div class="file" id="drop-file"></div>
+                    <input type="file" id="file" accept=".docx,.doc,.pdf" hidden>
+                </div>
+                <div id="check-out"></div>
+            </section>
+
+            <!-- ---- GỠ BĂNG ---- -->
+            <section class="panel" id="p-audio">
+                <div class="drop glass" id="drop-audio" tabindex="0" role="button" aria-label="Chọn tệp ghi âm">
+                    <span class="drop-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg></span>
+                    <div class="t">Kéo thả hoặc bấm để chọn ghi âm (.mp3, .wav, .m4a)</div>
+                    <div class="s">Gỡ băng bằng mô hình nhận được âm thanh do quản trị viên chọn; bạn có thể sửa bản gỡ băng trước khi tóm tắt</div>
+                    <div class="file" id="audio-file"></div>
+                    <input type="file" id="inp-audio" accept="audio/*" hidden>
+                </div>
+                <div class="audio-split">
+                    <div class="answer glass col">
+                        <h3>Bản gỡ băng</h3>
+                        <div id="audio-loading" class="loading-line" style="display:none"><span class="spin"></span>Đang tải lên và gỡ băng, vui lòng chờ…</div>
+                        <textarea id="ta-transcript" class="audio-ta" placeholder="Kết quả gỡ băng sẽ hiển thị ở đây. Bạn có thể chỉnh sửa trước khi bấm Tóm tắt…"></textarea>
+                        <button class="btn" id="b-summarize" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Tóm tắt &amp; tổng hợp</button>
+                    </div>
+                    <div class="answer glass col">
+                        <h3>Ghi chú hoàn chỉnh</h3>
+                        <div id="audio-out" class="note-box"><div class="empty">Bấm “Tóm tắt &amp; tổng hợp” để AI lược bỏ từ thừa và cấu trúc lại nội dung.</div></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ---- OCR ---- -->
+            <section class="panel" id="p-ocr">
+                <div class="drop glass" id="drop-ocr" tabindex="0" role="button" aria-label="Chọn tệp cần nhận dạng">
+                    <span class="drop-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
+                    <div class="t">Kéo thả hoặc bấm để chọn PDF hoặc ảnh cần nhận dạng</div>
+                    <div class="s">Trích xuất nội dung thành văn bản Markdown bằng mô hình đọc ảnh do quản trị viên chọn</div>
+                    <div class="file" id="ocr-file"></div>
+                    <input type="file" id="inp-ocr" accept="application/pdf,image/png,image/jpeg" hidden>
+                </div>
+                <div class="answer glass col ocr-result">
+                    <div class="row-between">
+                        <h3>Kết quả trích xuất</h3>
+                        <button class="btn btn-soft btn-sm" id="b-download-ocr" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Tải tệp .md</button>
+                    </div>
+                    <div id="ocr-loading" class="loading-line" style="display:none"><span class="spin"></span>AI đang đọc văn bản, có thể mất vài phút…</div>
+                    <textarea id="ta-ocr" class="audio-ta tall" placeholder="Văn bản trích xuất sẽ hiển thị tại đây…"></textarea>
+                </div>
+            </section>
+        </div>
+
+        <footer class="site-foot">
+            <span>© 2026 Sở Khoa học và Công nghệ tỉnh Lào Cai · DocNexus</span>
+            <span class="muted">Câu trả lời do AI tạo từ văn bản trong kho — vui lòng đối chiếu văn bản gốc trước khi sử dụng chính thức.</span>
+        </footer>
+    </main>
+</div>
+
+<div class="ios-install-guide glass" id="iosInstallGuide" role="dialog" aria-live="polite" aria-label="Hướng dẫn cài DocNexus trên iPhone">
+    <button class="guide-close" id="iosGuideClose" type="button" aria-label="Đóng hướng dẫn">×</button>
+    <h3>Cài DocNexus trên iPhone</h3>
+    <p>Mở bằng Safari, bấm nút Chia sẻ, chọn Thêm vào Màn hình chính, rồi bấm Thêm.</p>
+</div>
+<div class="viz-tip" id="vizTip" role="status" aria-live="polite"></div>
+
+<script src="/static/js/ui.js?v=6" defer></script>
+<script src="/static/js/app.js?v=6" defer></script>
+<script src="/static/js/overview.js?v=6" defer></script>
+<script>
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => { navigator.serviceWorker.register("/sw.js").catch(() => {}); });
+    }
+</script>
+</body>
 </html>

@@ -87,7 +87,7 @@ flowchart LR
 | Qdrant | Chunk, dense vector và sparse vector |
 | BGE-M3 | Embedding dense/sparse |
 | BGE reranker | Xếp hạng lại bằng chứng |
-| OpenRouter/Gemini | Metadata, lập kế hoạch, trả lời và kiểm chứng |
+| OpenRouter / OpenAI / Anthropic / Gemini | Mô hình AI gán riêng cho từng tính năng (trang quản trị, tab Mô hình AI) |
 | Playwright | Crawl QLVB qua SSO |
 | SQLite | Checkpoint crawler |
 
@@ -99,7 +99,7 @@ flowchart LR
 - Docker và Docker Compose.
 - Python 3.10 trở lên.
 - Tesseract, Poppler và LibreOffice nếu cần OCR hoặc xử lý định dạng cũ.
-- Khóa OpenRouter; Gemini API key nếu dùng chức năng âm thanh.
+- Khóa OpenRouter; tuỳ chọn khoá OpenAI, Anthropic, Gemini để gọi trực tiếp (nhập trong .env hoặc trên trang quản trị). Gỡ băng cần một mô hình nhận âm thanh (mặc định Gemini).
 
 ### Khởi tạo môi trường
 
@@ -121,10 +121,42 @@ QLVB_URL=https://dia-chi-he-thong-qlvb
 
 # Tùy chọn
 GEMINI_API_KEY=...
+OPENAI_API_KEY=...
+ANTHROPIC_API_KEY=...
 OCR_SERVER_URL=http://127.0.0.1:10000
 ~~~
 
 Không commit .env, thông tin đăng nhập QLVB hoặc dữ liệu nội bộ lên Git.
+
+## Tài khoản và phân quyền
+
+Lần khởi động đầu tiên (bảng `users` trống), ứng dụng tạo tài khoản **super admin** từ `ADMIN_USER`/`ADMIN_PASS`. Sau đó đăng nhập tại `/login` và quản lý tài khoản ở `/admin` → **Tài khoản**. Đổi `ADMIN_PASS` trong .env không đổi mật khẩu đã tạo; quên mật khẩu thì chạy:
+
+~~~bash
+./venv/bin/python scripts/create_user.py admin --reset
+~~~
+
+| Vai trò | Quyền |
+|---|---|
+| Super admin | Toàn quyền: cấu hình AI, khoá API, quản lý mọi tài khoản |
+| Quản trị viên | Crawler, kho văn bản, tài khoản cấp dưới, xem cấu hình AI, nhật ký |
+| Cán bộ vận hành | Crawler, kho văn bản, mọi công cụ AI |
+| Chuyên viên | Mọi công cụ AI, được chọn mô hình khi tra cứu |
+| Khách xem | Chỉ tra cứu bằng mô hình mặc định |
+
+- Mỗi tài khoản có thể giới hạn số câu hỏi AI mỗi ngày (0 = không giới hạn).
+- Trang tổng quan và bảng giá công khai; các công cụ AI cần đăng nhập (admin có thể mở tra cứu cho khách).
+- Phiên đăng nhập lưu trong cookie HttpOnly; database chỉ giữ mã băm của phiên. Mọi yêu cầu thay đổi dữ liệu tới `/api` phải kèm header `X-Requested-With: DocNexus` (giao diện tự gắn) để chống giả mạo yêu cầu.
+
+## Mô hình AI
+
+Tab **Mô hình AI** trên trang quản trị:
+
+- **Khoá API** cho OpenRouter, OpenAI (ChatGPT), Anthropic (Claude), Gemini; khoá được mã hoá bằng `APP_SECRET_KEY` (hoặc `data/app_secret.key` tự sinh — cần sao lưu cùng database).
+- **Mô hình cho từng tính năng**: tra cứu, lập kế hoạch, kiểm chứng, tổng hợp, kiểm tra dự thảo, gỡ băng, tóm tắt, OCR, trích metadata, dự phòng. Chỉ cho gán mô hình nhận đúng loại đầu vào (gỡ băng cần âm thanh, OCR cần ảnh); mặc định lấy từ .env (`LLM_MAIN`, `LLM_CHEAP`, `LLM_SMART`, `LLM_FALLBACK`, `LLM_TRANSCRIBE`, `LLM_OCR`).
+- **Danh mục**: giá và loại đầu vào lấy trực tiếp từ OpenRouter; bật mô hình, chọn **Nổi bật** (hiện ở bảng giá trang chủ) và **Cho chọn** (người dùng chọn khi tra cứu).
+- Mô hình ghi theo dạng `nhà_cung_cấp:model`, ví dụ `openai:gpt-5-mini`, `anthropic:claude-sonnet-5-5`, `gemini:gemini-2.5-flash`; không có tiền tố là OpenRouter.
+- Claude gọi bằng SDK chính thức của Anthropic, bật fallback phía máy chủ (`fallbacks="default"`) cho các model hỗ trợ: khi bộ lọc an toàn từ chối, Anthropic tự chạy lại yêu cầu trên model dự phòng.
 
 ## Khởi chạy
 
@@ -295,9 +327,9 @@ Còn lại:
 
 ## An toàn dữ liệu
 
-- Nội dung dùng cho metadata, trả lời, kiểm chứng và âm thanh có thể được gửi tới OpenRouter hoặc Gemini theo cấu hình. Chỉ dùng với dữ liệu được phép gửi ra dịch vụ bên ngoài.
+- Nội dung dùng cho metadata, trả lời, kiểm chứng và âm thanh có thể được gửi tới OpenRouter, OpenAI, Anthropic hoặc Gemini theo mô hình admin gán cho từng tính năng. Chỉ dùng với dữ liệu được phép gửi ra dịch vụ bên ngoài.
 - Tài khoản QLVB/captcha chỉ dùng cho phiên crawler và không được ghi vào checkpoint.
-- Trang quản trị dùng HTTP Basic Auth và **bị khóa nếu ADMIN_PASS chưa đặt, dùng giá trị mặc định hoặc ngắn hơn 10 ký tự**. Đăng nhập sai nhiều lần bị khóa tạm theo IP (`ADMIN_MAX_FAILED_LOGINS`, `ADMIN_LOCKOUT_SECONDS`); đặt `TRUST_PROXY_HEADERS=true` khi chạy sau Cloudflare Tunnel. Nên đặt Cloudflare Access trước khi public domain.
+- Đăng nhập bằng tài khoản riêng (mật khẩu băm scrypt, tối thiểu 10 ký tự có cả chữ và số). Đăng nhập sai nhiều lần bị khóa tạm theo IP và tài khoản (`ADMIN_MAX_FAILED_LOGINS`, `ADMIN_LOCKOUT_SECONDS`); đặt `TRUST_PROXY_HEADERS=true` khi chạy sau Cloudflare Tunnel. Mọi thay đổi tài khoản và cấu hình AI được ghi vào nhật ký thao tác. Nên đặt Cloudflare Access trước khi public domain.
 - Đổi QDRANT_API_KEY và mật khẩu PostgreSQL trước khi mở dịch vụ qua Internet; run.sh cảnh báo khi còn giá trị mặc định.
 - Tệp tải lên bị giới hạn định dạng và dung lượng (`UPLOAD_MAX_MB`, `AUDIO_MAX_MB`), xử lý với số luồng giới hạn (`UPLOAD_CONCURRENCY`); OCR giới hạn số trang và gửi theo lô.
 - Lỗi nội bộ được ghi log, không trả chi tiết cho người dùng. Markdown từ model được làm sạch (DOMPurify) trước khi hiển thị; ứng dụng gửi các header bảo mật cơ bản.

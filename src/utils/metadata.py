@@ -5,7 +5,7 @@
 import re
 import datetime as dt
 import logging
-from src.core import llm, config
+from src.core import llm
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +100,7 @@ def extract_metadata(full_text: str, fallback: dict | None = None) -> dict:
     tail = full_text[-1500:]   # người ký thường ở cuối
     user = f"PHẦN ĐẦU:\n{head}\n\nPHẦN CUỐI:\n{tail}\n\n{_FIELDS}"
     try:
-        data = llm.extract_json(_SYS, user, model=config.LLM_CHEAP) or {}
+        data = llm.extract_json(_SYS, user, model=llm.METADATA) or {}
     except Exception as exc:
         logger.warning("LLM metadata tạm thời không khả dụng, dùng metadata crawler: %s", exc)
         data = {}

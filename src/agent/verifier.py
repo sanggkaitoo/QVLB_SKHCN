@@ -93,7 +93,7 @@ def verify_answer(query: str, draft: str, evidence: list[Evidence]) -> Verificat
         result = llm.extract_json(
             VERIFIER_SYSTEM,
             f"CÂU HỎI: {query}\n\nBẰNG CHỨNG:\n{evidence_text}\n\nCÁC ĐOẠN CẦN KIỂM CHỨNG:\n{numbered}\n\n{VERIFIER_FORMAT}",
-            model=config.LLM_CHEAP,
+            model=llm.VERIFY,
             timeout=config.LLM_FAST_TIMEOUT_SECONDS,
             max_tokens=40 + 20 * len(segments),
         )

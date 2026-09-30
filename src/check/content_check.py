@@ -6,7 +6,7 @@
 """
 import logging
 import re
-from src.core import store, llm, config
+from src.core import store, llm
 from src.utils import extract
 from src.services import retrieval_srv
 
@@ -75,7 +75,7 @@ def check_content(docx_path: str, display_name: str | None = None) -> dict:
     user = (f"DỰ THẢO CẦN RÀ SOÁT:\n{text[:12000]}\n\n"
             f"NGỮ CẢNH PHÁP LÝ THAM CHIẾU (từ kho văn bản):\n{legal_ctx}\n\n{_FMT}")
     try:
-        review = llm.extract_json(_SYS, user, model=config.LLM_SMART)
+        review = llm.extract_json(_SYS, user, model=llm.CHECK)
     except Exception as exc:
         logger.warning("LLM rà soát nội dung lỗi: %s", exc)
         review = None

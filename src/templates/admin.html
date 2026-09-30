@@ -2,19 +2,23 @@
 <html lang="vi" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quản trị — DocNexus</title>
-        <link rel="manifest" href="/manifest.webmanifest">
-        <link rel="icon" href="/static/pwa/icon.svg" type="image/svg+xml">
-        <meta name="theme-color" content="#0369A1">
-        <meta name="apple-mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-title" content="DocNexus">
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Quản trị DocNexus</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/static/pwa/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#2563eb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="DocNexus">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<link rel="stylesheet" href="/static/css/admin.css?v=7">
+<link rel="stylesheet" href="/static/css/theme.css?v=6">
+<link rel="stylesheet" href="/static/css/admin.css?v=9">
+<script>try { document.documentElement.dataset.theme = localStorage.getItem("qlvb-theme") || "light"; } catch (e) {}</script>
 </head>
 <body>
-<a class='skip-link' href='#main-content'>Bỏ qua điều hướng</a>
+<a class="skip-link" href="#main-content">Bỏ qua điều hướng</a>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
     <g id="sealmark-admin">
@@ -22,110 +26,108 @@
       <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" stroke-width="1.5"/>
       <path d="M50 30l5.5 13.2 14.2 1.2-10.8 9.4 3.3 13.8L50 60.2 37.8 67.6l3.3-13.8-10.8-9.4 14.2-1.2L50 30z" fill="currentColor"/>
     </g>
+    <symbol id="a-chart" viewBox="0 0 24 24"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16v-5"/><path d="M13 16V8"/><path d="M18 16v-3"/></symbol>
+    <symbol id="a-doc" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></symbol>
+    <symbol id="a-bot" viewBox="0 0 24 24"><path d="M12 3v4"/><rect x="4" y="7" width="16" height="11" rx="2"/><path d="M8 12h.01M16 12h.01"/><path d="M9 18v3M15 18v3"/></symbol>
+    <symbol id="a-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></symbol>
+    <symbol id="a-spark" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/></symbol>
+    <symbol id="a-log" viewBox="0 0 24 24"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></symbol>
+    <symbol id="a-back" viewBox="0 0 24 24"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></symbol>
+    <symbol id="a-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></symbol>
+    <symbol id="a-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+    <symbol id="a-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="a-key" viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></symbol>
   </defs>
 </svg>
-<aside class="rail">
+
+<div class="shell">
+<aside class="rail" aria-label="Điều hướng quản trị">
   <div class="brand">
     <svg class="seal" viewBox="0 0 100 100" aria-hidden="true"><use href="#sealmark-admin"/></svg>
-    <div>
-      <h1>DocNexus Admin</h1>
-      <p>Admin console</p>
-    </div>
+    <div><h1>DocNexus</h1><p>Trang quản trị</p></div>
   </div>
   <nav class="nav" aria-label="Khu vực quản trị">
-    <div class="nav-label">Điều hướng</div>
-    <button class="tab active" type="button" data-target="p-dashboard">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16v-5"/><path d="M13 16V8"/><path d="M18 16v-3"/></svg>
-      Thống kê dữ liệu
-    </button>
-    <button class="tab" type="button" data-target="p-docs">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-      Tra cứu kho văn bản
-    </button>
-    <button class="tab" type="button" data-target="p-crawler">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v4"/><rect x="4" y="7" width="16" height="11" rx="2"/><path d="M8 12h.01M16 12h.01"/><path d="M9 18v3M15 18v3"/></svg>
-      Điều khiển crawler
-    </button>
-    <a class="side-link" href="/">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
-      Về trang tra cứu
-    </a>
+    <div class="nav-label">Dữ liệu</div>
+    <button class="tab active" type="button" data-target="p-dashboard" data-perm="docs.view"><svg class="ico"><use href="#a-chart"/></svg><span>Thống kê</span></button>
+    <button class="tab" type="button" data-target="p-docs" data-perm="docs.view"><svg class="ico"><use href="#a-doc"/></svg><span>Kho văn bản</span></button>
+    <button class="tab" type="button" data-target="p-crawler" data-perm="crawler.run"><svg class="ico"><use href="#a-bot"/></svg><span>Crawler</span></button>
+    <div class="nav-label">Hệ thống</div>
+    <button class="tab" type="button" data-target="p-users" data-perm="users.manage"><svg class="ico"><use href="#a-users"/></svg><span>Tài khoản</span></button>
+    <button class="tab" type="button" data-target="p-ai" data-perm="settings.view"><svg class="ico"><use href="#a-spark"/></svg><span>Mô hình AI</span></button>
+    <button class="tab" type="button" data-target="p-audit" data-perm="audit.view"><svg class="ico"><use href="#a-log"/></svg><span>Nhật ký</span></button>
   </nav>
-  <div class="spacer"></div>
-  <div class="status-card" aria-live="polite">
-    <div class="status-kicker">Crawler</div>
-    <div class="status-line"><span class="dot" id="statusDot"></span><span id="statusLabel">Sẵn sàng</span></div>
-    <div class="status-message" id="statusMessage">Chưa có tiến trình đang chạy.</div>
+  <div class="rail-foot">
+    <div class="status-card" aria-live="polite">
+      <div class="status-kicker">Crawler</div>
+      <div class="status-line"><span class="dot" id="statusDot"></span><span id="statusLabel">Sẵn sàng</span></div>
+      <div class="status-message" id="statusMessage">Chưa có tiến trình đang chạy.</div>
+    </div>
+    <div class="account" id="account"></div>
+    <div class="rail-actions">
+      <a class="utility-link" href="/"><svg class="ico"><use href="#a-back"/></svg><span class="action-label">Trang tra cứu</span></a>
+      <button class="utility-link" id="themeBtn" type="button" onclick="toggleTheme()" aria-label="Đổi giao diện sáng tối"><span id="themeIcon" aria-hidden="true">☾</span><span id="themeText" class="action-label">Giao diện Tối</span></button>
+    </div>
   </div>
-  <button class="theme-toggle" id="themeBtn" type="button" onclick="toggleTheme()"><span id="themeIcon">☀</span><span id="themeText">Giao diện Sáng</span></button>
 </aside>
+
 <main class="main" id="main-content" tabindex="-1">
   <header class="topbar">
     <div id="pageHead">
-      <div class="eyebrow">Admin Console</div>
-      <h2>Quan sát dữ liệu và vận hành crawler</h2>
-      <p>Theo dõi trạng thái kho văn bản, kiểm tra phân bố loại văn bản và khởi chạy crawler khi cần nạp dữ liệu mới.</p>
+      <div class="eyebrow">Thống kê</div>
+      <h2>Quan sát kho dữ liệu</h2>
+      <p>Theo dõi số văn bản, vector và phân bố loại văn bản trong kho.</p>
     </div>
     <div class="top-actions">
       <span class="pill"><span class="dot" id="apiDot"></span><span id="apiState">Đang kiểm tra API</span></span>
-      <button class="btn" type="button" onclick="loadStats()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
-        Làm mới
-      </button>
+      <button class="btn" type="button" id="refreshBtn"><svg class="ico"><use href="#a-refresh"/></svg>Làm mới</button>
     </div>
   </header>
+
   <div class="panel-wrap">
+    <!-- ============ THỐNG KÊ ============ -->
     <section class="panel active" id="p-dashboard">
       <div class="stats-grid" aria-live="polite">
-        <article class="stat-card"><div class="stat-label">Văn bản Postgres</div><div class="stat-value" id="s-docs">--</div><div class="stat-sub">Hồ sơ đã phân tích metadata</div></article>
-        <article class="stat-card accent-green"><div class="stat-label">Vector Qdrant</div><div class="stat-value" id="s-vecs">--</div><div class="stat-sub">Chunks dense và sparse</div></article>
-        <article class="stat-card accent-amber"><div class="stat-label">Loại văn bản</div><div class="stat-value" id="s-types">--</div><div class="stat-sub">Nhóm đang có trong kho</div></article>
-        <article class="stat-card accent-red"><div class="stat-label">Chuyên đề</div><div class="stat-value" id="s-tags">--</div><div class="stat-sub">Tags nổi bật từ dữ liệu</div></article>
+        <article class="card stat-card"><div class="stat-label">Văn bản trong kho</div><div class="stat-value" id="s-docs">--</div><div class="stat-sub">Đã phân tích metadata</div></article>
+        <article class="card stat-card accent-green"><div class="stat-label">Vector Qdrant</div><div class="stat-value" id="s-vecs">--</div><div class="stat-sub">Đoạn dense + sparse</div></article>
+        <article class="card stat-card accent-amber"><div class="stat-label">Loại văn bản</div><div class="stat-value" id="s-types">--</div><div class="stat-sub">Nhóm đang có trong kho</div></article>
+        <article class="card stat-card accent-violet"><div class="stat-label">Chuyên đề</div><div class="stat-value" id="s-tags">--</div><div class="stat-sub">Tag nổi bật từ dữ liệu</div></article>
       </div>
       <div class="grid-2">
-        <section class="box">
+        <section class="card box">
           <div class="box-head"><h3>Phân bố theo loại văn bản</h3><small id="loaiHint">Đang tải</small></div>
           <div class="list" id="list-loai"><div class="shimmer" style="width:85%"></div><div class="shimmer" style="width:70%"></div><div class="shimmer" style="width:92%"></div></div>
         </section>
-        <section class="box">
+        <section class="card box">
           <div class="box-head"><h3>Chuyên đề xuất hiện nhiều</h3><small id="tagHint">Đang tải</small></div>
           <div class="list" id="list-tags"><div class="shimmer" style="width:80%"></div><div class="shimmer" style="width:72%"></div><div class="shimmer" style="width:88%"></div></div>
         </section>
       </div>
     </section>
+
+    <!-- ============ KHO VĂN BẢN ============ -->
     <section class="panel" id="p-docs">
-      <div class="qbar-admin">
-        <input type="text" id="adminSearchInput" placeholder="Nhập số ký hiệu hoặc trích yếu để tìm kiếm..." onkeydown="if(event.key === 'Enter') searchDocs()">
-        <button class="btn btn-primary" onclick="searchDocs()" id="b-docs-search">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          Tìm kiếm
-        </button>
+      <div class="qbar-admin glass">
+        <svg class="ico q-ico" aria-hidden="true"><use href="#a-search"/></svg>
+        <input type="search" id="adminSearchInput" placeholder="Số ký hiệu hoặc trích yếu…" onkeydown="if(event.key === 'Enter') searchDocs()" aria-label="Tìm văn bản">
+        <button class="btn btn-primary" onclick="searchDocs()" id="b-docs-search"><svg class="ico"><use href="#a-search"/></svg>Tìm kiếm</button>
       </div>
-      
-      <div class="evid-wrap">
+      <div class="evid-wrap card flush">
         <table class="evid">
-          <thead>
-            <tr>
-              <th style="width: 18%;">Số ký hiệu</th>
-              <th style="width: 15%;">Ngày ban hành</th>
-              <th style="width: 15%;">Loại VB</th>
-              <th style="width: 52%;">Trích yếu</th>
-            </tr>
-          </thead>
-          <tbody id="adminDocsBody">
-             <tr><td colspan="4" class="empty">Đang kết nối kho dữ liệu...</td></tr>
-          </tbody>
+          <thead><tr><th style="width:18%">Số ký hiệu</th><th style="width:14%">Ngày ban hành</th><th style="width:14%">Loại VB</th><th>Trích yếu</th></tr></thead>
+          <tbody id="adminDocsBody"><tr><td colspan="4" class="empty">Đang kết nối kho dữ liệu...</td></tr></tbody>
         </table>
       </div>
     </section>
+
+    <!-- ============ CRAWLER ============ -->
     <section class="panel" id="p-crawler">
       <div class="control-layout">
         <div class="control-stack">
-          <article class="control-card">
+          <article class="card control-card">
             <div class="control-head">
-              <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
+              <div class="icon-box"><svg class="ico" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
               <div class="control-info"><h3>Đồng bộ qua API QLVB <span class="tag-rec">Khuyến nghị</span></h3>
-                <p>Kiểm kê toàn bộ văn bản đi và đến trên QLVB, theo dõi văn bản nào đã nạp, còn thiếu hoặc lỗi. Tiến độ được lưu sau từng văn bản; dừng giữa chừng hay mất mạng đều chạy tiếp được. Không đánh dấu văn bản là đã xem.</p></div>
+                <p>Kiểm kê toàn bộ văn bản đi và đến trên QLVB, theo dõi văn bản nào đã nạp, còn thiếu hoặc lỗi. Tiến độ lưu sau từng văn bản; dừng giữa chừng hay mất mạng đều chạy tiếp được. Không đánh dấu văn bản là đã xem.</p></div>
             </div>
             <div class="inv-wrap">
               <table class="inv">
@@ -145,31 +147,31 @@
               <button class="btn crawl-action" type="button" onclick="apiSync('full')">Kiểm kê đầy đủ</button>
             </div>
             <div class="control-actions">
-              <input class="input-field" type="number" id="apiLimit" value="20" min="0" max="100000" aria-label="Số văn bản cần tải (0 = tất cả)" title="0 = tải tất cả văn bản còn thiếu">
-              <label class="check"><input type="checkbox" id="apiRetry"> Thử lại văn bản lỗi</label>
+              <input class="input-field num" type="number" id="apiLimit" value="20" min="0" max="100000" aria-label="Số văn bản cần tải (0 = tất cả)" title="0 = tải tất cả văn bản còn thiếu">
+              <label class="check-row"><span class="switch"><input type="checkbox" id="apiRetry"><span class="track"></span></span>Thử lại văn bản lỗi</label>
               <button class="btn btn-primary crawl-action" type="button" onclick="apiDownload()">Tải phần còn thiếu</button>
               <button class="btn btn-danger" type="button" id="b-stop" onclick="stopCrawl()" disabled>Dừng</button>
             </div>
           </article>
-          <article class="control-card">
+          <article class="card control-card">
             <div class="control-head">
-              <div class="icon-box warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+              <div class="icon-box warn"><svg class="ico" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
               <div class="control-info"><h3>Danh sách theo dõi</h3><p>Xem văn bản theo trạng thái, tải lại từng văn bản hoặc xuất CSV danh sách còn thiếu.</p></div>
             </div>
             <div class="control-actions">
               <select class="input-field" id="itemStatus" onchange="loadItems()" aria-label="Trạng thái">
                 <option value="failed">Lỗi</option><option value="pending">Chờ tải</option><option value="skipped">Bỏ qua</option><option value="done">Đã nạp</option><option value="">Tất cả</option>
               </select>
-              <input class="input-field" type="text" id="itemQuery" placeholder="Số ký hiệu hoặc trích yếu" onkeydown="if(event.key==='Enter') loadItems()">
+              <input class="input-field grow" type="search" id="itemQuery" placeholder="Số ký hiệu hoặc trích yếu" onkeydown="if(event.key==='Enter') loadItems()" aria-label="Lọc danh sách">
               <button class="btn" type="button" onclick="loadItems()">Lọc</button>
-              <a class="btn" id="csvLink" href="/api/admin/qlvb/items.csv?status=pending" download>Xuất CSV</a>
+              <a class="btn btn-soft" id="csvLink" href="/api/admin/qlvb/items.csv?status=pending" download>Xuất CSV</a>
             </div>
             <div class="evid-wrap items-wrap">
               <table class="evid"><thead><tr><th>Số ký hiệu</th><th>Ngày</th><th>Trích yếu</th><th>Trạng thái</th><th></th></tr></thead>
                 <tbody id="itemsBody"><tr><td colspan="5" class="empty">Chưa có dữ liệu kiểm kê.</td></tr></tbody></table>
             </div>
           </article>
-          <details class="control-card legacy">
+          <details class="card control-card legacy">
             <summary><b>Crawler giao diện (dự phòng)</b> — thao tác trên trang web QLVB bằng trình duyệt tự động; chỉ dùng khi API không hoạt động.</summary>
             <div class="control-actions">
               <button class="btn crawl-action" type="button" onclick="runFullCrawl('all')">Đi và đến</button>
@@ -177,13 +179,13 @@
               <button class="btn crawl-action" type="button" onclick="runFullCrawl('den')">Văn bản đến</button>
             </div>
             <div class="control-actions">
-              <input class="input-field" type="number" id="demoLimit" value="5" min="1" max="1000" aria-label="Số lượng văn bản kiểm thử">
+              <input class="input-field num" type="number" id="demoLimit" value="5" min="1" max="1000" aria-label="Số lượng văn bản kiểm thử">
               <button class="btn btn-warning crawl-action" type="button" onclick="runDemoCrawl('di')">Demo VB đi</button>
               <button class="btn btn-warning crawl-action" type="button" onclick="runDemoCrawl('den')">Demo VB đến</button>
             </div>
           </details>
         </div>
-        <aside class="status-panel" aria-live="polite">
+        <aside class="card status-panel" aria-live="polite">
           <h3>Tiến trình crawler</h3>
           <div class="progress" id="progressBox" hidden><div class="progress-bar"><i id="progressBar"></i></div><div class="progress-text" id="progressText"></div></div>
           <div class="timeline" id="timeline">
@@ -192,17 +194,129 @@
             <div class="step" data-step="crawling"><span class="step-dot"></span><div><b>Kiểm kê / tải và nạp</b><br><span>Đọc danh sách, tải tệp, đưa vào kho dữ liệu.</span></div></div>
             <div class="step" data-step="done"><span class="step-dot"></span><div><b>Hoàn tất</b><br><span>Làm mới thống kê sau khi chạy xong.</span></div></div>
           </div>
+          <button class="btn btn-soft btn-block" type="button" id="reopenLogin" hidden onclick="reopenSsoLogin()">Mở lại hộp đăng nhập SSO</button>
         </aside>
+      </div>
+    </section>
+
+    <!-- ============ TÀI KHOẢN ============ -->
+    <section class="panel" id="p-users">
+      <div class="toolbar">
+        <div class="qbar-admin glass slim">
+          <svg class="ico q-ico" aria-hidden="true"><use href="#a-search"/></svg>
+          <input type="search" id="userQuery" placeholder="Tìm tên đăng nhập, họ tên, email…" aria-label="Tìm tài khoản">
+        </div>
+        <button class="btn btn-primary" type="button" id="addUserBtn"><svg class="ico"><use href="#a-plus"/></svg>Thêm tài khoản</button>
+      </div>
+      <div class="user-stats" id="userStats"></div>
+      <div class="evid-wrap card flush">
+        <table class="evid users-table">
+          <thead><tr><th>Tài khoản</th><th>Vai trò</th><th>Trạng thái</th><th>Hạn mức AI/ngày</th><th>Đăng nhập gần nhất</th><th></th></tr></thead>
+          <tbody id="usersBody"><tr><td colspan="6" class="empty">Đang tải…</td></tr></tbody>
+        </table>
+      </div>
+      <details class="card roles-card" id="rolesCard">
+        <summary><b>Vai trò và quyền</b> — mỗi tài khoản có đúng một vai trò; quyền đi theo vai trò.</summary>
+        <div class="evid-wrap"><table class="evid perm-table" id="permTable"></table></div>
+      </details>
+    </section>
+
+    <!-- ============ MÔ HÌNH AI ============ -->
+    <section class="panel" id="p-ai">
+      <div class="ai-grid">
+        <article class="card">
+          <div class="box-head"><h3>Nhà cung cấp &amp; khoá API</h3><small>Khoá được mã hoá trước khi lưu</small></div>
+          <div class="providers" id="providers"><div class="shimmer"></div><div class="shimmer"></div></div>
+        </article>
+        <article class="card">
+          <div class="box-head"><h3>Quyền truy cập</h3></div>
+          <label class="check-row"><span class="switch"><input type="checkbox" id="anonSearch"><span class="track"></span></span>Cho phép khách chưa đăng nhập dùng tra cứu</label>
+          <p class="muted small">Khi tắt, mọi chức năng AI đều cần đăng nhập. Trang tổng quan và bảng giá luôn công khai.</p>
+        </article>
+      </div>
+
+      <article class="card">
+        <div class="box-head"><h3>Mô hình cho từng tính năng</h3><small>Chỉ hiện mô hình nhận được đúng loại dữ liệu tính năng cần</small></div>
+        <div class="evid-wrap"><table class="evid tasks-table">
+          <thead><tr><th>Tính năng</th><th>Cần đầu vào</th><th>Mô hình</th><th>Giá (USD/1M token)</th><th></th></tr></thead>
+          <tbody id="tasksBody"><tr><td colspan="5" class="empty">Đang tải…</td></tr></tbody>
+        </table></div>
+        <div class="control-actions end"><button class="btn btn-primary" type="button" id="saveTasks">Lưu phân công mô hình</button></div>
+      </article>
+
+      <article class="card">
+        <div class="box-head"><h3>Mô hình đã bật</h3><small id="enabledHint">Nổi bật: hiển thị ở bảng giá trang chủ · Cho chọn: người dùng chọn khi tra cứu</small></div>
+        <div class="evid-wrap"><table class="evid enabled-table">
+          <thead><tr><th>Mô hình</th><th>Đầu vào</th><th>Giá vào / ra</th><th>~ mỗi câu hỏi</th><th>Nổi bật</th><th>Cho chọn</th><th>Mặc định</th><th></th></tr></thead>
+          <tbody id="enabledBody"><tr><td colspan="8" class="empty">Chưa bật mô hình nào. Thêm từ danh mục bên dưới.</td></tr></tbody>
+        </table></div>
+        <div class="control-actions end"><button class="btn btn-primary" type="button" id="saveModels">Lưu danh sách mô hình</button></div>
+      </article>
+
+      <article class="card">
+        <div class="box-head"><h3>Danh mục mô hình</h3><small id="catalogHint">Giá lấy trực tiếp từ OpenRouter</small></div>
+        <div class="control-actions catalog-filters">
+          <div class="seg" id="providerSeg" role="tablist" aria-label="Nguồn mô hình">
+            <button type="button" class="on" data-p="openrouter">OpenRouter</button>
+            <button type="button" data-p="openai">ChatGPT</button>
+            <button type="button" data-p="anthropic">Claude</button>
+            <button type="button" data-p="gemini">Gemini</button>
+            <button type="button" data-p="local">OCR nội bộ</button>
+          </div>
+          <select class="input-field" id="catalogInput" aria-label="Lọc theo loại đầu vào">
+            <option value="">Mọi loại đầu vào</option><option value="image">Nhận ảnh</option><option value="audio">Nhận âm thanh</option><option value="file">Nhận PDF</option>
+          </select>
+          <input class="input-field grow" type="search" id="catalogQuery" placeholder="Tìm mô hình (vd: gemini, gpt, claude, qwen)…" aria-label="Tìm mô hình">
+          <button class="btn" type="button" id="catalogRefresh" title="Tải lại danh mục và giá mới nhất"><svg class="ico"><use href="#a-refresh"/></svg>Cập nhật giá</button>
+        </div>
+        <div class="catalog" id="catalog"></div>
+      </article>
+    </section>
+
+    <!-- ============ NHẬT KÝ ============ -->
+    <section class="panel" id="p-audit">
+      <div class="evid-wrap card flush">
+        <table class="evid"><thead><tr><th>Thời gian</th><th>Người thực hiện</th><th>Thao tác</th><th>Đối tượng</th><th>Chi tiết</th><th>IP</th></tr></thead>
+          <tbody id="auditBody"><tr><td colspan="6" class="empty">Đang tải…</td></tr></tbody></table>
       </div>
     </section>
   </div>
 </main>
-<script src="/static/js/admin.js?v=8" defer></script>
-        <script>
-            if ("serviceWorker" in navigator) {
-                window.addEventListener("load", () => {
-                    navigator.serviceWorker.register("/sw.js").catch(() => {});
-                });
-            }
-        </script>    </body>
+</div>
+
+<dialog class="modal wide" id="userDialog">
+  <form class="modal-body" id="userForm" novalidate>
+    <h3 id="userDialogTitle">Thêm tài khoản</h3>
+    <div class="field-row">
+      <label class="field"><span>Tên đăng nhập</span><input class="input-field" name="username" autocomplete="off" autocapitalize="none" spellcheck="false" required></label>
+      <label class="field"><span>Họ và tên</span><input class="input-field" name="full_name" autocomplete="off"></label>
+    </div>
+    <div class="field-row">
+      <label class="field"><span>Email</span><input class="input-field" type="email" name="email" autocomplete="off"></label>
+      <label class="field"><span>Vai trò</span><select class="input-field" name="role" id="roleSelect"></select></label>
+    </div>
+    <p class="form-note" id="roleHelp"></p>
+    <div class="field-row">
+      <label class="field"><span id="pwLabel">Mật khẩu</span><input class="input-field" type="password" name="password" autocomplete="new-password"></label>
+      <label class="field"><span>Hạn mức câu hỏi AI mỗi ngày <small>(0 = không giới hạn)</small></span><input class="input-field" type="number" name="daily_quota" min="0" max="100000" value="0"></label>
+    </div>
+    <label class="check-row"><span class="switch"><input type="checkbox" name="must_change_password" checked><span class="track"></span></span>Yêu cầu đổi mật khẩu ở lần đăng nhập tới</label>
+    <label class="check-row"><span class="switch"><input type="checkbox" name="is_active" checked><span class="track"></span></span>Tài khoản đang hoạt động</label>
+    <div class="form-error" role="alert" hidden></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" type="button" data-close>Huỷ</button>
+      <button class="btn btn-primary" type="submit" id="userSubmit">Lưu</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="/static/js/ui.js?v=6"></script>
+<script src="/static/js/admin.js?v=9" defer></script>
+<script src="/static/js/admin-manage.js?v=1" defer></script>
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => { navigator.serviceWorker.register("/sw.js").catch(() => {}); });
+  }
+</script>
+</body>
 </html>

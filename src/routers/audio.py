@@ -1,12 +1,10 @@
 import logging
-import os
 
-import google.generativeai as genai
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from src.core import config, llm, runtime
+from src.core import config, llm, multimodal, runtime
 from src.utils.uploads import remove_quietly, save_upload
 
 logger = logging.getLogger(__name__)
@@ -29,41 +27,22 @@ NHIỆM VỤ CỦA BẠN:
    - **Kết luận / Phân công:** Ghi rõ mốc thời gian, công việc và trách nhiệm (nếu có).
 5. Tuyệt đối trung thành với thông tin gốc, KHÔNG bịa đặt thêm số liệu."""
 
-_gemini_configured = False
-
 
 class SummarizeReq(BaseModel):
     text: str = Field(..., min_length=1, max_length=200_000)
-
-
-def _transcribe(path: str) -> str:
-    global _gemini_configured
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise HTTPException(503, "Chức năng gỡ băng chưa được cấu hình (thiếu GEMINI_API_KEY).")
-    if not _gemini_configured:
-        genai.configure(api_key=api_key)
-        _gemini_configured = True
-    uploaded = genai.upload_file(path=path)
-    try:
-        model = genai.GenerativeModel("gemini-2.5-flash")
-        return model.generate_content([_TRANSCRIBE_PROMPT, uploaded], request_options={"timeout": 600}).text
-    finally:
-        # Xóa tệp trên máy chủ Google cả khi gỡ băng lỗi.
-        try:
-            genai.delete_file(uploaded.name)
-        except Exception as exc:
-            logger.warning("Không xóa được tệp âm thanh trên Gemini: %s", exc)
 
 
 @router.post("/transcribe")
 async def api_transcribe_audio(file: UploadFile = File(...)):
     path = await save_upload(file, _AUDIO_EXTENSIONS, config.AUDIO_MAX_MB)
     try:
-        text = await runtime.run_blocking(_transcribe, path, slots=runtime.UPLOAD_SLOTS)
-        return {"text": text}
+        text, model = await runtime.run_blocking(multimodal.transcribe, path, _TRANSCRIBE_PROMPT,
+                                                 slots=runtime.UPLOAD_SLOTS)
+        return {"text": text, "model": model}
     except HTTPException:
         raise
+    except multimodal.UnsupportedInput as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
     except Exception:
         logger.exception("Gỡ băng thất bại")
         return JSONResponse({"error": "Không gỡ băng được tệp âm thanh. Vui lòng thử lại sau."}, status_code=502)
@@ -74,7 +53,7 @@ async def api_transcribe_audio(file: UploadFile = File(...)):
 @router.post("/summarize")
 async def api_summarize_audio(req: SummarizeReq):
     try:
-        summary = await runtime.run_blocking(llm.chat, _SUMMARY_PROMPT, req.text, model=config.LLM_SMART,
+        summary = await runtime.run_blocking(llm.chat, _SUMMARY_PROMPT, req.text, model=llm.SUMMARY,
                                              slots=runtime.UPLOAD_SLOTS)
         return {"summary": summary}
     except HTTPException:

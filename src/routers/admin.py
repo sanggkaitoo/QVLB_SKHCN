@@ -10,14 +10,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from src.core import config, runtime, store
+from src.core import config, runtime, security, store
 from src.crawler import qlvb_api, sso
 from src.crawler.spider import run_spider
 from src.crawler.sso import ACTIVE_STATES as _ACTIVE_STATES, crawler_state
-from src.utils.auth import verify_admin
 
 logger = logging.getLogger(__name__)
-router = APIRouter(dependencies=[Depends(verify_admin)])
+router = APIRouter(dependencies=[Depends(security.require("docs.view"))])
+_CRAWL = [Depends(security.require("crawler.run"))]  # thao tác thay đổi: chạy crawler, đồng bộ, tải
 
 _crawl_task: asyncio.Task | None = None
 _crawl_lock = asyncio.Lock()
@@ -68,18 +68,19 @@ async def api_crawl_status():
         "captcha_b64": crawler_state["captcha_b64"],
         "captcha_version": crawler_state.get("captcha_version", 0),
         "captcha_expires_in": max(0, int(expires_at - time.time())) if expires_at else None,
+        "login_error": crawler_state.get("login_error"),
         "progress": crawler_state.get("progress") or {},
         "session": sso.session_info(),
     }
 
 
-@router.post("/crawl/start")
+@router.post("/crawl/start", dependencies=_CRAWL)
 async def api_crawl_start(req: CrawlRequest):
     """Crawler giao diện (Playwright) — phương án dự phòng."""
     return await _launch(run_spider(req.limit, req.mode), "crawler-ui")
 
 
-@router.post("/crawl/captcha/refresh")
+@router.post("/crawl/captcha/refresh", dependencies=_CRAWL)
 async def api_crawl_captcha_refresh():
     if crawler_state["status"] != "waiting_login":
         return {"status": "error", "message": "Không có phiên đăng nhập đang chờ."}
@@ -87,7 +88,7 @@ async def api_crawl_captcha_refresh():
     return {"status": "success", "message": "Đang tạo mã xác thực mới."}
 
 
-@router.post("/crawl/cancel")
+@router.post("/crawl/cancel", dependencies=_CRAWL)
 async def api_crawl_cancel():
     """Huỷ đăng nhập đang chờ hoặc dừng tác vụ đang chạy (dừng an toàn sau văn bản hiện tại)."""
     if crawler_state["status"] not in _ACTIVE_STATES:
@@ -116,12 +117,12 @@ async def api_qlvb_summary():
     return await asyncio.to_thread(qlvb_api.summary)
 
 
-@router.post("/qlvb/sync")
+@router.post("/qlvb/sync", dependencies=_CRAWL)
 async def api_qlvb_sync(req: ApiSyncRequest):
     return await _launch(qlvb_api.run_sync(_directions(req.direction), req.mode, req.page_size), "crawler-api-sync")
 
 
-@router.post("/qlvb/download")
+@router.post("/qlvb/download", dependencies=_CRAWL)
 async def api_qlvb_download(req: ApiDownloadRequest):
     return await _launch(qlvb_api.run_download(_directions(req.direction), req.limit, req.retry_failed),
                          "crawler-api-download")
@@ -138,7 +139,7 @@ async def api_qlvb_items(status: Literal["pending", "processing", "done", "faile
     return rows
 
 
-@router.post("/qlvb/items/{item_id}/retry")
+@router.post("/qlvb/items/{item_id}/retry", dependencies=_CRAWL)
 async def api_qlvb_retry(item_id: int):
     changed = await asyncio.to_thread(qlvb_api.requeue, item_id)
     if not changed:
@@ -168,7 +169,7 @@ def _log_crawl_result(task: asyncio.Task) -> None:
         crawler_state.update(status="error", message="Crawler dừng do lỗi không mong đợi.", login_data=None, captcha_b64=None)
 
 
-@router.post("/crawl/submit_login")
+@router.post("/crawl/submit_login", dependencies=_CRAWL)
 async def api_crawl_submit_login(req: LoginSubmitRequest):
     if crawler_state["status"] != "waiting_login":
         return {"status": "error", "message": "Crawler không ở trạng thái chờ đăng nhập."}

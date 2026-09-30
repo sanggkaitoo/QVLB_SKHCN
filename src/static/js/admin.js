@@ -2,6 +2,7 @@ const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 const esc = s => (s == null ? '' : s).toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const runningStates = ['starting', 'waiting_login', 'logging_in', 'crawling', 'stopping'];
+const toast = (...args) => window.UI.toast(...args);
 let pollInterval = null;
 let lastStatus = 'idle';
 
@@ -28,20 +29,37 @@ function toggleTheme() {
 setTheme(localStorage.getItem('qlvb-theme') || 'light');
 
 const heads = {
-  'p-dashboard': ['Admin Console', 'Quan sát dữ liệu và vận hành crawler', 'Theo dõi trạng thái kho văn bản, kiểm tra phân bố loại văn bản và khởi chạy crawler khi cần nạp dữ liệu mới.'],
-  'p-crawler': ['Crawler', 'Điều khiển luồng nạp dữ liệu', 'Chọn phạm vi chạy, theo dõi trạng thái và hoàn tất xác thực SSO ngay trong giao diện quản trị.'],
-  'p-docs': ['Kho văn bản', 'Tra cứu văn bản đã nạp', 'Quản lý và tìm kiếm các văn bản (theo số ký hiệu, trích yếu) hiện đang lưu trữ trong cơ sở dữ liệu.']
+  'p-dashboard': ['Thống kê', 'Quan sát kho dữ liệu', 'Theo dõi số văn bản, vector và phân bố loại văn bản trong kho.'],
+  'p-docs': ['Kho văn bản', 'Tra cứu văn bản đã nạp', 'Tìm văn bản đang lưu trong cơ sở dữ liệu theo số ký hiệu hoặc trích yếu.'],
+  'p-crawler': ['Crawler', 'Đồng bộ văn bản từ QLVB', 'Kiểm kê, tải văn bản còn thiếu và hoàn tất xác thực SSO ngay trong giao diện quản trị.'],
+  'p-users': ['Tài khoản', 'Quản lý tài khoản và phân quyền', 'Thêm, sửa, khoá hoặc xoá tài khoản; mỗi vai trò có một bộ quyền cố định.'],
+  'p-ai': ['Mô hình AI', 'Chọn mô hình cho từng tính năng', 'Kết nối OpenRouter, ChatGPT, Claude, Gemini; gán mô hình theo tính năng và chọn mô hình hiển thị ở bảng giá.'],
+  'p-audit': ['Nhật ký', 'Nhật ký thao tác', 'Đăng nhập, thay đổi tài khoản và cấu hình AI gần đây.']
 };
-$$('.tab[data-target]').forEach(tab => {
-  tab.addEventListener('click', () => {
-    $$('.tab[data-target]').forEach(item => item.classList.remove('active'));
-    tab.classList.add('active');
-    $$('.panel').forEach(panel => panel.classList.remove('active'));
-    const target = tab.dataset.target;
-    $('#' + target).classList.add('active');
-    const [eyebrow, title, desc] = heads[target];
-    $('#pageHead').innerHTML = `<div class="eyebrow">${eyebrow}</div><h2>${title}</h2><p>${desc}</p>`;
-  });
+const PANEL_LOADERS = {
+  'p-dashboard': () => loadStats(),
+  'p-docs': () => searchDocs(),
+  'p-crawler': () => { checkCrawlerStatus(); loadInventory(); loadItems(); },
+  'p-users': () => loadUsers(),
+  'p-ai': () => loadAi(),
+  'p-audit': () => loadAudit(),
+};
+const loadedPanels = new Set();
+function showPanel(target, { push = true } = {}) {
+  const tab = $(`.tab[data-target="${target}"]`);
+  if (!tab || tab.hidden) target = ($$('.tab[data-target]').find(t => !t.hidden) || {}).dataset?.target || 'p-dashboard';
+  $$('.tab[data-target]').forEach(item => item.classList.toggle('active', item.dataset.target === target));
+  $$('.panel').forEach(panel => panel.classList.toggle('active', panel.id === target));
+  const [eyebrow, title, desc] = heads[target];
+  $('#pageHead').innerHTML = `<div class="eyebrow">${eyebrow}</div><h2>${title}</h2><p>${desc}</p>`;
+  if (push) history.replaceState(null, '', '#' + target.slice(2));
+  if (!loadedPanels.has(target)) { loadedPanels.add(target); PANEL_LOADERS[target] && PANEL_LOADERS[target](); }
+}
+$$('.tab[data-target]').forEach(tab => tab.addEventListener('click', () => showPanel(tab.dataset.target)));
+$('#refreshBtn').addEventListener('click', () => {
+  const active = ($('.panel.active') || {}).id;
+  if (PANEL_LOADERS[active]) PANEL_LOADERS[active]();
+  toast('Đã làm mới', 'ok', { duration: 1500 });
 });
 
 function setApiState(ok) {
@@ -121,15 +139,9 @@ async function searchDocs() {
     }
 
     btn.disabled = false;
-    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Tìm kiếm';
+    btn.innerHTML = '<svg class="ico"><use href="#a-search"/></svg>Tìm kiếm';
 }
 
-// Tự động load 100 văn bản mới nhất khi người dùng click vào tab Kho văn bản
-document.querySelector('.tab[data-target="p-docs"]').addEventListener('click', () => {
-    if ($('#adminDocsBody').innerHTML.includes('Đang kết nối') || $('#adminDocsBody').innerHTML.includes('Bấm "Tìm kiếm"')) {
-        searchDocs();
-    }
-});
 
 function renderStatus(data) {
   const status = data.status || 'idle';
@@ -168,68 +180,120 @@ function renderStatus(data) {
   });
 }
 
-/* ---------- đăng nhập SSO: đếm ngược, đổi mã, huỷ ---------- */
-let loginModal = { open: false, version: 0, expiresAt: 0, timer: null };
+/* ---------- đăng nhập SSO: đếm ngược, đổi mã, huỷ ----------
+   Hộp thoại KHÔNG tự đóng khi bấm gửi: hiện "Đang xác thực…", nếu sai thì báo lỗi và hiện captcha mới
+   (giữ tài khoản/mật khẩu đã nhập); chỉ đóng khi đăng nhập thành công hoặc người dùng tự đóng. */
+let loginModal = { open: false, version: 0, expiresAt: 0, timer: null, submitted: false, dismissed: false, closing: false };
 
 function captchaCountdownText() {
   const left = Math.max(0, Math.round((loginModal.expiresAt - Date.now()) / 1000));
   if (!left) return 'Mã đã hết hạn, đang tạo mã mới...';
   return `Mã hết hạn sau ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')} — tự đổi mã khi hết hạn`;
 }
+function setSsoState(kind, text) {
+  const el = $('#sso-state');
+  if (!el) return;
+  el.hidden = !kind;
+  el.className = 'sso-state ' + (kind || '');
+  el.innerHTML = kind === 'busy' ? `<span class="spin"></span>${esc(text)}` : esc(text || '');
+}
+function setSsoBusy(busy) {
+  const form = $('#sso-form');
+  if (form) form.setAttribute('aria-busy', busy ? 'true' : 'false');
+  const confirm = Swal.getConfirmButton(), deny = Swal.getDenyButton();
+  if (confirm) { confirm.disabled = busy; confirm.textContent = busy ? 'Đang xác thực…' : 'Gửi và tiếp tục'; }
+  if (deny) deny.disabled = busy;
+}
 function updateLoginModal(data) {
-  if (!loginModal.open) return;
-  if (data.status !== 'waiting_login') {
-    if (data.status !== 'logging_in') Swal.close();
+  if (!loginModal.open || loginModal.closing) return;
+  const status = data.status;
+  if (status === 'logging_in') {
+    setSsoBusy(true);
+    setSsoState('busy', 'Đang xác thực với cổng SSO…');
     return;
   }
-  if ((data.captcha_version || 0) !== loginModal.version && data.captcha_b64) {
-    loginModal.version = data.captcha_version || 0;
-    const img = $('#swal-captcha-img');
-    if (img) img.src = 'data:image/png;base64,' + data.captcha_b64;
-    const input = $('#swal-captcha');
-    if (input) { input.value = ''; input.focus(); }
+  if (status === 'waiting_login') {
+    if ((data.captcha_version || 0) !== loginModal.version && data.captcha_b64) {
+      loginModal.version = data.captcha_version || 0;
+      const img = $('#swal-captcha-img');
+      if (img) { img.src = 'data:image/png;base64,' + data.captcha_b64; img.classList.remove('stale'); }
+      const input = $('#swal-captcha');
+      if (input) { input.value = ''; if (loginModal.submitted) input.focus(); }
+    }
+    if (data.captcha_expires_in != null) loginModal.expiresAt = Date.now() + data.captcha_expires_in * 1000;
+    if (loginModal.submitted && data.login_error) {
+      setSsoBusy(false);
+      setSsoState('bad', data.login_error + ' Nhập lại mã captcha mới để thử tiếp.');
+      loginModal.submitted = false;
+    } else if (!loginModal.submitted) {
+      setSsoBusy(false);
+    }
+    return;
   }
-  if (data.captcha_expires_in != null) loginModal.expiresAt = Date.now() + data.captcha_expires_in * 1000;
+  // Rời trạng thái đăng nhập: thành công (đang chạy/hoàn tất) hoặc kết thúc vì lỗi/huỷ.
+  loginModal.closing = true;
+  if (['crawling', 'done', 'starting'].includes(status)) {
+    setSsoBusy(true);
+    setSsoState('ok', 'Đăng nhập thành công. Crawler đang tiếp tục…');
+    setTimeout(() => { Swal.close(); toast('Đăng nhập SSO thành công', 'ok'); }, 1100);
+  } else {
+    Swal.close();
+    if (status === 'error') toast(data.message || 'Đăng nhập SSO thất bại.', 'bad');
+  }
 }
 async function postAdmin(url, payload) {
   const res = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload || {}) });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok || data.status === 'error') throw new Error(data.message || data.detail || 'Máy chủ từ chối yêu cầu.');
+  if (!res.ok || data.status === 'error') throw new Error(data.message || (typeof data.detail === 'string' ? data.detail : '') || 'Máy chủ từ chối yêu cầu.');
   return data;
 }
+function reopenSsoLogin() {
+  loginModal.dismissed = false;
+  checkCrawlerStatus();
+}
 function openLoginModal(data) {
-  loginModal = { open: true, version: data.captcha_version || 0, timer: null,
+  loginModal = { open: true, version: data.captcha_version || 0, timer: null, submitted: false, dismissed: false, closing: false,
                  expiresAt: Date.now() + (data.captcha_expires_in ?? 180) * 1000 };
+  $('#reopenLogin').hidden = true;
   Swal.fire({
     title: 'Xác thực SSO',
     html: `
-      <p style="font-size:13px;color:var(--muted);margin:0 0 14px">Nhập thông tin để crawler tiếp tục. Mật khẩu chỉ dùng cho phiên này và không được lưu.</p>
+      <div id="sso-form" class="sso-form">
+      <p style="font-size:13px;margin:0 0 12px">Nhập thông tin để crawler tiếp tục. Mật khẩu chỉ dùng cho phiên này và không được lưu.</p>
+      <div id="sso-state" class="sso-state" hidden></div>
       <input id="swal-user" class="swal2-input" autocomplete="username" placeholder="Tài khoản SSO">
       <input id="swal-pass" class="swal2-input" type="password" autocomplete="current-password" placeholder="Mật khẩu">
-      <div style="margin:14px 0 4px;text-align:center"><img id="swal-captcha-img" src="data:image/png;base64,${esc(data.captcha_b64 || '')}" alt="Captcha" style="width:160px;height:auto;border:1px solid var(--line);border-radius:6px;background:#fff"></div>
-      <div id="swal-countdown" style="font-size:12px;color:var(--muted);margin-bottom:4px"></div>
-      <input id="swal-captcha" class="swal2-input" placeholder="Nhập mã captcha" style="text-align:center;letter-spacing:2px">`,
+      <div class="sso-captcha"><img id="swal-captcha-img" src="data:image/png;base64,${esc(data.captcha_b64 || '')}" alt="Mã captcha"></div>
+      <div id="swal-countdown" class="sso-count"></div>
+      <input id="swal-captcha" class="swal2-input" placeholder="Nhập mã captcha" style="text-align:center;letter-spacing:2px" autocomplete="off">
+      </div>`,
     confirmButtonText: 'Gửi và tiếp tục',
     showDenyButton: true,
     denyButtonText: 'Đổi mã',
     showCancelButton: true,
     cancelButtonText: 'Huỷ đăng nhập',
+    showCloseButton: true,
+    closeButtonAriaLabel: 'Đóng (crawler vẫn chờ đăng nhập)',
     allowOutsideClick: false,
-    allowEscapeKey: false,
+    allowEscapeKey: true,
     didOpen: () => {
       const tick = () => { const el = $('#swal-countdown'); if (el) el.textContent = captchaCountdownText(); };
       tick();
       loginModal.timer = setInterval(tick, 1000);
+      $('#swal-captcha').addEventListener('keydown', e => { if (e.key === 'Enter') Swal.clickConfirm(); });
+      if (data.login_error) setSsoState('bad', data.login_error);
+      $('#swal-user').focus();
     },
     willClose: () => { clearInterval(loginModal.timer); loginModal.open = false; },
     preDeny: async () => {
       try {
         await postAdmin('/api/admin/crawl/captcha/refresh');
+        const img = $('#swal-captcha-img'); if (img) img.classList.add('stale');
         const el = $('#swal-countdown'); if (el) el.textContent = 'Đang tạo mã mới...';
       } catch (err) { Swal.showValidationMessage(err.message); }
       return false; // giữ hộp thoại mở; ảnh mới được cập nhật qua trạng thái
     },
-    preConfirm: () => {
+    preConfirm: async () => {
       const username = $('#swal-user').value.trim();
       const password = $('#swal-pass').value;
       const captcha = $('#swal-captcha').value.trim();
@@ -237,15 +301,29 @@ function openLoginModal(data) {
         Swal.showValidationMessage('Vui lòng nhập đầy đủ tài khoản, mật khẩu và captcha.');
         return false;
       }
-      return { username, password, captcha };
+      Swal.resetValidationMessage();
+      try {
+        await postAdmin('/api/admin/crawl/submit_login', { username, password, captcha });
+        loginModal.submitted = true;
+        setSsoBusy(true);
+        setSsoState('busy', 'Đang xác thực với cổng SSO…');
+        startPolling(1000);
+      } catch (err) {
+        Swal.showValidationMessage(err.message);
+      }
+      return false; // không đóng: chờ kết quả đăng nhập
     }
   }).then(async result => {
-    if (result.isConfirmed) {
-      await fetch('/api/admin/crawl/submit_login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(result.value) });
-      Swal.fire({ title: 'Đã gửi thông tin', text: 'Đang xác thực với SSO...', icon: 'info', showConfirmButton: false, timer: 1800 });
-    } else if (result.dismiss === Swal.DismissReason.cancel) {
+    if (result.dismiss === Swal.DismissReason.cancel) {
       try { await postAdmin('/api/admin/crawl/cancel'); } catch (err) { /* đã kết thúc */ }
       checkCrawlerStatus();
+    } else if (result.dismiss === Swal.DismissReason.close || result.dismiss === Swal.DismissReason.esc) {
+      // Người dùng tự đóng: không bật lại mỗi lần làm mới trạng thái.
+      if (!loginModal.closing) {
+        loginModal.dismissed = true;
+        $('#reopenLogin').hidden = false;
+        toast('Crawler vẫn đang chờ đăng nhập SSO. Bấm “Mở lại hộp đăng nhập” khi sẵn sàng.', 'info');
+      }
     }
   });
 }
@@ -256,32 +334,39 @@ async function checkCrawlerStatus({ notify = false } = {}) {
     const data = await res.json();
     renderStatus(data);
     setApiState(true);
-    if (data.status === 'waiting_login') {
-      if (!document.querySelector('.swal2-container')) openLoginModal(data);
-      else updateLoginModal(data);
-    } else if (loginModal.open) {
+    const waiting = ['waiting_login', 'logging_in'].includes(data.status);
+    if (!waiting) { loginModal.dismissed = false; $('#reopenLogin').hidden = true; }
+    if (loginModal.open) {
       updateLoginModal(data);
+    } else if (data.status === 'waiting_login' && !loginModal.dismissed && !document.querySelector('.swal2-container')) {
+      openLoginModal(data);
+    } else if (waiting && loginModal.dismissed) {
+      $('#reopenLogin').hidden = false;
     }
     if (['done', 'error', 'cancelled'].includes(data.status) && runningStates.includes(lastStatus)) {
       stopPolling();
       if (notify) {
-        const icon = { done: 'success', error: 'error', cancelled: 'info' }[data.status];
+        const type = { done: 'ok', error: 'bad', cancelled: 'info' }[data.status];
         const title = { done: 'Hoàn tất', error: 'Crawler dừng do lỗi', cancelled: 'Đã dừng' }[data.status];
-        Swal.fire(title, data.message || '', icon);
+        toast(`${title}${data.message ? ': ' + data.message : ''}`, type, { duration: 7000 });
       }
       loadStats();
       loadInventory();
       loadItems();
     }
-    if (runningStates.includes(data.status)) startPolling();
+    if (runningStates.includes(data.status)) startPolling(data.status === 'logging_in' ? 1000 : 2000);
     if (data.job && data.job.startsWith('api') && runningStates.includes(data.status)) loadInventoryThrottled();
     lastStatus = data.status || 'idle';
   } catch (err) {
     setApiState(false);
   }
 }
-function startPolling() {
-  if (!pollInterval) pollInterval = setInterval(() => checkCrawlerStatus({ notify: true }), 2000);
+let pollEvery = 0;
+function startPolling(ms = 2000) {
+  if (pollInterval && pollEvery === ms) return;
+  if (pollInterval) clearInterval(pollInterval);
+  pollEvery = ms;
+  pollInterval = setInterval(() => checkCrawlerStatus({ notify: true }), ms);
 }
 function stopPolling() {
   if (pollInterval) clearInterval(pollInterval);
@@ -340,7 +425,7 @@ async function loadItems() {
 }
 async function retryItem(id) {
   try { await postAdmin(`/api/admin/qlvb/items/${id}/retry`); loadItems(); loadInventory(); }
-  catch (err) { Swal.fire('Không thể đưa lại hàng chờ', err.message, 'error'); }
+  catch (err) { toast('Không thể đưa lại hàng chờ: ' + err.message, 'bad'); }
 }
 async function launchJob(url, payload, message) {
   try {
@@ -350,7 +435,7 @@ async function launchJob(url, payload, message) {
     startPolling();
     checkCrawlerStatus({ notify: true });
   } catch (err) {
-    Swal.fire('Không thể bắt đầu', err.message || 'Kiểm tra backend rồi thử lại.', 'error');
+    toast('Không thể bắt đầu: ' + (err.message || 'kiểm tra backend rồi thử lại.'), 'bad');
   }
 }
 function apiSync(mode) {
@@ -361,7 +446,7 @@ function apiSync(mode) {
 }
 async function apiDownload() {
   const limit = parseInt($('#apiLimit').value, 10);
-  if (!Number.isFinite(limit) || limit < 0) { Swal.fire('Số lượng chưa hợp lệ', 'Nhập 0 để tải tất cả, hoặc số văn bản cần tải.', 'error'); return; }
+  if (!Number.isFinite(limit) || limit < 0) { toast('Số lượng chưa hợp lệ: nhập 0 để tải tất cả, hoặc số văn bản cần tải.', 'warn'); return; }
   if (limit === 0) {
     const ok = await Swal.fire({ title: 'Tải tất cả văn bản còn thiếu?', text: 'Có thể mất nhiều giờ. Bạn có thể bấm Dừng bất cứ lúc nào và chạy tiếp sau.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Bắt đầu', cancelButtonText: 'Hủy' });
     if (!ok.isConfirmed) return;
@@ -370,19 +455,17 @@ async function apiDownload() {
 }
 async function stopCrawl() {
   try { await postAdmin('/api/admin/crawl/cancel'); checkCrawlerStatus({ notify: true }); }
-  catch (err) { Swal.fire('Không thể dừng', err.message, 'error'); }
+  catch (err) { toast('Không thể dừng: ' + err.message, 'bad'); }
 }
 async function startCrawl(payload) {
   try {
-    const res = await fetch('/api/admin/crawl/start', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-    const data = await res.json();
-    if (!res.ok || data.status === 'error') throw new Error(data.message || 'Không khởi động được crawler.');
+    const data = await postAdmin('/api/admin/crawl/start', payload);
     renderStatus({ status: 'starting', message: data.message || 'Đã khởi động crawler.' });
     lastStatus = 'starting';
     startPolling();
     checkCrawlerStatus({ notify: true });
   } catch (err) {
-    Swal.fire('Không thể bắt đầu', err.message || 'Kiểm tra backend rồi thử lại.', 'error');
+    toast('Không thể bắt đầu: ' + (err.message || 'kiểm tra backend rồi thử lại.'), 'bad');
   }
 }
 async function runFullCrawl(mode = 'all') {
@@ -400,19 +483,9 @@ async function runFullCrawl(mode = 'all') {
 function runDemoCrawl(mode) {
   const limit = parseInt($('#demoLimit').value, 10);
   if (!Number.isFinite(limit) || limit < 1 || limit > 1000) {
-    Swal.fire('Giới hạn chưa hợp lệ', 'Nhập số từ 1 đến 1000 để chạy kiểm thử.', 'error');
+    toast('Giới hạn chưa hợp lệ: nhập số từ 1 đến 1000.', 'warn');
     return;
   }
   startCrawl({ limit, mode });
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  loadStats();
-  checkCrawlerStatus();
-  loadInventory();
-  loadItems();
-  try {
-    const saved = localStorage.getItem('qlvb-page-size');
-    if (saved && $(`#apiPageSize option[value="${saved}"]`)) $('#apiPageSize').value = saved;
-  } catch (err) { /* không bắt buộc */ }
-});

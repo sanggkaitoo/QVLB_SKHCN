@@ -28,6 +28,7 @@ crawler_state: dict[str, Any] = {
     "captcha_expires_at": None,
     "login_data": None,
     "login_action": None,      # "refresh" | "cancel"
+    "login_error": None,       # lỗi của lần đăng nhập gần nhất (sai captcha/mật khẩu), hiện trong hộp đăng nhập
     "stop_requested": False,
     "message": "",
     "progress": {},
@@ -237,6 +238,27 @@ async def _wait_for_login_data(page, form, qlvb_url: str, attempt: int) -> tuple
     raise TimeoutError("Hết thời gian chờ nhập tài khoản và captcha.")
 
 
+_ERROR_SELECTORS = ("#error-check-active", ".alert-danger", "#error-msg", ".ui.negative.message",
+                    "[class*='error' i]:not(input)", "[id*='error' i]:not(input)")
+
+
+async def _login_error_text(page) -> str | None:
+    """Thông báo lỗi SSO đang hiển thị (ví dụ "Mã xác thực không đúng, hoặc quá thời hạn!")."""
+    for frame in page.frames:
+        for selector in _ERROR_SELECTORS:
+            locator = frame.locator(selector)
+            try:
+                for index in range(min(await locator.count(), 5)):
+                    element = locator.nth(index)
+                    if await element.is_visible():
+                        text = " ".join((await element.inner_text()).split())
+                        if 3 <= len(text) <= 300:
+                            return text
+            except Exception:
+                continue
+    return None
+
+
 async def _wait_for_application(page, qlvb_url: str) -> bool:
     target_host = urlparse(qlvb_url).hostname
     deadline = asyncio.get_running_loop().time() + config.CRAWLER_LOGIN_RESULT_TIMEOUT_SECONDS
@@ -260,7 +282,7 @@ def _token_from_payload(payload: dict) -> tuple[str | None, str | None]:
 
 async def login(page, qlvb_url: str) -> None:
     """Đăng nhập SSO; lưu token API trong RAM. Ném LoginCancelled nếu người dùng huỷ."""
-    crawler_state["login_action"] = None
+    crawler_state.update(login_action=None, login_error=None)
     token_holder: dict[str, Any] = {}
 
     async def capture(response):
@@ -283,7 +305,7 @@ async def login(page, qlvb_url: str) -> None:
             await _publish_captcha(form, attempt)
             data, form = await _wait_for_login_data(page, form, qlvb_url, attempt)
             crawler_state.update({"status": "logging_in", "message": "Đang xác thực với cổng SSO...",
-                                  "captcha_b64": None, "captcha_expires_at": None})
+                                  "captcha_expires_at": None, "login_error": None})
             await form["username"].fill(data.get("username", ""))
             await form["password"].fill(data.get("password", ""))
             await form["captcha_input"].fill(data.get("captcha", ""))
@@ -297,9 +319,11 @@ async def login(page, qlvb_url: str) -> None:
                     await asyncio.sleep(0.25)
                 if token_holder.get("token"):
                     _session.update(token=token_holder["token"], obtained_at=time.time(), user=token_holder.get("user"))
-                crawler_state.update(login_data=None, captcha_b64=None, captcha_expires_at=None)
+                crawler_state.update(login_data=None, captcha_b64=None, captcha_expires_at=None, login_error=None)
                 return
 
+            error_text = await _login_error_text(page)
+            crawler_state["login_error"] = error_text or "Đăng nhập chưa thành công. Kiểm tra tài khoản, mật khẩu và mã xác thực."
             crawler_state["message"] = "Đăng nhập chưa thành công; đang làm mới captcha..."
             form = await find_login_form(page)
             if form and not await _refresh_captcha(form):

@@ -80,7 +80,7 @@ const API = ""; // cùng origin khi FastAPI phục vụ file này
                     if (!r.ok || !j.ok) 
                         throw 0;
                     setTel(true);
-                } catch  {
+                } catch {
                     DEMO = true;
                     $("#demo")
                         .classList
@@ -90,7 +90,7 @@ const API = ""; // cùng origin khi FastAPI phục vụ file này
             }
             function setTel(ok) {
                 const v = ok
-                    ? ["6333", "5432", "gemini"]
+                    ? ["sẵn sàng", "sẵn sàng", "sẵn sàng"]
                     : ["xem thử", "xem thử", "xem thử"];
                 ["q", "p", "l"].forEach((k, i) => {
                     $("#s-" + k).textContent = v[i];
@@ -102,6 +102,7 @@ const API = ""; // cùng origin khi FastAPI phục vụ file này
 
             /* ---------- tabs ---------- */
             const HEAD = {
+                overview: ["Tổng quan", "Kho văn bản trong một cái nhìn", "Số liệu trực tiếp từ kho dữ liệu."],
                 search: [
                     "Tra cứu", "Tìm trong toàn bộ kho văn bản", "Tìm theo từ khóa hoặc ý nghĩa trên văn bản đi và đến. Mọi câu trả lời đều dẫn nguồn số ký hiệu."
                 ],
@@ -111,35 +112,92 @@ const API = ""; // cùng origin khi FastAPI phục vụ file này
                 check: [
                     "Kiểm tra", "Rà soát dự thảo trước khi trình ký", "Đối chiếu thể thức theo Nghị định 30/2020 và kiểm tra căn cứ, chính tả, tính logic của nội dung."
                 ],
-                audio: [ "Tiện ích", "Gỡ băng & Tổng hợp Audio", "Chuyển đổi file ghi âm giọng nói thành văn bản (Speech-to-Text) và tự động tóm tắt, làm gọn thành ghi chú mạch lạc."
-                ],
-                ocr: [ "Tiện ích", "Nhận dạng văn bản (OCR)", "Trích xuất toàn bộ nội dung từ file PDF thành văn bản (Markdown) bằng mô hình Unlimited-OCR."
-
-                ]
+                audio: ["Tiện ích", "Gỡ băng & tổng hợp ghi âm", "Chuyển file ghi âm thành văn bản rồi tóm tắt thành ghi chú mạch lạc, bằng các mô hình AI do quản trị viên chọn cho từng bước."],
+                ocr: ["Tiện ích", "Nhận dạng văn bản (OCR)", "Trích xuất nội dung từ PDF scan hoặc ảnh chụp thành văn bản Markdown."]
             };
-            document
-                .querySelectorAll(".tab")
-                .forEach(t => t.onclick = () => {
-                    document
-                        .querySelectorAll(".tab")
-                        .forEach(x => x.classList.remove("active"));
-                    t
-                        .classList
-                        .add("active");
-                    const k = t.dataset.tab;
-                    document
-                        .querySelectorAll(".panel")
-                        .forEach(p => p.classList.remove("active"));
-                    $("#p-" + (
-                        k === "search"
-                            ? "search"
-                            : k
-                    ))
-                        .classList
-                        .add("active");
-                    const [e, h, p] = HEAD[k];
-                    $("#hd").innerHTML = `<div class="eyebrow">${e}</div><h2>${h}</h2><p>${p}</p>`;
+            /* Quyền cần cho từng tab (tab tổng quan công khai). */
+            const TAB_PERM = {search: "tools.search", agg: "tools.aggregate", check: "tools.check", audio: "tools.audio", ocr: "tools.ocr"};
+
+            function showTab(k, options = {}) {
+                if (!HEAD[k]) k = "overview";
+                document.querySelectorAll(".tab").forEach(x => {
+                    const on = x.dataset.tab === k;
+                    x.classList.toggle("active", on);
+                    x.setAttribute("aria-current", on ? "page" : "false");
                 });
+                document.querySelectorAll(".panel").forEach(p => p.classList.toggle("active", p.id === "p-" + k));
+                document.body.dataset.tab = k;
+                const [e, h, p] = HEAD[k];
+                $("#hd").innerHTML = `<div class="eyebrow">${e}</div><h2>${h}</h2><p>${p}</p>`;
+                if (options.push !== false && location.hash.slice(1) !== k) history.pushState(null, "", k === "overview" ? location.pathname : "#" + k);
+                if (options.scroll !== false) window.scrollTo({top: 0, behavior: "smooth"});
+                window.dispatchEvent(new CustomEvent("tab:change", {detail: k}));
+            }
+            document.querySelectorAll(".tab").forEach(t => t.onclick = () => showTab(t.dataset.tab));
+            document.querySelectorAll("[data-go]").forEach(el => el.addEventListener("click", event => {
+                event.preventDefault();
+                showTab(el.dataset.go);
+                if (el.dataset.go === "search") setTimeout(() => $("#q-search").focus(), 250);
+            }));
+            window.addEventListener("popstate", () => showTab(location.hash.slice(1) || "overview", {push: false, scroll: false}));
+
+            /* Ô tìm kiếm ở hero và câu hỏi gợi ý: chuyển sang tab tra cứu rồi chạy luôn. */
+            function searchFromHero(q) {
+                if (!q) { showTab("search"); $("#q-search").focus(); return; }
+                $("#q-search").value = q;
+                showTab("search");
+                runSearch();
+            }
+            $("#heroSearch")?.addEventListener("submit", event => { event.preventDefault(); searchFromHero($("#heroQ").value.trim()); });
+            document.querySelectorAll(".chip.prompt").forEach(chip => chip.onclick = () => searchFromHero(chip.textContent.trim()));
+
+            /* ---------- tài khoản & phân quyền ---------- */
+            let AUTH = {user: null};
+            function allowed(k) {
+                const perm = TAB_PERM[k];
+                if (!perm) return true;
+                if (UI.auth.can(perm)) return true;
+                return k === "search" && !AUTH.user && AUTH.anonymous_search;
+            }
+            function applyAuth(state) {
+                AUTH = state || {user: null};
+                UI.renderAccount($("#account"), AUTH);
+                Object.keys(TAB_PERM).forEach(k => {
+                    const ok = allowed(k);
+                    document.querySelector(`.tab[data-tab="${k}"]`)?.classList.toggle("locked", !ok);
+                    const panel = $("#p-" + k);
+                    let gate = panel.querySelector(":scope > .gate");
+                    if (ok) { gate?.remove(); return; }
+                    if (!gate) { gate = document.createElement("div"); gate.className = "gate"; panel.prepend(gate); }
+                    gate.innerHTML = AUTH.user
+                        ? `<svg class="ico"><use href="#i-lock"/></svg><div><strong>Tài khoản của bạn chưa được cấp quyền dùng chức năng này.</strong><br>Liên hệ quản trị viên nếu bạn cần sử dụng.</div>`
+                        : `<svg class="ico"><use href="#i-lock"/></svg><div><strong>Vui lòng đăng nhập để sử dụng chức năng này.</strong><br>Tài khoản do quản trị viên cấp.</div><a class="btn btn-primary btn-sm" href="${UI.esc(UI.auth.loginUrl())}">Đăng nhập</a>`;
+                });
+                loadModelChoices();
+            }
+            window.addEventListener("auth:change", event => applyAuth(event.detail));
+            window.addEventListener("auth:required", () => {
+                UI.toast("Phiên đăng nhập đã hết hoặc bạn chưa đăng nhập.", "warn", {action: {label: "Đăng nhập", run: () => { location.href = UI.auth.loginUrl(); }}});
+            });
+
+            async function loadModelChoices() {
+                const pick = $("#modelPick"), sel = $("#modelSel");
+                if (!pick || !AUTH.user) { if (pick) pick.hidden = true; return; }
+                try {
+                    const data = await (await fetch("/api/models/choices", {cache: "no-store"})).json();
+                    const items = data.items || [];
+                    if (!data.can_choose || !items.length) { pick.hidden = true; return; }
+                    let saved = null;
+                    try { saved = localStorage.getItem("qlvb-model"); } catch { /* bỏ qua */ }
+                    sel.innerHTML = items.map(m => `<option value="${UI.esc(m.spec)}">${UI.esc(m.name)}${m.question_vnd != null ? ` · ~${m.question_vnd.toLocaleString("vi-VN")}đ/câu` : ""}</option>`).join("");
+                    const initial = items.some(m => m.spec === saved) ? saved : (items.some(m => m.spec === data.default) ? data.default : items[0].spec);
+                    sel.value = initial;
+                    sel.onchange = () => { try { localStorage.setItem("qlvb-model", sel.value); } catch { /* bỏ qua */ } };
+                    pick.hidden = false;
+                } catch {
+                    pick.hidden = true;
+                }
+            }
 
             /* ---------- SEARCH (stream + demo) ---------- */
             const filters = {
@@ -149,7 +207,7 @@ const API = ""; // cùng origin khi FastAPI phục vụ file này
             };
 
             document
-                .querySelectorAll(".chip")
+                .querySelectorAll(".chip[data-f]")
                 .forEach(c => c.onclick = () => {
                     const f = c.dataset.f,
                         v = c.dataset.v;
@@ -224,9 +282,13 @@ const API = ""; // cùng origin khi FastAPI phục vụ file này
                         Object.keys(filters).forEach(k => {
                             if (filters[k].length > 0) url.searchParams.set(k, filters[k].join(","));
                         });
+                        if (!$("#modelPick").hidden && $("#modelSel").value) url.searchParams.set("model", $("#modelSel").value);
                         const r = await fetch(url, { headers: { Accept: "text/event-stream" } });
                         if (r.status === 503) {
                             ans.innerHTML = '<div class="ph">Hệ thống đang bận xử lý câu hỏi khác. Vui lòng thử lại sau vài giây.</div>';
+                        } else if ([401, 403, 429].includes(r.status)) {
+                            const d = await r.json().catch(() => ({}));
+                            ans.innerHTML = `<div class="ph">${esc(apiError(r, d))}</div>`;
                         } else if (!r.ok || !r.body) {
                             throw new Error("HTTP " + r.status);
                         } else {
@@ -368,6 +430,9 @@ const API = ""; // cùng origin khi FastAPI phục vụ file này
                         const r = await fetch(API + "/api/aggregate_stream?q=" + encodeURIComponent(q), { headers: { Accept: "text/event-stream" } });
                         if (r.status === 503) {
                             out.innerHTML = '<div class="empty">Hệ thống đang bận. Vui lòng thử lại sau vài giây.</div>';
+                        } else if ([401, 403, 429].includes(r.status)) {
+                            const d = await r.json().catch(() => ({}));
+                            out.innerHTML = `<div class="empty">${esc(apiError(r, d))}</div>`;
                         } else if (!r.ok || !r.body) {
                             throw new Error("HTTP " + r.status);
                         } else {
@@ -663,7 +728,7 @@ const API = ""; // cùng origin khi FastAPI phục vụ file này
                         ta.value = "ờm... kính thưa các đồng chí thì... hôm nay chúng ta họp về vấn đề là giải ngân vốn đầu tư công. ờ... tiến độ hiện nay đang rất là chậm...";
                     } else {
                         const r = await fetch(API + "/api/audio/transcribe", { method: "POST", body: fd });
-                        const d = await r.json();
+                        const d = await r.json().catch(() => ({}));
                         if (!r.ok || d.error) throw new Error(apiError(r, d));
 
                         // Gán text trả về, có dự phòng chuỗi cảnh báo nếu text bị undefined
@@ -699,14 +764,14 @@ const API = ""; // cùng origin khi FastAPI phục vụ file này
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({ text: text })
                         });
-                        const d = await r.json();
+                        const d = await r.json().catch(() => ({}));
                         if (!r.ok || d.error) throw new Error(apiError(r, d));
 
                         // Ép kiểu: d.summary hoặc chuỗi báo lỗi, tránh ném Null vào formatCitations
                         out.innerHTML = formatCitations(d.summary || "*Không có nội dung tóm tắt được trả về từ máy chủ.*");
                     }
                 } catch (e) {
-                    out.innerHTML = `<div class="empty" style="color:#f08a82">Lỗi tóm tắt: ${e.message}</div>`;
+                    out.innerHTML = `<div class="empty error">Lỗi tóm tắt: ${esc(e.message)}</div>`;
                 }
 
                 btn.disabled = false;
@@ -795,7 +860,7 @@ Kế hoạch này căn cứ trực tiếp vào kế hoạch **01/KH-TU** của T
 
                 try {
                     const r = await fetch(API + "/api/ocr/process", { method: "POST", body: fd });
-                    const d = await r.json();
+                    const d = await r.json().catch(() => ({}));
                     if (!r.ok || d.error) throw new Error(apiError(r, d));
 
                     ta.value = d.text || "⚠️ Không trích xuất được nội dung.";
@@ -808,7 +873,7 @@ Kế hoạch này căn cứ trực tiếp vào kế hoạch **01/KH-TU** của T
                             const url = URL.createObjectURL(blob);
                             const a = document.createElement('a');
                             a.href = url;
-                            a.download = f.name.replace(".pdf", ".md");
+                            a.download = f.name.replace(/\.(pdf|png|jpe?g)$/i, "") + ".md";
                             a.click();
                             URL.revokeObjectURL(url);
                         };
@@ -919,3 +984,9 @@ Kế hoạch này căn cứ trực tiếp vào kế hoạch **01/KH-TU** của T
             }
 
             health();
+            showTab(location.hash.slice(1) || "overview", {push: false, scroll: false});
+            UI.auth.load();
+            if (new URLSearchParams(location.search).get("denied") === "admin") {
+                UI.toast("Tài khoản của bạn không có quyền vào trang quản trị.", "warn");
+                history.replaceState(null, "", location.pathname + location.hash);
+            }

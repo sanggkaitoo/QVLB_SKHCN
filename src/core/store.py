@@ -486,14 +486,15 @@ def log_rag_query(data: dict):
             cursor.execute(
                 """INSERT INTO rag_query_logs
                    (query_text, intent, plan, source_doc_ids, rerank_scores, attempts,
-                    confidence, latency_ms, answer_status, error_text)
-                   VALUES (%s, %s, %s::jsonb, %s, %s, %s, %s, %s, %s, %s)""",
+                    confidence, latency_ms, answer_status, error_text, user_id, model)
+                   VALUES (%s, %s, %s::jsonb, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
                 (
                     data.get("query_text"), data.get("intent"),
                     psycopg2.extras.Json(data.get("plan") or {}),
                     data.get("source_doc_ids") or [], data.get("rerank_scores") or [],
                     data.get("attempts", 1), data.get("confidence"), data.get("latency_ms"),
                     data.get("answer_status"), data.get("error_text"),
+                    data.get("user_id"), data.get("model"),
                 ),
             )
     except Exception as exc:

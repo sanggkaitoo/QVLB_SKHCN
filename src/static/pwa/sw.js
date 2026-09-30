@@ -1,4 +1,4 @@
-const CACHE_NAME = "docnexus-pwa-v5";
+const CACHE_NAME = "docnexus-pwa-v6";
 const APP_SHELL = ["/", "/offline.html", "/manifest.webmanifest", "/static/pwa/icon.svg"];
 
 self.addEventListener("install", (event) => {
@@ -14,10 +14,9 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const request = event.request;
   const url = new URL(request.url);
-  // Admin pages use HTTP Basic Auth: let the browser load them natively. Routing them through
-  // respondWith(fetch()) delays or hangs the 401 login challenge in browsers that have this worker.
+  // Trang quản trị và đăng nhập phụ thuộc phiên đăng nhập: luôn để trình duyệt tải trực tiếp, không cache.
   if (request.method !== "GET" || url.origin !== self.location.origin
-      || url.pathname.startsWith("/api/") || url.pathname.startsWith("/admin")) return;
+      || url.pathname.startsWith("/api/") || url.pathname.startsWith("/admin") || url.pathname.startsWith("/login")) return;
 
   if (request.mode === "navigate") {
     event.respondWith(fetch(request).then((response) => {

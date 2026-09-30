@@ -123,7 +123,7 @@ def plan_aggregation(question: str, explicit_filters: dict | None = None) -> Agg
         base.keywords = document_topic(question)
         return base
     try:
-        planned = llm.extract_json(_PLAN_SYSTEM, f"CÂU HỎI: {question}\n\n{_PLAN_FORMAT}", model=config.LLM_CHEAP,
+        planned = llm.extract_json(_PLAN_SYSTEM, f"CÂU HỎI: {question}\n\n{_PLAN_FORMAT}", model=llm.AGGREGATE,
                                    timeout=config.LLM_FAST_TIMEOUT_SECONDS, max_tokens=600)
     except Exception as exc:
         logger.warning("Planner tổng hợp lỗi, dùng kế hoạch theo luật: %s", exc)
@@ -200,7 +200,7 @@ def _extract_facts(plan: AggregationPlan, document: dict, chunks: list[dict]) ->
     user = (f"CHỈ SỐ CẦN TRÍCH: {plan.metric}\nTrạng thái cần: {_STATUS_LABELS[plan.status]}\n"
             f"VĂN BẢN: {document.get('so_ky_hieu') or '?'} – {document.get('trich_yeu') or ''}\n\n"
             f"CÁC ĐOẠN:\n{context}\n\n{_EXTRACT_FORMAT}")
-    result = llm.extract_json(_EXTRACT_SYSTEM, user, model=config.LLM_CHEAP,
+    result = llm.extract_json(_EXTRACT_SYSTEM, user, model=llm.AGGREGATE,
                               timeout=config.LLM_FAST_TIMEOUT_SECONDS * 2, max_tokens=3500)
     facts = result.get("facts") if isinstance(result, dict) else None
     return [fact for fact in facts or [] if isinstance(fact, dict)][:40]
