@@ -110,7 +110,7 @@ const API = ""; // cùng origin khi FastAPI phục vụ file này
                     "Tổng hợp", "Cộng số liệu trên nhiều văn bản (thử nghiệm)", "Đặt câu hỏi đếm hoặc cộng; hệ thống trích số liệu có trích dẫn từ từng văn bản, tính bằng code và tách riêng dữ kiện cần cán bộ xác nhận."
                 ],
                 check: [
-                    "Kiểm tra", "Rà soát dự thảo trước khi trình ký", "Đối chiếu thể thức theo Nghị định 30/2020 và kiểm tra căn cứ, chính tả, tính logic của nội dung."
+                    "Kiểm tra", "Rà soát dự thảo trước khi trình ký", "Kiểm tra thể thức theo Nghị định 30/2020 hoặc quy định của đơn vị, chính tả bằng code và AI; đối chiếu căn cứ pháp lý với kho văn bản."
                 ],
                 audio: ["Tiện ích", "Gỡ băng & tổng hợp ghi âm", "Chuyển file ghi âm thành văn bản rồi tóm tắt thành ghi chú mạch lạc, bằng các mô hình AI do quản trị viên chọn cho từng bước."],
                 ocr: ["Tiện ích", "Nhận dạng văn bản (OCR)", "Trích xuất nội dung từ PDF scan hoặc ảnh chụp thành văn bản Markdown."]
@@ -531,21 +531,17 @@ const API = ""; // cùng origin khi FastAPI phục vụ file này
             }
 
             /* ---------- CHECK ---------- */
-            let SUB = "format";
+            // Tab "Thể thức & chính tả" do docx-check.js xử lý; phần dưới đây là tab "Nội dung & căn cứ".
+            const SUB = "content";
             document
                 .querySelectorAll(".subtab")
                 .forEach(s => s.onclick = () => {
-                    document
-                        .querySelectorAll(".subtab")
-                        .forEach(x => x.classList.remove("active"));
-                    s
-                        .classList
-                        .add("active");
-                    SUB = s.dataset.sub;
-                    $("#drop-sub").textContent = SUB === "format"
-                        ? "Kiểm tra font, cỡ chữ, lề, giãn dòng theo Nghị định 30/2020"
-                        : "Đối chiếu căn cứ pháp lý, rà soát chính tả và tính logic của nội dung";
-                    $("#check-out").innerHTML = "";
+                    document.querySelectorAll(".subtab").forEach(x => {
+                        x.classList.toggle("active", x === s);
+                        x.setAttribute("aria-selected", x === s ? "true" : "false");
+                    });
+                    $("#check-format").hidden = s.dataset.sub !== "format";
+                    $("#check-content").hidden = s.dataset.sub !== "content";
                 });
             const drop = $("#drop"),
                 file = $("#file");

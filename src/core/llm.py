@@ -32,6 +32,7 @@ TASKS = {
     "verify": {"label": "Tra cứu – kiểm chứng câu trả lời với nguồn", "inputs": ["text"], "env": "LLM_CHEAP"},
     "aggregate": {"label": "Tổng hợp số liệu – lập kế hoạch, trích số liệu", "inputs": ["text"], "env": "LLM_CHEAP"},
     "check": {"label": "Kiểm tra dự thảo – thẩm định nội dung", "inputs": ["text"], "env": "LLM_SMART"},
+    "spell": {"label": "Kiểm tra dự thảo – chính tả (AI)", "inputs": ["text"], "env": "LLM_SPELL"},
     "transcribe": {"label": "Gỡ băng – chuyển giọng nói thành văn bản", "inputs": ["audio"], "env": "LLM_TRANSCRIBE"},
     "summary": {"label": "Gỡ băng – tóm tắt thành biên bản", "inputs": ["text"], "env": "LLM_SMART"},
     "ocr": {"label": "OCR – nhận dạng chữ từ ảnh/PDF scan", "inputs": ["image"], "env": "LLM_OCR"},
@@ -41,6 +42,7 @@ TASKS = {
 _ALIASES = {"cheap": "plan", "smart": "check", "main": "answer"}  # tên vai trò cũ
 ANSWER, PLAN, VERIFY, AGGREGATE, CHECK = "@answer", "@plan", "@verify", "@aggregate", "@check"
 TRANSCRIBE, SUMMARY, OCR, METADATA, FALLBACK = "@transcribe", "@summary", "@ocr", "@metadata", "@fallback"
+SPELL = "@spell"
 CHEAP, SMART = PLAN, CHECK
 PROVIDERS = {"openrouter": "OpenRouter", "openai": "OpenAI (ChatGPT)", "anthropic": "Anthropic (Claude)",
              "gemini": "Google Gemini (trực tiếp)", "local": "Máy chủ OCR nội bộ"}

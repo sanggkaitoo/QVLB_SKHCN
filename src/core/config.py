@@ -55,6 +55,8 @@ LLM_FALLBACK = os.getenv("LLM_FALLBACK", LLM_SMART)
 # Tính năng cần loại đầu vào đặc biệt: gỡ băng cần model nhận âm thanh, OCR cần model nhận ảnh.
 LLM_TRANSCRIBE = os.getenv("LLM_TRANSCRIBE", "gemini:gemini-2.5-flash")
 LLM_OCR = os.getenv("LLM_OCR", "local:Unlimited-OCR")
+# Kiểm tra chính tả bằng AI trong "Kiểm tra dự thảo" (mô hình khá về tiếng Việt, chi phí thấp).
+LLM_SPELL = os.getenv("LLM_SPELL", "google/gemini-2.5-flash")
 LLM_MAX_OUTPUT_TOKENS = max(256, int(os.getenv("LLM_MAX_OUTPUT_TOKENS", 4096)))
 # Lời gọi phụ trợ (planner, grader, verifier) có đầu ra ngắn; timeout riêng tránh một lượt chậm kéo dài P95.
 LLM_FAST_TIMEOUT_SECONDS = _env_int("LLM_FAST_TIMEOUT_SECONDS", 20, 5)

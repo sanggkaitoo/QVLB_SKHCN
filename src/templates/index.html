@@ -16,7 +16,7 @@
     <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
     <link rel="stylesheet" href="/static/css/theme.css?v=6">
-    <link rel="stylesheet" href="/static/css/app.css?v=7">
+    <link rel="stylesheet" href="/static/css/app.css?v=9">
 </head>
 <body data-tab="overview">
 <a class="skip-link" href="#main-content">Bỏ qua điều hướng</a>
@@ -337,17 +337,86 @@
             <!-- ---- KIỂM TRA ---- -->
             <section class="panel" id="p-check">
                 <div class="subtabs" role="tablist">
-                    <button class="subtab active" type="button" data-sub="format">Thể thức (NĐ 30/2020)</button>
+                    <button class="subtab active" type="button" data-sub="format">Thể thức &amp; chính tả</button>
                     <button class="subtab" type="button" data-sub="content">Nội dung &amp; căn cứ</button>
                 </div>
-                <div class="drop glass" id="drop" tabindex="0" role="button" aria-label="Chọn tệp dự thảo">
-                    <span class="drop-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4m0 0 4 4m-4-4L8 8"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></span>
-                    <div class="t">Kéo thả hoặc bấm để chọn dự thảo (.docx)</div>
-                    <div class="s" id="drop-sub">Kiểm tra font, cỡ chữ, lề, giãn dòng theo Nghị định 30/2020</div>
-                    <div class="file" id="drop-file"></div>
-                    <input type="file" id="file" accept=".docx,.doc,.pdf" hidden>
+
+                <!-- Thể thức & chính tả (.docx) -->
+                <div id="check-format" class="dc">
+                    <aside class="dc-side glass" aria-label="Thiết lập kiểm tra">
+                        <div class="dc-side-head">
+                            <h3>Bộ thể thức</h3>
+                            <div class="seg dc-profiles" id="dcProfiles" role="radiogroup" aria-label="Bộ thể thức">
+                                <button type="button" role="radio" data-profile="nd30">Nghị định 30</button>
+                                <button type="button" role="radio" data-profile="skhcn">SKHCN</button>
+                                <button type="button" role="radio" data-profile="custom">Tùy chỉnh</button>
+                            </div>
+                            <p class="dc-desc" id="dcProfileDesc">Đang tải…</p>
+                            <div class="dc-spec" id="dcSpec"></div>
+                        </div>
+                        <form class="dc-custom" id="dcCustom" hidden autocomplete="off">
+                            <div class="dc-form-title">Thông số tùy chỉnh <button class="btn btn-ghost btn-sm" type="button" id="dcCustomReset">Lấy lại mặc định</button></div>
+                            <label class="field"><span>Dựa trên</span>
+                                <select class="input-field" name="base"><option value="skhcn">SKHCN</option><option value="nd30">Nghị định 30</option></select></label>
+                            <fieldset class="dc-grid4"><legend>Lề trang (mm)</legend>
+                                <label class="field"><span>Trên</span><input class="input-field" name="m_top" type="number" step="0.5" min="5" max="60"></label>
+                                <label class="field"><span>Dưới</span><input class="input-field" name="m_bottom" type="number" step="0.5" min="5" max="60"></label>
+                                <label class="field"><span>Trái</span><input class="input-field" name="m_left" type="number" step="0.5" min="5" max="60"></label>
+                                <label class="field"><span>Phải</span><input class="input-field" name="m_right" type="number" step="0.5" min="5" max="60"></label>
+                            </fieldset>
+                            <div class="dc-grid2">
+                                <label class="field"><span>Phông chữ</span><input class="input-field" name="font" maxlength="60"></label>
+                                <label class="field"><span>Cỡ chữ nội dung <small>(vd 14 hoặc 13, 14)</small></span><input class="input-field" name="size_pt"></label>
+                                <label class="field"><span>Thụt dòng đầu (cm)</span><input class="input-field" name="first_line_cm" placeholder="1 hoặc 1; 1,27"></label>
+                                <label class="field"><span>Giãn dòng</span><select class="input-field" name="line"><option value="single">Single</option><option value="1.5">1,5 lines</option><option value="double">Double</option></select></label>
+                                <label class="field"><span>Cách đoạn trước (pt)</span><input class="input-field" name="before_pt" type="number" step="0.5" min="0" max="72"></label>
+                                <label class="field"><span>Cách đoạn sau (pt)</span><input class="input-field" name="after_pt" type="number" step="0.5" min="0" max="72"></label>
+                                <label class="field"><span>Chữ “Nơi nhận” (pt)</span><input class="input-field" name="noi_nhan_title_pt"></label>
+                                <label class="field"><span>Danh sách nơi nhận (pt)</span><input class="input-field" name="noi_nhan_items_pt"></label>
+                                <label class="field"><span>Chức vụ, họ tên người ký (pt)</span><input class="input-field" name="signer_pt"></label>
+                                <label class="field"><span>Kết thúc bằng ./.</span><select class="input-field" name="end_mark"><option value="required">Bắt buộc</option><option value="recommended">Khuyến nghị</option><option value="off">Không kiểm tra</option></select></label>
+                                <label class="field"><span>Mã cơ quan trong ký hiệu</span><input class="input-field" name="agency" placeholder="vd SKHCN (để trống: không kiểm tra)"></label>
+                            </div>
+                            <label class="field"><span>Mã đơn vị hợp lệ <small>(mỗi dòng: MÃ: Tên đơn vị)</small></span><textarea class="input-field dc-units" name="units" rows="4" placeholder="VP: Văn phòng&#10;CĐS: Phòng Chuyển đổi số"></textarea></label>
+                            <p class="form-error" id="dcCustomError" hidden></p>
+                        </form>
+                        <label class="check-row dc-ai-toggle"><span class="switch"><input type="checkbox" id="dcAi" checked><span class="track"></span></span>
+                            <span>Kiểm tra chính tả bằng AI<small class="muted" id="dcAiNote">Gửi phần nội dung (không gửi tệp Word) tới mô hình AI do quản trị viên chọn.</small></span></label>
+                        <details class="dc-more">
+                            <summary>Phạm vi kiểm tra theo Nghị định 30</summary>
+                            <div id="dcCoverage" class="dc-coverage"></div>
+                        </details>
+                        <details class="dc-more" id="dcDictBox">
+                            <summary>Từ điển riêng <span class="muted" id="dcDictCount"></span></summary>
+                            <p class="muted small">Tên riêng, thuật ngữ, từ viết tắt… trong từ điển riêng không bị báo lỗi chính tả (dùng chung cho cả đơn vị).</p>
+                            <form class="dc-dict-add" id="dcDictForm"><input class="input-field" name="word" maxlength="60" placeholder="Thêm từ (vd Mường Khương)" aria-label="Thêm từ vào từ điển riêng"><button class="btn btn-soft btn-sm" type="submit">Thêm</button></form>
+                            <div class="dc-dict" id="dcDict"></div>
+                        </details>
+                    </aside>
+
+                    <div class="dc-main">
+                        <div class="drop glass" id="dcDrop" tabindex="0" role="button" aria-label="Chọn tệp Word cần kiểm tra">
+                            <span class="drop-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4m0 0 4 4m-4-4L8 8"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></span>
+                            <div class="t">Kéo thả hoặc bấm để chọn dự thảo Word (.docx)</div>
+                            <div class="s">Kiểm tra khổ giấy, lề, phông, cỡ chữ, đoạn văn, số ký hiệu, ngày tháng, nơi nhận, chữ ký và chính tả. Tệp không bị sửa.</div>
+                            <div class="file" id="dcFileName"></div>
+                            <input type="file" id="dcFile" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+                        </div>
+                        <div id="dcOut" aria-live="polite"></div>
+                    </div>
                 </div>
-                <div id="check-out"></div>
+
+                <!-- Nội dung & căn cứ (giữ nguyên) -->
+                <div id="check-content" hidden>
+                    <div class="drop glass" id="drop" tabindex="0" role="button" aria-label="Chọn tệp dự thảo">
+                        <span class="drop-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4m0 0 4 4m-4-4L8 8"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></span>
+                        <div class="t">Kéo thả hoặc bấm để chọn dự thảo (.docx, .doc, .pdf)</div>
+                        <div class="s" id="drop-sub">Đối chiếu căn cứ pháp lý với kho văn bản, rà soát tính logic của nội dung</div>
+                        <div class="file" id="drop-file"></div>
+                        <input type="file" id="file" accept=".docx,.doc,.pdf" hidden>
+                    </div>
+                    <div id="check-out"></div>
+                </div>
             </section>
 
             <!-- ---- GỠ BĂNG ---- -->
@@ -408,8 +477,9 @@
 <div class="viz-tip" id="vizTip" role="status" aria-live="polite"></div>
 
 <script src="/static/js/ui.js?v=6" defer></script>
-<script src="/static/js/app.js?v=6" defer></script>
+<script src="/static/js/app.js?v=7" defer></script>
 <script src="/static/js/overview.js?v=7" defer></script>
+<script src="/static/js/docx-check.js?v=2" defer></script>
 <script>
     if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => { navigator.serviceWorker.register("/sw.js").catch(() => {}); });

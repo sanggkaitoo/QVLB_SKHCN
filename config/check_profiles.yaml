@@ -1,0 +1,74 @@
+# Bộ thể thức dùng cho "Kiểm tra dự thảo → Thể thức & chính tả" (tệp .docx).
+# Sửa tệp này rồi kiểm tra lại là có hiệu lực, không cần khởi động lại ứng dụng.
+#
+# Đơn vị: lề = mm; thụt dòng = cm; cỡ chữ, khoảng cách đoạn = pt.
+#   Giá trị đơn:        20            (đúng bằng, có sai số làm tròn của Word)
+#   Khoảng:             {min: 20, max: 25}
+#   Danh sách cho phép: [13, 14]
+# "inherits": lấy bộ khác làm gốc rồi ghi đè những mục khai báo ở đây.
+
+nd30:
+  label: Nghị định 30/2020/NĐ-CP
+  description: >-
+    Thể thức và kỹ thuật trình bày văn bản hành chính theo Phụ lục I Nghị định 30/2020/NĐ-CP.
+  page:
+    size: A4
+    margins_mm: {top: {min: 20, max: 25}, bottom: {min: 20, max: 25}, left: {min: 30, max: 35}, right: {min: 15, max: 20}}
+  font: Times New Roman
+  body:                              # phần nội dung văn bản
+    size_pt: [13, 14]
+    align: justify
+    first_line_cm: [1.0, 1.27]
+    indent_left_cm: 0
+    indent_right_cm: 0
+    spacing: {mode: min_between, min_pt: 6}   # khoảng cách giữa các đoạn tối thiểu 6 pt
+    line: {min: single, max: 1.5}              # từ dòng đơn đến 1,5 dòng
+  header:                            # phần đầu văn bản
+    quoc_hieu: {size_pt: [12, 13], bold: true, upper: true}
+    tieu_ngu: {size_pt: [13, 14], bold: true}
+    co_quan: {size_pt: [12, 13], upper: true}
+    so_ky_hieu: {size_pt: [13]}
+    dia_danh: {size_pt: [13, 14], italic: true}
+    ten_loai: {size_pt: [13, 14], bold: true, upper: true}
+    trich_yeu: {size_pt: [14], bold: true}
+    vv: {size_pt: [12, 13], bold: false}
+  closing:                           # nơi nhận và chữ ký
+    noi_nhan_title_pt: [12]
+    noi_nhan_items_pt: [11]
+    signer_pt: [13, 14]
+  page_number: true                  # số trang: canh giữa lề trên, cỡ 13–14, không hiện ở trang đầu
+  end_mark: recommended              # "./." cuối nội dung: required | recommended | off
+  reference:
+    agency: null                     # mã cơ quan bắt buộc trong ký hiệu (null = không kiểm tra)
+    units: {}                        # mã đơn vị/phòng hợp lệ trong ký hiệu công văn
+
+skhcn:
+  inherits: nd30
+  label: Sở KH&CN Lào Cai
+  description: >-
+    Quy định trình bày của Sở Khoa học và Công nghệ tỉnh Lào Cai: lề trên/dưới/phải 2 cm, trái 3 cm;
+    nội dung Times New Roman 14 pt, thụt dòng đầu 1 cm, cách đoạn trước/sau 6 pt, giãn dòng đơn.
+  page:
+    margins_mm: {top: 20, bottom: 20, left: 30, right: 20}
+  body:
+    size_pt: [14]
+    first_line_cm: [1.0]
+    spacing: {mode: exact, before_pt: 6, after_pt: 6}
+    line: {min: single, max: single}
+  closing:
+    noi_nhan_title_pt: [12]
+    noi_nhan_items_pt: [11]
+    signer_pt: [13, 13.5]
+  end_mark: required
+  reference:
+    agency: SKHCN
+    units:
+      VP: Văn phòng Sở
+      KHTC: Phòng Kế hoạch - Tài chính
+      QLKH: Phòng Quản lý khoa học
+      QLCN: Phòng Quản lý công nghệ
+      BCVT: Phòng Bưu chính - Viễn thông
+      CĐS: Phòng Chuyển đổi số
+      TCĐLCL: Phòng Tiêu chuẩn - Đo lường - Chất lượng
+      ĐMST: Phòng Đổi mới sáng tạo
+      TTCNTT: Trung tâm Công nghệ thông tin
