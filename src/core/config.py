@@ -99,6 +99,14 @@ CRAWLER_LOGIN_PAGE_MAX_AGE_SECONDS = _env_int("CRAWLER_LOGIN_PAGE_MAX_AGE_SECOND
 
 # --- Crawler qua API QLVB (khuyến nghị) ---
 QLVB_API_BASE_URL = os.getenv("QLVB_API_BASE_URL", "https://egov-gateway.laocai.gov.vn").rstrip("/")
+# Máy chủ lưu trữ dùng để ghép khi QLVB trả đường dẫn tệp không có tên máy chủ.
+QLVB_STORAGE_BASE = os.getenv("QLVB_STORAGE_BASE", "https://egov-storage1.laocai.gov.vn").rstrip("/")
+# Một số văn bản (QLVB chỉ trả tên tệp, không có đường dẫn lưu trữ) được trang web QLVB tải qua hệ thống
+# văn phòng cũ, đi qua cổng gateway; tiền tố thư mục là hằng số có sẵn trong trang web QLVB.
+QLVB_LEGACY_FILE_URL = os.getenv(
+    "QLVB_LEGACY_FILE_URL",
+    "https://egov-gateway.laocai.gov.vn/https://office-demoeg.laocai.gov.vn/Ajax/IworkFileHandler.ashx")
+QLVB_LEGACY_FILE_PREFIX = os.getenv("QLVB_LEGACY_FILE_PREFIX", "Vm01d2RFQXhNak09/Vanban//")
 QLVB_STORAGE_HOSTS = {host.strip() for host in os.getenv(
     "QLVB_STORAGE_HOSTS", "egov-storage1.laocai.gov.vn,egov-storage.laocai.gov.vn").split(",") if host.strip()}
 # Chứng chỉ trung gian GlobalSign mà máy chủ QLVB không gửi kèm (gateway: GCC R46 OV TLS CA 2025,

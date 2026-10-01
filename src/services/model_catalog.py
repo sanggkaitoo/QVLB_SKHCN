@@ -149,7 +149,8 @@ def describe(spec: str) -> dict:
     else:
         inputs = _STATIC_INPUTS.get(provider) or twin.get("inputs") or ["text"]
     return {"spec": spec, "provider": provider, "id": model_id,
-            "name": twin.get("name") or model_id, "vendor": llm.PROVIDERS.get(provider, provider),
+            "name": twin.get("name") or model_id,
+            "vendor": {"openai": "OpenAI", "anthropic": "Anthropic", "gemini": "Google", "local": "Nội bộ"}.get(provider, provider),
             "inputs": sorted(set(inputs)), "prompt": 0.0 if provider == "local" else twin.get("prompt"),
             "completion": 0.0 if provider == "local" else twin.get("completion"),
             "context": twin.get("context"), "unknown": not twin and provider != "local"}

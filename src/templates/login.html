@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/theme.css?v=6">
+    <link rel="stylesheet" href="/static/css/theme.css?v=7">
     <script>try { document.documentElement.dataset.theme = localStorage.getItem("qlvb-theme") || "light"; } catch (e) {}</script>
     <style>
         .login-page { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
@@ -19,7 +19,8 @@
         .login-side h1 span { background: linear-gradient(120deg, var(--primary), var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
         .login-side .lead { color: var(--muted); font-size: 16px; max-width: 46ch; margin: 16px 0 0; }
         .brand-row { display: flex; align-items: center; gap: 12px; font-weight: 700; color: var(--ink); text-decoration: none; }
-        .brand-row .logo { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, #3b82f6, #0d9488); box-shadow: var(--shadow-primary); font-size: 18px; }
+        .brand-row .logo { width: 44px; height: 44px; flex: none; filter: drop-shadow(0 4px 10px rgba(214, 69, 59, .25)); transition: transform .6s var(--ease); }
+        .brand-row:hover .logo { transform: rotate(-12deg) scale(1.04); }
         .brand-row small { display: block; font-weight: 500; color: var(--muted); font-size: 12.5px; }
         .perks { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
         .perks li { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 16px; transition: transform var(--t) var(--ease), box-shadow var(--t); }
@@ -55,7 +56,15 @@
 <body>
 <main class="login-page">
     <section class="login-side">
-        <a class="brand-row" href="/"><span class="logo" aria-hidden="true">D</span><span>DocNexus<small>Trợ lý AI · Sở KH&amp;CN Lào Cai</small></span></a>
+        <a class="brand-row" href="/"><svg class="logo" viewBox="0 0 100 100" aria-hidden="true"><g >
+            <circle cx="50" cy="50" r="47" fill="none" stroke="#d6453b" stroke-width="2"/>
+            <circle cx="50" cy="50" r="40" fill="none" stroke="#d6453b" stroke-width="1"/>
+            <path id="ring" d="M50,50 m-33,0 a33,33 0 1,1 66,0 a33,33 0 1,1 -66,0" fill="none"/>
+            <text fill="#d6453b" font-family="'Be Vietnam Pro',sans-serif" font-size="7.4" font-weight="600" letter-spacing="1.2">
+                <textPath href="#ring" startOffset="0">SỞ KHOA HỌC VÀ CÔNG NGHỆ · TỈNH LÀO CAI ·</textPath>
+            </text>
+            <polygon points="50,37 53.5,47.2 64.3,47.4 55.7,53.9 58.8,64.1 50,58 41.2,64.1 44.3,53.9 35.7,47.4 46.5,47.2" fill="#d6453b"/>
+        </g></svg><span>DocNexus<small>Trợ lý AI · Sở KH&amp;CN Lào Cai</small></span></a>
         <div>
             <h1>Văn bản hành chính, <span>trả lời có dẫn nguồn</span></h1>
             <p class="lead">Đăng nhập để tra cứu, tổng hợp số liệu, kiểm tra dự thảo và gỡ băng cuộc họp bằng AI.</p>
@@ -63,7 +72,7 @@
         <ul class="perks">
             <li class="glass"><span class="p-ico"><svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></span><div><strong>Luôn có nguồn</strong><span>Mỗi nhận định gắn số ký hiệu văn bản gốc.</span></div></li>
             <li class="glass"><span class="p-ico"><svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 5-3.5 7.5-8.5 9C7.5 19.5 4 17 4 12V6l8-3 8 3z"/></svg></span><div><strong>Phân quyền theo vai trò</strong><span>Mỗi tài khoản chỉ thấy chức năng được giao.</span></div></li>
-            <li class="glass"><span class="p-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/></svg></span><div><strong>Dữ liệu lưu nội bộ</strong><span>Văn bản mật không gửi sang dịch vụ AI.</span></div></li>
+            <li class="glass"><span class="p-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/></svg></span><div><strong>Dữ liệu lưu nội bộ</strong><span>Kho văn bản và chỉ mục tìm kiếm đặt tại máy chủ của Sở.</span></div></li>
         </ul>
         <div class="side-foot login-foot"><span>© 2026 Sở Khoa học và Công nghệ tỉnh Lào Cai</span></div>
     </section>

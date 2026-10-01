@@ -10,6 +10,8 @@ from src.core import config, security
 from src.routers import admin, aggregate, ai_settings, audio, auth, check, ocr, overview, search, users, web_routes
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+# httpx ghi mọi request ở mức INFO, kể cả địa chỉ tải tệp QLVB có kèm token đăng nhập: chỉ giữ cảnh báo/lỗi.
+logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger("docnexus")
 
 

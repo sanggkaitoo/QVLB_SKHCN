@@ -139,6 +139,21 @@ async def api_qlvb_items(status: Literal["pending", "processing", "done", "faile
     return rows
 
 
+@router.post("/qlvb/retry_failed", dependencies=_CRAWL)
+async def api_qlvb_retry_failed():
+    """Đưa mọi văn bản lỗi về hàng chờ và tải lại ngay nếu crawler đang rảnh."""
+    ids = await asyncio.to_thread(qlvb_api.requeue_failed)
+    if not ids:
+        return {"status": "success", "started": False, "count": 0, "message": "Không có văn bản lỗi hoặc bị bỏ qua."}
+    started = await _launch(qlvb_api.run_download(["di", "den"], 0, False, ids), "crawler-api-retry-all")
+    if started["status"] == "success":
+        return {"status": "success", "started": True, "count": len(ids),
+                "message": f"Đang tải lại {len(ids):,} văn bản lỗi/bị bỏ qua.".replace(",", ".")}
+    return {"status": "success", "started": False, "count": len(ids),
+            "message": f"Crawler đang chạy tác vụ khác; {len(ids):,} văn bản lỗi/bị bỏ qua đã vào hàng chờ, sẽ được tải ở "
+                       "lượt “Tải phần còn thiếu” tiếp theo.".replace(",", ".")}
+
+
 @router.post("/qlvb/items/{item_id}/retry", dependencies=_CRAWL)
 async def api_qlvb_retry(item_id: int):
     """Đưa văn bản về hàng chờ và tải ngay nếu crawler đang rảnh.

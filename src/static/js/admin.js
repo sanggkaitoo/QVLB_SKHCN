@@ -74,10 +74,22 @@ function setStatsLoading() {
   $('#list-loai').innerHTML = '<div class="shimmer" style="width:85%"></div><div class="shimmer" style="width:70%"></div><div class="shimmer" style="width:92%"></div>';
   $('#list-tags').innerHTML = '<div class="shimmer" style="width:80%"></div><div class="shimmer" style="width:72%"></div><div class="shimmer" style="width:88%"></div>';
 }
+// Mã loại văn bản trong kho → tên hiển thị.
+const TYPE_LABELS = {
+  nghi_quyet: 'Nghị quyết', quyet_dinh: 'Quyết định', chi_thi: 'Chỉ thị', quy_che: 'Quy chế', quy_dinh: 'Quy định',
+  thong_cao: 'Thông cáo', thong_bao: 'Thông báo', huong_dan: 'Hướng dẫn', chuong_trinh: 'Chương trình',
+  ke_hoach: 'Kế hoạch', phuong_an: 'Phương án', de_an: 'Đề án', du_an: 'Dự án', bao_cao: 'Báo cáo',
+  bien_ban: 'Biên bản', to_trinh: 'Tờ trình', hop_dong: 'Hợp đồng', cong_van: 'Công văn', cong_dien: 'Công điện',
+  ban_ghi_nho: 'Bản ghi nhớ', ban_thoa_thuan: 'Bản thỏa thuận', giay_uy_quyen: 'Giấy ủy quyền', giay_moi: 'Giấy mời',
+  giay_gioi_thieu: 'Giấy giới thiệu', giay_nghi_phep: 'Giấy nghỉ phép', phieu_gui: 'Phiếu gửi',
+  phieu_chuyen: 'Phiếu chuyển', phieu_bao: 'Phiếu báo', thu_cong: 'Thư công', khac: 'Khác',
+};
+const typeLabel = code => TYPE_LABELS[code] || (code ? String(code).replace(/_/g, ' ') : 'Khác');
+
 function renderList(items, emptyText, nameKey) {
   if (!items.length) return `<div class="empty">${emptyText}</div>`;
   return items.map(item => {
-    const name = nameKey === 'tag' ? '#' + esc(item.tag || 'khac') : esc(item.loai_vb || 'khac');
+    const name = nameKey === 'tag' ? '#' + esc(item.tag || 'khác') : esc(typeLabel(item.loai_vb));
     return `<div class="list-item"><span class="list-name">${name}</span><span class="tag">${fmt(item.cnt)} VB</span></div>`;
   }).join('');
 }
@@ -128,7 +140,7 @@ async function searchDocs() {
                 <tr>
                     <td><span class="ky">${esc(row.so_ky_hieu || 'Chưa rõ')}</span></td>
                     <td class="mono" style="color: var(--muted); font-size: 13px;">${esc(row.ngay_ban_hanh || '---')}</td>
-                    <td><span class="loai">${esc(row.loai_vb || 'Khác')}</span></td>
+                    <td><span class="loai">${esc(typeLabel(row.loai_vb))}</span></td>
                     <td style="color: var(--muted); line-height: 1.4;">${esc(row.trich_yeu || 'Không có trích yếu')}
                       <div style="font-size:11.5px;color:var(--faint);margin-top:4px">${fmt(row.n_files)} tệp · ${fmt(row.n_chunks)} đoạn · ${esc(row.ingest_status === 'ready' ? 'sẵn sàng' : (row.ingest_status || ''))}${row.index_version ? ' (' + esc(row.index_version) + ')' : ''}</div></td>
                 </tr>
@@ -389,6 +401,10 @@ async function loadInventory() {
       return `<tr><th>${esc(d.label || key)}</th><td>${src}</td><td>${fmt(d.inventoried)}</td><td class="ok">${fmt(d.done)}</td><td>${fmt(d.pending)}</td><td class="${d.failed ? 'bad' : ''}">${fmt(d.failed)}</td><td>${fmt(d.skipped)}</td></tr>`;
     });
     $('#invBody').innerHTML = rows.join('');
+    const failedTotal = ['di', 'den'].reduce((sum, key) => sum + Number((data[key] || {}).failed || 0) + Number((data[key] || {}).skipped || 0), 0);
+    const retryAll = $('#b-retry-all');
+    retryAll.hidden = !failedTotal;
+    retryAll.textContent = `Tải lại lỗi & bỏ qua (${fmt(failedTotal)})`;
     const notes = ['di', 'den'].map(key => {
       const d = data[key] || {};
       if (!d.last_sweep_at) return `${esc(d.label || key)}: chưa kiểm kê`;
@@ -413,16 +429,48 @@ async function loadItems() {
     const rows = await res.json();
     $('#itemsBody').innerHTML = rows.length ? rows.map(r => `
       <tr>
-        <td><span class="ky">${esc(r.so_ky_hieu || '—')}</span><div class="sub">${r.direction === 'di' ? 'Đi' : 'Đến'}${r.co_quan ? ' · ' + esc(r.co_quan) : ''}</div></td>
-        <td class="mono">${esc(r.ngay || '')}</td>
-        <td>${esc(r.trich_yeu || '')}${(r.last_error || r.skip_reason) ? `<div class="sub ${r.status === 'failed' ? 'bad' : ''}">${esc(r.last_error || r.skip_reason)}</div>` : ''}</td>
-        <td><span class="st st-${esc(r.status)}">${esc(STATUS_TEXT[r.status] || r.status)}</span>${r.attempts ? `<div class="sub">${fmt(r.attempts)} lần thử</div>` : ''}</td>
-        <td>${['failed', 'done', 'skipped'].includes(r.status) ? `<button class="btn btn-sm" type="button" onclick="retryItem(${Number(r.id)}, this)">Tải lại</button>` : ''}</td>
-      </tr>`).join('') : '<tr><td colspan="5" class="empty">Không có văn bản nào ở trạng thái này.</td></tr>';
+        <td><span class="ky">${esc(r.so_ky_hieu || '—')}</span><div class="sub">${esc(r.ngay ? r.ngay.slice(0, 10).split('-').reverse().join('/') : '')} · ${r.direction === 'di' ? 'Đi' : 'Đến'}</div>${r.co_quan ? `<div class="sub ellipsis">${esc(r.co_quan)}</div>` : ''}</td>
+        <td>${esc(r.trich_yeu || '')}${noteHtml(r)}</td>
+        <td class="st-cell"><span class="st st-${esc(r.status)}">${esc(STATUS_TEXT[r.status] || r.status)}</span>${r.attempts ? `<div class="sub">${fmt(r.attempts)} lần thử</div>` : ''}
+          ${['failed', 'done', 'skipped'].includes(r.status) ? `<button class="btn btn-sm" type="button" onclick="retryItem(${Number(r.id)}, this)">Tải lại</button>` : ''}</td>
+      </tr>`).join('') : '<tr><td colspan="3" class="empty">Không có văn bản nào ở trạng thái này.</td></tr>';
   } catch (err) {
-    $('#itemsBody').innerHTML = '<tr><td colspan="5" class="error">Không tải được danh sách.</td></tr>';
+    $('#itemsBody').innerHTML = '<tr><td colspan="3" class="error">Không tải được danh sách.</td></tr>';
   }
 }
+// Ghi chú lỗi/bỏ qua: rút gọn lỗi kỹ thuật dài (vết ngăn xếp của QLVB), rê chuột để xem đầy đủ.
+function noteHtml(r) {
+  const note = r.last_error || r.skip_reason;
+  if (!note) return '';
+  const short = note.split(/\r?\n|\s+at\s+/)[0].slice(0, 180) + (note.length > 180 ? '…' : '');
+  return `<div class="sub ${r.status === 'failed' ? 'bad' : ''}" title="${esc(note)}">${esc(short)}</div>`;
+}
+
+async function retryAllFailed(button) {
+  const ok = await Swal.fire({
+    title: 'Tải lại văn bản lỗi và bị bỏ qua?',
+    text: 'Mọi văn bản đang ở trạng thái Lỗi hoặc Bỏ qua sẽ được xét lại theo quy tắc hiện hành và tải lại ngay (mới nhất trước). Có thể bấm Dừng bất cứ lúc nào.',
+    icon: 'question', showCancelButton: true, confirmButtonText: 'Tải lại', cancelButtonText: 'Huỷ',
+  });
+  if (!ok.isConfirmed) return;
+  button.disabled = true;
+  try {
+    const data = await postAdmin('/api/admin/qlvb/retry_failed');
+    toast(data.message, data.started ? 'info' : (data.count ? 'warn' : 'ok'), { duration: 6000 });
+    if (data.started) {
+      lastStatus = 'starting';
+      startPolling();
+      checkCrawlerStatus({ notify: true });
+    }
+    loadInventory();
+    loadItems();
+  } catch (err) {
+    toast('Không thể tải lại: ' + err.message, 'bad');
+  } finally {
+    button.disabled = false;
+  }
+}
+
 async function retryItem(id, button) {
   if (button) { button.disabled = true; button.innerHTML = '<span class="spin dark"></span>Đang gửi'; }
   try {

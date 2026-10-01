@@ -94,8 +94,13 @@ class ClientTests(unittest.TestCase):
             asyncio.run(scenario("https://evil.example.com/get?key=x"))
 
     def test_mapping_and_classification(self):
-        record = qlvb_api._list_record("di", {**list_row(7), "domat": "Mật"})
+        from unittest.mock import patch
+        from src.core import config
+        with patch.object(config, "CRAWLER_SKIP_CLASSIFIED", True):
+            record = qlvb_api._list_record("di", {**list_row(7), "domat": "Mật"})
         self.assertEqual(("skipped", "2026-09-29"), (record["status"], record["ngay"]))
+        with patch.object(config, "CRAWLER_SKIP_CLASSIFIED", False):  # đơn vị xác nhận không có văn bản mật
+            self.assertEqual("pending", qlvb_api._list_record("di", {**list_row(7), "domat": "Mật"})["status"])
         self.assertEqual("pending", qlvb_api._list_record("den", {**list_row(8), "ngaybh": "02/05/2026"})["status"])
         self.assertEqual("2026-05-02", qlvb_api._list_record("den", {**list_row(8), "ngaybh": "02/05/2026"})["ngay"])
         self.assertNotEqual(qlvb_api._fingerprint(list_row(1)), qlvb_api._fingerprint(list_row(1, ["f1.pdf", "f2.pdf"])))
@@ -249,3 +254,76 @@ class LoginWaitTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class StorageUrlTests(unittest.TestCase):
+    """QLVB có lúc trả đường dẫn tệp không có tên máy chủ: ghép với máy chủ lưu trữ, vẫn chặn máy chủ lạ."""
+
+    def test_relative_paths_are_joined_with_storage_host(self):
+        from urllib.parse import urlsplit
+        from src.core import config
+        from src.crawler.qlvb_api import storage_url
+        full = "https://egov-storage1.laocai.gov.vn/get?key=lciegov%2Fioffice%2F25092026%2FA.pdf"
+        self.assertEqual(full, storage_url(full))
+        self.assertEqual(full, storage_url("lciegov/ioffice/25092026/A.pdf"))
+        self.assertEqual(full, storage_url("/get?key=lciegov%2Fioffice%2F25092026%2FA.pdf"))
+        self.assertEqual("https://egov-storage.laocai.gov.vn/get?key=a", storage_url("//egov-storage.laocai.gov.vn/get?key=a"))
+        self.assertNotIn(urlsplit(storage_url("https://evil.example.com/x")).hostname, config.QLVB_STORAGE_HOSTS)
+
+
+class LegacyDownloadTests(unittest.TestCase):
+    """Văn bản QLVB chỉ trả tên tệp: tải như trang web QLVB (gateway → IworkFileHandler, action=getfile)."""
+
+    def _client(self, handler):
+        import httpx
+        from src.crawler.qlvb_api import QlvbApiClient
+        client = QlvbApiClient("Bearer TOKEN-123")
+        client._client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        return client
+
+    def test_bare_name_uses_web_app_download(self):
+        import asyncio
+        import httpx
+        seen = []
+
+        def handler(request):
+            seen.append(str(request.url))
+            return httpx.Response(200, content=b"%PDF-1.7 data", headers={"content-type": "application/pdf"})
+
+        client = self._client(handler)
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "a.pdf")
+            size = asyncio.run(client.download("Cong_van tham gia_Signed.pdf", path))
+        self.assertEqual(13, size)
+        self.assertEqual(
+            "https://egov-gateway.laocai.gov.vn/https://office-demoeg.laocai.gov.vn/Ajax/IworkFileHandler.ashx"
+            "?action=getfile&fileName=Vm01d2RFQXhNak09%2FVanban%2F%2FCong_van%20tham%20gia_Signed.pdf"
+            "&access_token=TOKEN-123", seen[0])
+
+    def test_error_page_is_not_saved_as_file(self):
+        import asyncio
+        import httpx
+        from src.crawler.qlvb_api import QlvbApiError
+        client = self._client(lambda request: httpx.Response(200, content=b"<html>Loi</html>",
+                                                             headers={"content-type": "text/html"}))
+        with tempfile.TemporaryDirectory() as directory, self.assertRaises(QlvbApiError):
+            asyncio.run(client.download("a.pdf", os.path.join(directory, "a.pdf")))
+
+
+class SecrecyAndExtensionTests(unittest.TestCase):
+    def test_urgency_is_not_secrecy(self):
+        from src.crawler.qlvb_api import _raw_meta, is_classified
+        for value in ("Thường", "thường", "Bình thường", "", "Hỏa tốc", "Khẩn", "Thượng khẩn"):
+            self.assertFalse(is_classified(value), value)
+        for value in ("Mật", "Tối mật", "Tuyệt mật"):
+            self.assertTrue(is_classified(value), value)
+        # Trang chi tiết để trống độ mật, "Cấp độ" = Hỏa tốc → lấy độ mật từ danh sách, độ khẩn ghi riêng.
+        meta = _raw_meta("den", {"source_id": "X", "do_mat": "Thường", "ngay": None}, {"DoMat": "", "TenCapDo": "Hỏa tốc"})
+        self.assertEqual(("Thường", "Hỏa tốc"), (meta["do_mat"], meta["do_khan"]))
+
+    def test_extension_falls_back_to_file_path(self):
+        from src.crawler.qlvb_api import _extension, _path_file_name
+        self.assertEqual("docx", _extension(_path_file_name(
+            "https://egov-storage1.laocai.gov.vn/get?key=lciegov%2Fioffice%2F24092026%2FCongvanv_yru4EmJfRsT.docx")))
+        self.assertEqual("pdf", _extension(_path_file_name("Congvan_2026_Signed.pdf")))
+        self.assertEqual("", _extension("Công văn về việc phòng chống ma túy 6 tháng cuối năm 2026_"))

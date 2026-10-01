@@ -428,6 +428,12 @@ window.addEventListener('auth:change', event => {
   if (perms.includes('crawler.run')) checkCrawlerStatus();
 });
 window.addEventListener('auth:required', () => { location.href = window.UI.auth.loginUrl(); });
+// Đổi tab khi phần # của địa chỉ thay đổi (liên kết, nút Back/Forward).
+window.addEventListener('hashchange', () => {
+  const target = 'p-' + (location.hash.slice(1) || 'dashboard');
+  if (!$('#' + target) || $('#' + target).classList.contains('active')) return;
+  showPanel(target, { push: false });
+});
 
 window.addEventListener('DOMContentLoaded', () => {
   window.UI.auth.load();

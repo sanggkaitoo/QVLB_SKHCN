@@ -149,7 +149,7 @@
             const parts = SYNC_PARTS.map(([k, label, cls]) => ({label, cls, n: s[k] || 0})).filter(p => p.n);
             rows.push([s.label || key, s.source_documents ?? "—", inv, s.done || 0, s.pending || 0, s.failed || 0, s.skipped || 0]);
             html += `<div class="sync-row"><div class="sync-head"><strong>${esc(s.label || key)}</strong>
-                <span>${nf(s.done)} / ${nf(inv)} đã nạp${s.source_documents ? ` · QLVB có ${nf(s.source_documents)}` : ""}</span></div>
+                <span title="${s.source_documents ? `QLVB có ${nf(s.source_documents)} văn bản` : ""}"><b>${nf(s.done)}</b> / ${nf(inv)} đã nạp</span></div>
                 <div class="stack" role="img" aria-label="${esc(s.label || key)}: ${parts.map(p => `${p.label} ${nf(p.n)}`).join(", ") || "chưa kiểm kê"}">
                 ${inv ? parts.map(p => `<i class="${p.cls}" data-w="${(p.n / inv) * 100}" data-label="${esc(p.label)}" data-n="${p.n}" tabindex="0"></i>`).join("") : ""}</div></div>`;
         }
@@ -208,7 +208,7 @@
     }
 
     /* ---------- bảng giá mô hình AI ---------- */
-    const PROVIDER_LABEL = {openrouter: "qua OpenRouter", openai: "OpenAI trực tiếp", anthropic: "Anthropic trực tiếp", gemini: "Google trực tiếp"};
+    const PROVIDER_LABEL = {openrouter: "qua OpenRouter", openai: "gọi trực tiếp", anthropic: "gọi trực tiếp", gemini: "gọi trực tiếp", local: "máy chủ nội bộ"};
     const INPUT_LABEL = {text: "Văn bản", image: "Ảnh", audio: "Âm thanh", file: "PDF", video: "Video"};
     const usd = v => v == null ? "—" : "$" + Number(v).toLocaleString("en-US", {maximumFractionDigits: v < 1 ? 3 : 2});
     const ctx = n => !n ? "" : n >= 1e6 ? (n / 1e6).toLocaleString("vi-VN", {maximumFractionDigits: 1}) + "M" : Math.round(n / 1000) + "K";

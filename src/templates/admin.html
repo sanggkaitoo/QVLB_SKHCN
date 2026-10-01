@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<link rel="stylesheet" href="/static/css/theme.css?v=6">
-<link rel="stylesheet" href="/static/css/admin.css?v=12">
+<link rel="stylesheet" href="/static/css/theme.css?v=7">
+<link rel="stylesheet" href="/static/css/admin.css?v=17">
 <script>try { document.documentElement.dataset.theme = localStorage.getItem("qlvb-theme") || "light"; } catch (e) {}</script>
 </head>
 <body>
@@ -157,6 +157,7 @@
             <div class="control-head">
               <div class="icon-box warn"><svg class="ico" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
               <div class="control-info"><h3>Danh sách theo dõi</h3><p>Xem văn bản theo trạng thái, tải lại từng văn bản hoặc xuất CSV danh sách còn thiếu.</p></div>
+              <a class="btn btn-soft btn-sm head-action" id="csvLink" href="/api/admin/qlvb/items.csv?status=pending" download>Xuất CSV</a>
             </div>
             <div class="control-actions">
               <select class="input-field" id="itemStatus" onchange="loadItems()" aria-label="Trạng thái">
@@ -164,11 +165,11 @@
               </select>
               <input class="input-field grow" type="search" id="itemQuery" placeholder="Số ký hiệu hoặc trích yếu" onkeydown="if(event.key==='Enter') loadItems()" aria-label="Lọc danh sách">
               <button class="btn" type="button" onclick="loadItems()">Lọc</button>
-              <a class="btn btn-soft" id="csvLink" href="/api/admin/qlvb/items.csv?status=pending" download>Xuất CSV</a>
+              <button class="btn btn-warning crawl-action" type="button" id="b-retry-all" onclick="retryAllFailed(this)" hidden>Tải lại lỗi &amp; bỏ qua</button>
             </div>
             <div class="evid-wrap items-wrap">
-              <table class="evid"><thead><tr><th>Số ký hiệu</th><th>Ngày</th><th>Trích yếu</th><th>Trạng thái</th><th></th></tr></thead>
-                <tbody id="itemsBody"><tr><td colspan="5" class="empty">Chưa có dữ liệu kiểm kê.</td></tr></tbody></table>
+              <table class="evid"><thead><tr><th>Số ký hiệu</th><th>Trích yếu</th><th>Trạng thái</th></tr></thead>
+                <tbody id="itemsBody"><tr><td colspan="3" class="empty">Chưa có dữ liệu kiểm kê.</td></tr></tbody></table>
             </div>
           </article>
           <details class="card control-card legacy">
@@ -311,8 +312,8 @@
 </dialog>
 
 <script src="/static/js/ui.js?v=6"></script>
-<script src="/static/js/admin.js?v=10" defer></script>
-<script src="/static/js/admin-manage.js?v=1" defer></script>
+<script src="/static/js/admin.js?v=16" defer></script>
+<script src="/static/js/admin-manage.js?v=2" defer></script>
 <script>
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => { navigator.serviceWorker.register("/sw.js").catch(() => {}); });

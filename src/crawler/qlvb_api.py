@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import logging
 import os
 import re
@@ -20,7 +21,7 @@ import ssl
 import time
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
 
 import httpx
 import psycopg2.extras
@@ -50,7 +51,6 @@ DIRECTIONS = {
     "den": DirectionSpec("Văn bản đến", "/ioffice/Ajax/IworkVanThuHandler.ashx", {"type": "xulyden", "trangthai": 2},
                          "xemden_chitiet", "/document/xem-den-xem?documentId={id}&type=done", "ngayden"),
 }
-_NORMAL_SECRECY = {"", "thường", "thuong", "binh thuong", "bình thường"}
 
 
 class QlvbApiError(RuntimeError):
@@ -90,7 +90,8 @@ def _clean(value) -> str:
 
 
 def is_classified(do_mat) -> bool:
-    return _clean(do_mat).lower() not in _NORMAL_SECRECY
+    """Văn bản mật: độ mật là Mật / Tối mật / Tuyệt mật. "Thường", trống hay giá trị khác đều không phải mật."""
+    return "mật" in _clean(do_mat).lower()
 
 
 class QlvbApiClient:
@@ -131,11 +132,15 @@ class QlvbApiClient:
                 # Without a valid token the gateway answers 200 "Not found application: ioffice".
                 if "not found application" in response.text[:200].lower():
                     raise SessionExpired("Chưa đăng nhập hoặc phiên QLVB đã hết hạn.") from exc
-                raise QlvbApiError("QLVB trả về dữ liệu không phải JSON.") from exc
+                snippet = " ".join(response.text[:160].split())
+                raise QlvbApiError(f"QLVB trả về dữ liệu không phải JSON (máy chủ QLVB lỗi tạm thời?): {snippet!r}") from exc
             if isinstance(payload, dict) and payload.get("code") not in (None, "OK"):
                 message = str(payload.get("message") or payload.get("code"))
                 if re.search(r"(token|đăng nhập|unauthor|hết hạn)", message, re.IGNORECASE):
                     raise SessionExpired(message)
+                if "no row at position" in message.lower():
+                    raise QlvbApiError("Máy chủ QLVB không mở được chi tiết văn bản này (lỗi phía QLVB, "
+                                       "thường do văn bản bị thu hồi/chưa đồng bộ); thử lại sau.")
                 raise QlvbApiError(f"QLVB báo lỗi: {message[:200]}")
             return payload.get("value") if isinstance(payload, dict) and "value" in payload else payload
         raise QlvbApiError(f"Không kết nối được API QLVB ({last_error}).")
@@ -161,19 +166,35 @@ class QlvbApiClient:
         return value
 
     async def download(self, file_url: str, destination: str) -> int:
-        parts = urlsplit(file_url)
+        if is_bare_file_name(file_url):
+            return await self.download_legacy(file_url, destination)
+        parts = urlsplit(storage_url(file_url))
         if parts.scheme != "https" or parts.hostname not in config.QLVB_STORAGE_HOSTS:
-            raise QlvbApiError(f"Tệp không thuộc máy chủ lưu trữ QLVB: {parts.hostname}")
+            raise QlvbApiError(f"Tệp không thuộc máy chủ lưu trữ QLVB: {parts.hostname} ({str(file_url)[:120]!r})")
         params = dict(parse_qsl(parts.query))
         params["token"] = self._raw_token
         url = urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+        return await self._save(url, destination, params=params)
+
+    async def download_legacy(self, file_name: str, destination: str) -> int:
+        """Tệp chỉ có tên (không đường dẫn lưu trữ): tải như trang web QLVB — qua gateway tới hệ thống văn
+        phòng cũ: …/IworkFileHandler.ashx?action=getfile&fileName=<tiền tố>/Vanban//<tên>&access_token=…"""
+        query = urlencode({"action": "getfile", "fileName": config.QLVB_LEGACY_FILE_PREFIX + file_name.strip(),
+                           "access_token": self._raw_token}, quote_via=quote)
+        return await self._save(f"{config.QLVB_LEGACY_FILE_URL}?{query}", destination, legacy=True)
+
+    async def _save(self, url: str, destination: str, params: dict | None = None, legacy: bool = False) -> int:
         limit = config.CRAWLER_MAX_FILE_MB * 1024 * 1024
         size = 0
         async with self._client.stream("GET", url, params=params, headers={"Accept": "*/*"}) as response:
             if response.status_code in {401, 403}:
                 raise SessionExpired("Phiên QLVB đã hết hạn khi tải tệp.")
             if response.status_code >= 400:
-                raise QlvbApiError(f"Không tải được tệp (HTTP {response.status_code}).")
+                where = " qua hệ thống văn phòng cũ" if legacy else ""
+                raise QlvbApiError(f"Không tải được tệp{where} (HTTP {response.status_code}).")
+            kind = response.headers.get("content-type", "").lower()
+            if legacy and kind.startswith(("text/html", "application/json", "text/plain")):
+                raise QlvbApiError("QLVB trả trang báo lỗi thay vì tệp (tệp không còn trên hệ thống văn phòng cũ?).")
             with open(destination, "wb") as stream:
                 async for chunk in response.aiter_bytes():
                     size += len(chunk)
@@ -183,6 +204,59 @@ class QlvbApiClient:
         if size == 0:
             raise QlvbApiError("Tệp tải về rỗng.")
         return size
+
+
+_RELATIVE_LOG = os.path.join("data", "captures", "qlvb-relative-attachments.jsonl")
+
+
+def _record_relative_paths(item: dict, detail: dict) -> None:
+    """Chẩn đoán: lưu thông tin tệp đính kèm khi QLVB trả đường dẫn không đầy đủ (không có token)."""
+    try:
+        os.makedirs(os.path.dirname(_RELATIVE_LOG), exist_ok=True)
+        if os.path.exists(_RELATIVE_LOG) and os.path.getsize(_RELATIVE_LOG) > 5 * 1024 * 1024:
+            return
+        record = {"at": time.strftime("%Y-%m-%d %H:%M:%S"), "so_ky_hieu": item.get("so_ky_hieu"),
+                  "direction": item.get("direction"), "source_id": item.get("source_id"),
+                  "detail_keys": sorted(detail.keys()),
+                  "attachments": detail.get("Attachments"),
+                  "other_lists": {key: value for key, value in detail.items()
+                                  if isinstance(value, list) and key != "Attachments" and value}}
+        with open(_RELATIVE_LOG, "a", encoding="utf-8") as stream:
+            stream.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
+    except Exception as exc:
+        logger.debug("Không ghi được chẩn đoán đường dẫn tệp: %s", exc)
+
+
+def _extension(name: str) -> str:
+    return name.rsplit(".", 1)[-1].lower() if "." in name else ""
+
+
+def _path_file_name(file_path: str) -> str:
+    """Tên tệp trong đường dẫn lưu trữ: "…/get?key=lciegov%2F…%2FCongvan_x.pdf" → "Congvan_x.pdf"."""
+    parts = urlsplit(str(file_path or ""))
+    key = dict(parse_qsl(parts.query)).get("key") or parts.path or str(file_path or "")
+    return key.rstrip("/").rsplit("/", 1)[-1]
+
+
+def is_bare_file_name(file_path: str) -> bool:
+    """Chỉ có tên tệp (vd "Congvan_…_Signed.pdf"), không có máy chủ, thư mục hay "get?key=…"."""
+    path = str(file_path or "").strip()
+    return bool(path) and "/" not in path and "?" not in path and not urlsplit(path).netloc
+
+
+def storage_url(file_path: str) -> str:
+    """Địa chỉ tải tệp. QLVB thường trả địa chỉ đầy đủ "https://egov-storage1…/get?key=…"; có lúc chỉ trả
+    đường dẫn không có tên máy chủ ("/get?key=…" hoặc khoá "lciegov/ioffice/…") → ghép với máy chủ lưu trữ
+    mặc định theo đúng mẫu cũ. Địa chỉ đầy đủ giữ nguyên để vẫn qua kiểm tra máy chủ hợp lệ."""
+    path = str(file_path or "").strip()
+    if path.startswith("//"):
+        return "https:" + path
+    if not path or urlsplit(path).netloc:
+        return path
+    base = config.QLVB_STORAGE_BASE
+    if "get?" in path:
+        return base + "/" + path.lstrip("/")
+    return f"{base}/get?key={quote(path.lstrip('/'), safe='')}"
 
 
 # --------------------------------------------------------------------------- database
@@ -349,6 +423,15 @@ def list_items(status: str | None = None, direction: str | None = None, q: str =
             [*params, limit, offset],
         )
         return [dict(row) for row in cursor.fetchall()]
+
+
+def requeue_failed() -> list[int]:
+    """Đưa mọi văn bản lỗi hoặc bị bỏ qua về hàng chờ (nút "Tải lại lỗi & bỏ qua"); trả danh sách id.
+    Văn bản bỏ qua được xét lại theo quy tắc hiện hành (vd trước đây bị nhận nhầm là văn bản mật)."""
+    with store.pg() as connection, connection.cursor() as cursor:
+        cursor.execute("UPDATE crawl_items SET status = 'pending', attempts = 0, last_error = NULL, skip_reason = NULL "
+                       "WHERE status IN ('failed', 'skipped') AND in_source RETURNING id")
+        return [row[0] for row in cursor.fetchall()]
 
 
 def requeue(item_id: int | None = None) -> int:
@@ -572,7 +655,9 @@ def _raw_meta(direction: str, item: dict, detail: dict) -> dict:
         "co_quan_ban_hanh": _clean(detail.get("CoQuanBanHanh")) or item.get("co_quan") or "",
         "nguoi_ky": _clean(detail.get("NguoiKy")),
         "loai_van_ban": _clean(detail.get("LoaiVanBan")) or item.get("loai_vb") or "",
-        "do_mat": _clean(detail.get("DoMat") or detail.get("TenCapDo")) or item.get("do_mat") or "",
+        # "Cấp độ" (TenCapDo) trên QLVB là ĐỘ KHẨN (Thường/Khẩn/Hỏa tốc), không phải độ mật.
+        "do_mat": _clean(detail.get("DoMat")) or item.get("do_mat") or "",
+        "do_khan": _clean(detail.get("TenCapDo") or detail.get("DoKhan")),
         "ngay_den": _clean(detail.get("NgayDen")),
         "so_den": _clean(detail.get("SoDen")),
         "ma_dinh_danh": _clean(detail.get("MaDinhDanh")),
@@ -597,22 +682,37 @@ async def _process_item(session: _Session, item: dict) -> str:
                                 skip_reason="Văn bản mật: không tải về và không gửi sang AI")
         return "skipped"
     attachments = [a for a in detail.get("Attachments") or [] if isinstance(a, dict) and a.get("FilePath")]
+    if any(not urlsplit(str(a["FilePath"])).netloc for a in attachments):
+        await asyncio.to_thread(_record_relative_paths, item, detail)
     work_dir = os.path.join(config.DOWNLOAD_DIR, "api", f"{direction}_{source_id}")
     shutil.rmtree(work_dir, ignore_errors=True)
     os.makedirs(work_dir, exist_ok=True)
     try:
-        sources, unsupported = [], []
+        sources, unsupported, download_errors = [], [], []
         for index, attachment in enumerate(attachments, start=1):
             name = _safe_name(attachment.get("FileName"), f"tep_{index}")
-            extension = name.rsplit(".", 1)[-1].lower() if "." in name else ""
+            extension = _extension(name)
+            if extension not in SUPPORTED_EXTENSIONS:
+                # Tên hiển thị trên QLVB đôi khi mất đuôi ("Công văn … năm 2026_"): lấy đuôi từ đường dẫn tệp.
+                from_path = _extension(_path_file_name(attachment["FilePath"]))
+                if from_path in SUPPORTED_EXTENSIONS:
+                    extension, name = from_path, f"{name.rstrip('._ ')}.{from_path}"
             if extension not in SUPPORTED_EXTENSIONS:
                 unsupported.append(name)
                 continue
             check_stop()
             path = os.path.join(work_dir, f"{index:02d}_{name}")
-            await _call(session, lambda c, url=attachment["FilePath"], p=path: c.download(url, p))
+            try:
+                await _call(session, lambda c, url=attachment["FilePath"], p=path: c.download(url, p))
+            except QlvbApiError as exc:
+                # Một tệp hỏng/quá lớn không làm hỏng cả văn bản: bỏ tệp đó, ghi chú, nạp các tệp còn lại.
+                download_errors.append(f"{name}: {exc}")
+                logger.warning("Không tải được tệp %s của %s: %s", name, item.get("so_ky_hieu"), exc)
+                continue
             sources.append(SourceFile(path, index))
             await _pause()
+        if not sources and download_errors:
+            raise QlvbApiError("; ".join(download_errors)[:480])
         if not sources:
             reason = "Không có tệp định dạng hỗ trợ" + (f" ({', '.join(unsupported[:5])})" if unsupported else "")
             await asyncio.to_thread(_update_item, item["id"], status="skipped", skip_reason=reason,
@@ -626,8 +726,9 @@ async def _process_item(session: _Session, item: dict) -> str:
         failed = outcome.get("failed_files") or []
         truncated = outcome.get("warnings") or []
         note = None
-        if failed or unsupported or truncated:
+        if failed or unsupported or truncated or download_errors:
             note = "; ".join(filter(None, [
+                f"{len(download_errors)} tệp không tải được ({download_errors[0][:160]})" if download_errors else "",
                 f"{len(failed)} tệp không trích xuất được" if failed else "",
                 f"bỏ qua {len(unsupported)} tệp không hỗ trợ ({', '.join(unsupported[:3])})" if unsupported else "",
                 *truncated[:2],

@@ -206,6 +206,7 @@ a { color: var(--primary); }
                 border-color var(--t) var(--ease), color var(--t) var(--ease), filter var(--t) var(--ease);
 }
 .btn svg { width: 17px; height: 17px; flex: none; transition: transform var(--t) var(--ease); }
+a.btn, a.btn:hover { text-decoration: none; }
 .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow); border-color: rgba(37, 99, 235, .35); }
 .btn:hover svg { transform: translateX(1px); }
 .btn:active { transform: translateY(0) scale(.97); box-shadow: var(--shadow-sm); transition-duration: .06s; }

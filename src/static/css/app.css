@@ -50,7 +50,7 @@
 .rail-foot { margin-top: auto; display: grid; gap: 12px; }
 .telemetry { display: grid; gap: 8px; padding: 12px 14px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line); font-size: 12px; color: var(--muted); }
 .tel-row { display: flex; align-items: center; gap: 8px; }
-.tel-row .mono { margin-left: auto; font-size: 11px; color: var(--faint); }
+.tel-row .mono { margin-left: auto; font: 500 11.5px var(--font); color: var(--faint); }
 .rail-actions { display: grid; gap: 4px; }
 .utility-link {
     display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 12px;
@@ -133,9 +133,10 @@ body[data-tab="overview"] .topbar { display: none; }
 .hbar-fill { height: 100%; border-radius: 0 4px 4px 0; background: var(--viz-1); width: 0; transition: width .8s var(--ease), filter var(--t); }
 .hbar-val { font-size: 12.5px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; min-width: 36px; text-align: right; }
 .sync-row { margin-bottom: 14px; }
-.sync-head { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; margin-bottom: 6px; }
-.sync-head strong { color: var(--ink); font-weight: 600; }
-.sync-head span { color: var(--muted); font-variant-numeric: tabular-nums; }
+.sync-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 2px 8px; font-size: 13px; margin-bottom: 6px; }
+.sync-head strong { color: var(--ink); font-weight: 600; white-space: nowrap; }
+.sync-head span { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sync-head span b { color: var(--ink); font-weight: 600; }
 .stack { display: flex; gap: 2px; height: 14px; border-radius: 7px; overflow: hidden; background: var(--viz-track); }
 .stack > i { display: block; height: 100%; transition: width .8s var(--ease), filter var(--t); cursor: pointer; }
 .stack > i:hover { filter: brightness(1.12); }
@@ -397,7 +398,7 @@ table.evid td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .dc-side { position: sticky; top: 18px; padding: 18px; border-radius: var(--r-xl); display: grid; gap: 14px; max-height: calc(100vh - 36px); overflow: auto; }
 .dc-side h3 { font-size: 15.5px; margin-bottom: 10px; }
 .dc-profiles { width: 100%; }
-.dc-profiles button { flex: 1; }
+.dc-profiles button { flex: 1; white-space: nowrap; padding-left: 8px; padding-right: 8px; }
 .dc-desc { margin: 10px 0 8px; font-size: 12.5px; color: var(--muted); }
 .dc-spec { display: flex; flex-wrap: wrap; gap: 5px; }
 .dc-custom { display: grid; gap: 10px; padding: 12px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--line); }
@@ -531,6 +532,7 @@ table.evid td.num { text-align: right; font-variant-numeric: tabular-nums; }
 
 @media (max-width: 1180px) {
     .dc { grid-template-columns: minmax(0, 1fr); }
+    .dc-main { order: -1; }   /* màn hình hẹp: ô tải tệp (thao tác chính) lên trước phần thiết lập */
     .dc-side { position: static; max-height: none; }
 }
 @media (max-width: 680px) {
@@ -562,7 +564,8 @@ table.evid td.num { text-align: right; font-variant-numeric: tabular-nums; }
     .brand { padding: 0; }
     .seal { width: 38px; height: 38px; }
     .brand h1 { font-size: 18px; }
-    .nav { order: 3; flex-direction: row; width: 100%; overflow-x: auto; gap: 6px; padding-bottom: 2px; scrollbar-width: none; }
+    .nav { order: 3; flex-direction: row; width: 100%; overflow-x: auto; gap: 6px; padding-bottom: 2px; scrollbar-width: none;
+        -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); mask-image: linear-gradient(90deg, #000 88%, transparent); padding-right: 28px; }
     .nav::-webkit-scrollbar { display: none; }
     .nav-label, .telemetry { display: none; }
     .tab { width: auto; flex: none; min-height: 40px; padding: 0 14px; }
@@ -586,7 +589,7 @@ table.evid td.num { text-align: right; font-variant-numeric: tabular-nums; }
     .rail { padding: 10px 14px; padding-top: max(10px, env(safe-area-inset-top)); }
     .brand .sub { display: none; }
     .nav {
-        position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; order: 0;
+        position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; order: 0; -webkit-mask-image: none; mask-image: none;
         display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0; overflow: visible;
         padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
         background: var(--glass-strong); border-top: 1px solid var(--glass-border);
