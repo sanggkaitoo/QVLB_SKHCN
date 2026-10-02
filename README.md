@@ -46,7 +46,7 @@ Kết quả vẫn là tổng hợp tự động: cần kiểm tra đơn vị, k�
 - **Phát hiện tệp trùng nội dung** (bản PDF ký số và DOCX của cùng văn bản): chỉ index một bản (ưu tiên bản trích xuất sạch nhất), các bản còn lại được ghi nhận là bản sao.
 - Làm sạch giá trị giữ chỗ "undefined" từ giao diện QLVB; dựng lại số ký hiệu từ dòng "Số: …" khi văn bản ký số tách con số khỏi ký hiệu.
 - Ghi index theo lượt: điểm mới ghi xong mới xóa lượt cũ và công bố, không để lộ trạng thái nửa vời.
-- Giữ bản gốc trong data/store, chống nạp trùng bằng SHA-256; hỗ trợ PDF, DOC/DOCX, XLS/XLSX, CSV và OCR ảnh/PDF scan. Tệp lỗi được cách ly kèm lý do cụ thể.
+- Chống nạp trùng bằng SHA-256; hỗ trợ PDF, DOC/DOCX, XLS/XLSX, CSV và OCR ảnh/PDF scan. Mặc định không giữ tệp gốc (xem bản gốc trên QLVB); super admin bật "Lưu tệp gốc khi crawl" ở Quản trị → Crawler để giữ bản gốc trong STORE_DIR và cách ly tệp lỗi kèm lý do.
 
 ### Tiện ích nghiệp vụ
 
@@ -128,6 +128,26 @@ OCR_SERVER_URL=http://127.0.0.1:10000
 
 Không commit .env, thông tin đăng nhập QLVB hoặc dữ liệu nội bộ lên Git.
 
+## Log
+
+Ứng dụng không in log ra console; mọi log ghi vào `data/logs/` (đổi bằng `LOG_DIR`):
+
+| Tệp | Nội dung | Xoay vòng |
+|---|---|---|
+| `app.log` | Log ứng dụng từ `LOG_LEVEL` (mặc định INFO) | Ứng dụng tự xoay khi vượt `LOG_MAX_MB` (20 MB), giữ `LOG_BACKUPS` (5) bản nén `.gz` |
+| `error.log` | Chỉ cảnh báo và lỗi | như trên |
+| `access.log` | Mỗi request HTTP một dòng (tắt: `LOG_ACCESS=false`) | như trên |
+| `startup.log` | Docker Compose, migration lúc chạy `./run.sh` | logrotate hằng ngày / khi > 20 MB, giữ 7 bản |
+| `stdout.log` | Phần thư viện ghi thẳng ra console (hiếm) | như trên |
+
+~~~bash
+tail -f data/logs/app.log          # theo dõi
+LOG_CONSOLE=true ./run.sh          # gỡ lỗi: in log ra console như trước
+sudo scripts/install_logrotate.sh  # cài logrotate cho startup.log, stdout.log, data/*.log (chạy một lần)
+~~~
+
+Log container Docker (PostgreSQL, Qdrant) giới hạn 3 tệp × 10 MB mỗi dịch vụ (`docker logs qlvb_postgres`); Qdrant chỉ ghi cảnh báo/lỗi, PostgreSQL không ghi checkpoint và không chép nguyên câu SQL lỗi.
+
 ## Tài khoản và phân quyền
 
 Lần khởi động đầu tiên (bảng `users` trống), ứng dụng tạo tài khoản **super admin** từ `ADMIN_USER`/`ADMIN_PASS`. Sau đó đăng nhập tại `/login` và quản lý tài khoản ở `/admin` → **Tài khoản**. Đổi `ADMIN_PASS` trong .env không đổi mật khẩu đã tạo; quên mật khẩu thì chạy:
@@ -189,7 +209,7 @@ Dừng web app bằng Ctrl+C. PostgreSQL và Qdrant vẫn tiếp tục chạy. M
 docker compose stop
 ~~~
 
-PostgreSQL và Qdrant được bind mount tại data/postgres và data/qdrant. Bản gốc cùng checkpoint crawler nằm theo STORE_DIR và CRAWLER_STATE_DB trong .env. Dừng hoặc tạo lại container không xóa các thư mục bind mount này.
+PostgreSQL và Qdrant được bind mount tại data/postgres và data/qdrant. Bản gốc (khi bật lưu) cùng checkpoint crawler nằm theo STORE_DIR và CRAWLER_STATE_DB trong .env. Nút "Xoá tệp gốc đã lưu" (super admin, khi đã tắt lưu và crawler không chạy) chỉ xoá các thư mục `<hex>/<sha256>/` và `failed_ingest/` trong STORE_DIR; database, Qdrant và checkpoint crawler giữ nguyên. `scripts/reindex.py` dùng văn bản đã trích trong database khi không còn tệp gốc. Dừng hoặc tạo lại container không xóa các thư mục bind mount này.
 
 ## PWA
 
@@ -219,7 +239,7 @@ Hộp đăng nhập có nút **Đổi mã** và **Huỷ đăng nhập**. SSO kh�
 
 ### Crawler giao diện (dự phòng)
 
-Thao tác trên trang QLVB bằng Playwright như trước; chỉ dùng khi API không hoạt động. Cấu hình `CRAWLER_*` và checkpoint SQLite `CRAWLER_STATE_DB` vẫn giữ nguyên. Tệp lỗi được chuyển vào `STORE_DIR/failed_ingest`.
+Thao tác trên trang QLVB bằng Playwright như trước; chỉ dùng khi API không hoạt động. Cấu hình `CRAWLER_*` và checkpoint SQLite `CRAWLER_STATE_DB` vẫn giữ nguyên. Khi bật lưu tệp gốc, tệp lỗi được chuyển vào `STORE_DIR/failed_ingest`; khi tắt, tệp lỗi bị xoá (xem lại trên QLVB).
 
 Khảo sát API được ghi bằng `scripts/record_qlvb_network.py` (mở trình duyệt để người dùng thao tác; token, cookie, mật khẩu được che trước khi lưu vào `data/captures/`).
 

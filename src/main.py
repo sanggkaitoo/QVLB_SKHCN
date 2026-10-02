@@ -6,12 +6,14 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from src.core import config, security
-from src.routers import admin, aggregate, ai_settings, audio, auth, check, ocr, overview, search, users, web_routes
+from src.core import config, logging_setup
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-# httpx ghi mọi request ở mức INFO, kể cả địa chỉ tải tệp QLVB có kèm token đăng nhập: chỉ giữ cảnh báo/lỗi.
-logging.getLogger("httpx").setLevel(logging.WARNING)
+# Log ghi ra tệp data/logs/*.log (xoay vòng, nén gzip), không in ra console. Gọi trước khi nạp các module khác.
+logging_setup.configure()
+
+from src.core import security  # noqa: E402
+from src.routers import admin, aggregate, ai_settings, audio, auth, check, ocr, overview, search, users, web_routes  # noqa: E402
+
 logger = logging.getLogger("docnexus")
 
 
@@ -23,10 +25,22 @@ def _warmup():
         logger.exception("Không làm nóng được mô hình; mô hình sẽ nạp ở yêu cầu đầu tiên")
 
 
+def _refresh_legal_index():
+    try:
+        from src.check import legal_registry
+        if legal_registry.needs_refresh():
+            legal_registry.build_index()
+    except Exception:
+        logger.exception("Không cập nhật được danh mục vbpl.vn")
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     # Lần chạy đầu: tạo super admin từ ADMIN_USER/ADMIN_PASS (sau đó quản lý tài khoản trên trang quản trị).
     threading.Thread(target=security.ensure_super_admin, name="seed-super-admin", daemon=True).start()
+    if config.LEGAL_REGISTRY_ENABLED:
+        # Danh mục văn bản pháp luật (vbpl.vn) cho kiểm tra căn cứ: cập nhật nền khi quá hạn.
+        threading.Thread(target=_refresh_legal_index, name="legal-index-check", daemon=True).start()
     if config.WARMUP_MODELS:
         # Nạp mô hình nền để yêu cầu đầu tiên không phải chờ khởi động nguội.
         threading.Thread(target=_warmup, name="model-warmup", daemon=True).start()

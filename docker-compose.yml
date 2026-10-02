@@ -1,3 +1,10 @@
+# Log container: tối đa 3 tệp × 10 MB mỗi dịch vụ (mặc định Docker không giới hạn — log Postgres từng lên 1,3 GB).
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   qdrant:
     image: qdrant/qdrant:v1.12.1
@@ -9,6 +16,9 @@ services:
       - ./data/qdrant:/qdrant/storage
     environment:
       - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY:-changeme_qdrant_key}
+      # Không ghi log mỗi request HTTP (hàng nghìn dòng khi nạp văn bản); chỉ cảnh báo/lỗi.
+      - QDRANT__LOG_LEVEL=WARN
+    logging: *logging
 
     ulimits:
       nofile:
@@ -25,6 +35,10 @@ services:
       - POSTGRES_USER=${PG_USER:-qlvb}
       - POSTGRES_PASSWORD=${PG_PASSWORD:-changeme_pg}
       - POSTGRES_DB=${PG_DB:-qlvb}
+    # Bớt log: không ghi mỗi lần checkpoint; không chép nguyên câu SQL khi lỗi (câu lệnh nạp văn bản có thể dài
+    # hàng trăm MB). Thông báo lỗi vẫn được ghi.
+    command: ["postgres", "-c", "log_checkpoints=off", "-c", "log_min_error_statement=panic"]
+    logging: *logging
     ulimits:
       nofile:
         soft: 262144

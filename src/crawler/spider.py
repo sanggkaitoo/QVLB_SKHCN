@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import re
 import unicodedata
@@ -17,6 +18,8 @@ from src.crawler.sso import (  # noqa: F401  (crawler_state re-exported for olde
 )
 from src.services.document_fields import clean_placeholder
 from src.services.ingest import ingest_download_dir
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -120,7 +123,7 @@ async def handle_download_modal(
                     )
                 downloads_saved += 1
             except Exception as exc:
-                print(f"  [!] Lỗi tải tệp {index + 1} của {document_ref}: {exc}")
+                logger.warning("Lỗi tải tệp %s của %s: %s", index + 1, document_ref, exc)
             finally:
                 if download is not None:
                     try:
@@ -129,7 +132,7 @@ async def handle_download_modal(
                         pass
         return downloads_saved
     except Exception as exc:
-        print(f"  [!] Lỗi modal của {document_ref}: {exc}")
+        logger.warning("Lỗi modal của %s: %s", document_ref, exc)
         return downloads_saved
     finally:
         if modal is not None:
@@ -217,7 +220,7 @@ async def _flush_batch(pending: list[tuple[str, str, str]], history: CrawlHistor
     failed_count = len(result.get("failed_files", []))
     if failed_count:
         crawler_state["message"] = (
-            f"Đã bỏ qua và cách ly {failed_count} tệp lỗi; đang tiếp tục crawl."
+            f"Đã bỏ qua {failed_count} tệp lỗi; đang tiếp tục crawl."
         )
     pending.clear()
     return failed_count
@@ -297,7 +300,7 @@ async def crawl_table(
             break
         fingerprint = (await rows[0].inner_text()).strip()
         if fingerprint in seen_pages:
-            print(f"  [!] Dừng để tránh lặp trang {page_number} ({direction}).")
+            logger.warning("Dừng để tránh lặp trang %s (%s).", page_number, direction)
             break
         seen_pages.add(fingerprint)
         columns = await _column_map(page, direction)
@@ -401,7 +404,7 @@ async def _ingest_leftovers(history: CrawlHistory) -> None:
     failed_count = len(result.get("failed_files", []))
     if failed_count:
         crawler_state["message"] = (
-            f"Đã cách ly {failed_count} tệp tải dở bị lỗi; tiếp tục khởi động crawler."
+            f"Đã bỏ qua {failed_count} tệp tải dở bị lỗi; tiếp tục khởi động crawler."
         )
 
 
@@ -430,7 +433,7 @@ async def run_spider(limit: int, mode: str = "all"):
             for direction in ("di", "den"):
                 imported = history.import_legacy_json(get_history_file(direction), direction)
                 if imported:
-                    print(f"[crawler] Đã nhập {imported} lịch sử {direction.upper()} từ JSON.")
+                    logger.info("Đã nhập %s lịch sử %s từ JSON.", imported, direction.upper())
 
             await _ingest_leftovers(history)
             async with async_playwright() as playwright:

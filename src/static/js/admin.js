@@ -39,7 +39,7 @@ const heads = {
 const PANEL_LOADERS = {
   'p-dashboard': () => loadStats(),
   'p-docs': () => searchDocs(),
-  'p-crawler': () => { checkCrawlerStatus(); loadInventory(); loadItems(); },
+  'p-crawler': () => { checkCrawlerStatus(); loadInventory(); loadItems(); loadLegal(); loadSourceFiles(); },
   'p-users': () => loadUsers(),
   'p-ai': () => loadAi(),
   'p-audit': () => loadAudit(),
@@ -468,6 +468,94 @@ async function retryAllFailed(button) {
     toast('Không thể tải lại: ' + err.message, 'bad');
   } finally {
     button.disabled = false;
+  }
+}
+
+let legalTimer = null;
+async function loadLegal() {
+  const box = $('#legalStatus');
+  try {
+    const d = await (await fetch('/api/admin/legal/status')).json();
+    const counts = d.counts || {};
+    const parts = [];
+    if (!d.enabled) parts.push('<span class="bad">Đã tắt (LEGAL_REGISTRY_ENABLED=false).</span>');
+    if (d.building) parts.push('<span class="spin dark"></span>Đang cập nhật danh mục từ vbpl.vn…');
+    else if (d.built_at) parts.push(`Cập nhật ${esc(new Date(d.built_at).toLocaleString('vi-VN'))}: <b>${fmt(counts.central)}</b> văn bản Trung ương, <b>${fmt(counts.local)}</b> văn bản Lào Cai/Yên Bái (${fmt(d.seconds)} giây).`
+      + (d.needs_refresh ? ' <span class="warn">Đã quá ' + fmt(d.max_age_days) + ' ngày — nên cập nhật.</span>' : ''));
+    else parts.push('Chưa có danh mục — bấm “Cập nhật danh mục” (khoảng 2 phút).');
+    if (d.error) parts.push(`<span class="bad">Lần cập nhật gần nhất lỗi: ${esc(d.error)}</span>`);
+    box.innerHTML = parts.join('<br>');
+    clearTimeout(legalTimer);
+    if (d.building) legalTimer = setTimeout(loadLegal, 5000);
+  } catch {
+    box.textContent = 'Không tải được trạng thái danh mục vbpl.vn.';
+  }
+}
+async function rebuildLegal(button) {
+  button.disabled = true;
+  try {
+    const data = await postAdmin('/api/admin/legal/rebuild');
+    toast(data.message, 'info');
+    loadLegal();
+  } catch (err) {
+    toast('Không cập nhật được: ' + err.message, 'bad');
+  } finally {
+    button.disabled = false;
+  }
+}
+
+let sourceTimer = null;
+const fmtBytes = b => b >= 2 ** 30 ? (b / 2 ** 30).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + ' GB'
+  : (b / 2 ** 20).toLocaleString('vi-VN', { maximumFractionDigits: 0 }) + ' MB';
+async function loadSourceFiles() {
+  const box = $('#sourceStatus'), toggle = $('#keepSource'), purge = $('#b-purge-source');
+  try {
+    const d = await (await fetch('/api/admin/source-files')).json();
+    const u = d.usage || {}, p = d.purge || {};
+    toggle.checked = !!d.keep;
+    toggle.disabled = !d.can_manage || !!p.running;
+    purge.hidden = !d.can_manage || d.keep || !u.files || !!p.running;
+    const parts = [d.keep ? 'Đang <b>lưu</b> tệp gốc khi crawl.' : 'Đang <b>không lưu</b> tệp gốc khi crawl.'];
+    if (p.running) parts.push(`<span class="spin dark"></span>Đang xoá tệp gốc… đã giải phóng <b>${fmtBytes(p.freed_bytes || 0)}</b>.`);
+    else parts.push(u.files ? `Đang lưu <b>${fmt(u.files)}</b> tệp gốc, chiếm <b>${fmtBytes(u.bytes)}</b>.` : 'Không còn tệp gốc nào được lưu.');
+    if (!p.running && p.finished_at) parts.push(`Lần xoá gần nhất (${esc(new Date(p.finished_at).toLocaleString('vi-VN'))}): ${fmt(p.deleted_files)} tệp, ${fmtBytes(p.freed_bytes || 0)}.`);
+    if (p.error) parts.push(`<span class="bad">Xoá dừng do lỗi: ${esc(p.error)}</span>`);
+    box.innerHTML = parts.join('<br>');
+    clearTimeout(sourceTimer);
+    if (p.running) sourceTimer = setTimeout(loadSourceFiles, 3000);
+  } catch {
+    box.textContent = 'Không tải được trạng thái tệp gốc.';
+  }
+}
+$('#keepSource').addEventListener('change', async event => {
+  const keep = event.target.checked;
+  try {
+    const res = await fetch('/api/admin/source-files', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ keep }) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Máy chủ từ chối yêu cầu.');
+    toast(keep ? 'Từ giờ crawler lưu tệp gốc.' : 'Từ giờ crawler không lưu tệp gốc.', 'ok');
+  } catch (err) {
+    event.target.checked = !keep;
+    toast(err.message, 'bad');
+  }
+  loadSourceFiles();
+});
+async function purgeSourceFiles(button) {
+  const ok = await Swal.fire({
+    title: 'Xoá tệp gốc đã lưu?',
+    text: 'Chỉ xoá bản gốc trong kho tệp. Văn bản, nội dung đã trích xuất và kết quả tra cứu giữ nguyên. Không hoàn tác được; cần bản gốc thì mở trên QLVB.',
+    icon: 'warning', showCancelButton: true, confirmButtonText: 'Xoá tệp gốc', cancelButtonText: 'Hủy',
+  });
+  if (!ok.isConfirmed) return;
+  button.disabled = true;
+  try {
+    const data = await postAdmin('/api/admin/source-files/purge');
+    toast(data.message, 'info');
+  } catch (err) {
+    toast('Không xoá được: ' + err.message, 'bad');
+  } finally {
+    button.disabled = false;
+    loadSourceFiles();
   }
 }
 

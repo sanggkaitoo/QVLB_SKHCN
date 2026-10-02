@@ -6,7 +6,7 @@ import time
 from typing import Literal
 
 import psycopg2.extras
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -14,6 +14,7 @@ from src.core import config, runtime, security, store
 from src.crawler import qlvb_api, sso
 from src.crawler.spider import run_spider
 from src.crawler.sso import ACTIVE_STATES as _ACTIVE_STATES, crawler_state
+from src.services import source_store
 
 logger = logging.getLogger(__name__)
 router = APIRouter(dependencies=[Depends(security.require("docs.view"))])
@@ -40,6 +41,16 @@ async def _launch(coroutine, name: str) -> dict:
         _crawl_task = asyncio.create_task(coroutine, name=name)
         _crawl_task.add_done_callback(_log_crawl_result)
     return {"status": "success", "message": "Đã khởi động."}
+
+
+def _super_admin(user: security.User = Depends(security.require_login)) -> security.User:
+    if user.role != "super_admin":
+        raise HTTPException(403, "Chỉ super admin được thay đổi cài đặt này.")
+    return user
+
+
+def _crawler_busy() -> bool:
+    return bool(_crawl_task and not _crawl_task.done()) or crawler_state["status"] in _ACTIVE_STATES
 
 
 class CrawlRequest(BaseModel):
@@ -152,6 +163,58 @@ async def api_qlvb_retry_failed():
     return {"status": "success", "started": False, "count": len(ids),
             "message": f"Crawler đang chạy tác vụ khác; {len(ids):,} văn bản lỗi/bị bỏ qua đã vào hàng chờ, sẽ được tải ở "
                        "lượt “Tải phần còn thiếu” tiếp theo.".replace(",", ".")}
+
+
+@router.get("/legal/status")
+async def api_legal_status():
+    """Danh mục văn bản pháp luật từ CSDL quốc gia (vbpl.vn) dùng cho "Kiểm tra nội dung & căn cứ"."""
+    from src.check import legal_registry
+    return {"enabled": config.LEGAL_REGISTRY_ENABLED, "max_age_days": config.LEGAL_INDEX_MAX_AGE_DAYS,
+            "needs_refresh": await asyncio.to_thread(legal_registry.needs_refresh),
+            **await asyncio.to_thread(legal_registry.status)}
+
+
+@router.post("/legal/rebuild", dependencies=_CRAWL)
+async def api_legal_rebuild():
+    from src.check import legal_registry
+    started = legal_registry.build_in_background()
+    return {"status": "success", "started": started,
+            "message": "Đang cập nhật danh mục từ vbpl.vn (khoảng 2 phút)." if started else "Danh mục đang được cập nhật."}
+
+
+class SourceFilesRequest(BaseModel):
+    keep: bool
+
+
+@router.get("/source-files")
+async def api_source_files(user: security.User = Depends(security.require_login)):
+    """Lưu tệp gốc khi crawl (mặc định không) và dung lượng bản gốc đang lưu trong STORE_DIR."""
+    return {"keep": await asyncio.to_thread(source_store.keep_enabled), "can_manage": user.role == "super_admin",
+            "usage": await asyncio.to_thread(source_store.usage), "purge": source_store.purge_status()}
+
+
+@router.put("/source-files")
+async def api_source_files_set(req: SourceFilesRequest, request: Request, user: security.User = Depends(_super_admin)):
+    from src.core import app_settings
+    if req.keep and source_store.purge_status().get("running"):
+        raise HTTPException(409, "Đang xoá tệp gốc đã lưu: hãy đợi xoá xong rồi mới bật lại.")
+    await asyncio.to_thread(app_settings.put, source_store.KEEP_KEY, req.keep, user.id)
+    security.audit(user, "source_files_changed", None, req.model_dump(), security.client_ip(request))
+    return {"ok": True}
+
+
+@router.post("/source-files/purge")
+async def api_source_files_purge(request: Request, user: security.User = Depends(_super_admin)):
+    """Xoá bản gốc đã lưu. Chỉ xoá tệp trong STORE_DIR; Postgres và Qdrant giữ nguyên."""
+    if _crawler_busy():
+        raise HTTPException(409, "Crawler đang chạy: hãy đợi chạy xong hoặc dừng crawler trước khi xoá tệp gốc.")
+    before = await asyncio.to_thread(source_store.usage, True)
+    refused = await asyncio.to_thread(source_store.start_purge)
+    if refused:
+        raise HTTPException(409, refused)
+    security.audit(user, "source_files_purged", None, {"files": before["files"], "bytes": before["bytes"]},
+                   security.client_ip(request))
+    return {"status": "success", "message": "Đang xoá tệp gốc đã lưu."}
 
 
 @router.post("/qlvb/items/{item_id}/retry", dependencies=_CRAWL)

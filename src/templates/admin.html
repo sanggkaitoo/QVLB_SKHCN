@@ -14,7 +14,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <link rel="stylesheet" href="/static/css/theme.css?v=7">
-<link rel="stylesheet" href="/static/css/admin.css?v=17">
+<link rel="stylesheet" href="/static/css/admin.css?v=18">
 <script>try { document.documentElement.dataset.theme = localStorage.getItem("qlvb-theme") || "light"; } catch (e) {}</script>
 </head>
 <body>
@@ -172,6 +172,25 @@
                 <tbody id="itemsBody"><tr><td colspan="3" class="empty">Chưa có dữ liệu kiểm kê.</td></tr></tbody></table>
             </div>
           </article>
+          <article class="card control-card">
+            <div class="control-head">
+              <div class="icon-box"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="M3 13l9 5 9-5"/></svg></div>
+              <div class="control-info"><h3>CSDL quốc gia về pháp luật (vbpl.vn)</h3><p>Danh mục văn bản Trung ương và tỉnh Lào Cai (gồm Yên Bái cũ) dùng để kiểm tra hiệu lực căn cứ trong “Kiểm tra dự thảo → Nội dung &amp; căn cứ”. Chỉ đọc sitemap và trang công khai; tự cập nhật khi khởi động nếu quá hạn.</p></div>
+              <button class="btn btn-soft btn-sm head-action" type="button" id="b-legal" onclick="rebuildLegal(this)">Cập nhật danh mục</button>
+            </div>
+            <div class="legal-status" id="legalStatus">Đang tải…</div>
+          </article>
+          <article class="card control-card">
+            <div class="control-head">
+              <div class="icon-box"><svg class="ico" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg></div>
+              <div class="control-info"><h3>Tệp gốc của văn bản</h3><p>Nội dung đã trích xuất luôn nằm trong cơ sở dữ liệu nên tra cứu và nạp lại không cần tệp gốc. Khi không lưu, tệp tải về bị xoá ngay sau khi nạp; cần xem bản gốc hoặc văn bản lỗi thì mở trên QLVB. Chỉ super admin được thay đổi.</p></div>
+            </div>
+            <div class="control-actions">
+              <label class="check-row"><span class="switch"><input type="checkbox" id="keepSource" disabled><span class="track"></span></span>Lưu tệp gốc khi crawl</label>
+              <button class="btn btn-danger btn-sm" type="button" id="b-purge-source" onclick="purgeSourceFiles(this)" hidden>Xoá tệp gốc đã lưu</button>
+            </div>
+            <div class="legal-status" id="sourceStatus">Đang tải…</div>
+          </article>
           <details class="card control-card legacy">
             <summary><b>Crawler giao diện (dự phòng)</b> — thao tác trên trang web QLVB bằng trình duyệt tự động; chỉ dùng khi API không hoạt động.</summary>
             <div class="control-actions">
@@ -312,7 +331,7 @@
 </dialog>
 
 <script src="/static/js/ui.js?v=6"></script>
-<script src="/static/js/admin.js?v=16" defer></script>
+<script src="/static/js/admin.js?v=18" defer></script>
 <script src="/static/js/admin-manage.js?v=2" defer></script>
 <script>
   if ("serviceWorker" in navigator) {

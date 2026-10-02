@@ -22,6 +22,15 @@ DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR", "/opt/qlvb_ai/data/downloads")
 STORE_DIR    = os.getenv("STORE_DIR", "/opt/qlvb_ai/data/store")  # nơi GIỮ bản gốc
 CRAWLER_STATE_DB = os.getenv("CRAWLER_STATE_DB", os.path.join(STORE_DIR, "crawler_state.sqlite3"))
 
+# --- Log ---
+# Log ghi ra tệp trong LOG_DIR (không in ra console), tự xoay vòng theo dung lượng và nén gzip bản cũ.
+LOG_DIR = os.getenv("LOG_DIR", "data/logs")
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").strip().upper() or "INFO"
+LOG_MAX_MB = _env_int("LOG_MAX_MB", 20, 1, 1024)          # dung lượng mỗi tệp trước khi xoay vòng
+LOG_BACKUPS = _env_int("LOG_BACKUPS", 5, 1, 100)          # số bản cũ (đã nén) giữ lại cho mỗi tệp
+LOG_ACCESS = _env_bool("LOG_ACCESS", True)                # ghi access.log (mỗi request HTTP một dòng)
+LOG_CONSOLE = _env_bool("LOG_CONSOLE", False)             # true: in thêm ra console (khi gỡ lỗi)
+
 # --- Qdrant ---
 QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
 QDRANT_PORT = int(os.getenv("QDRANT_PORT", 6333))
@@ -107,6 +116,13 @@ QLVB_LEGACY_FILE_URL = os.getenv(
     "QLVB_LEGACY_FILE_URL",
     "https://egov-gateway.laocai.gov.vn/https://office-demoeg.laocai.gov.vn/Ajax/IworkFileHandler.ashx")
 QLVB_LEGACY_FILE_PREFIX = os.getenv("QLVB_LEGACY_FILE_PREFIX", "Vm01d2RFQXhNak09/Vanban//")
+
+# --- Kiểm tra căn cứ: CSDL quốc gia về pháp luật (vbpl.vn) ---
+LEGAL_REGISTRY_ENABLED = _env_bool("LEGAL_REGISTRY_ENABLED", True)
+LEGAL_FETCH_INTERVAL = float(os.getenv("LEGAL_FETCH_INTERVAL", "1.0"))      # giây giữa hai lần truy cập vbpl.vn
+LEGAL_FETCH_TIMEOUT = float(os.getenv("LEGAL_FETCH_TIMEOUT", "20"))
+LEGAL_INDEX_MAX_AGE_DAYS = _env_int("LEGAL_INDEX_MAX_AGE_DAYS", 7, 1)        # tự cập nhật danh mục sau bấy nhiêu ngày
+LEGAL_MAX_LOOKUPS = _env_int("LEGAL_MAX_LOOKUPS", 25, 1, 200)               # số văn bản tra mỗi lần kiểm tra
 QLVB_STORAGE_HOSTS = {host.strip() for host in os.getenv(
     "QLVB_STORAGE_HOSTS", "egov-storage1.laocai.gov.vn,egov-storage.laocai.gov.vn").split(",") if host.strip()}
 # Chứng chỉ trung gian GlobalSign mà máy chủ QLVB không gửi kèm (gateway: GCC R46 OV TLS CA 2025,

@@ -530,6 +530,32 @@ table.evid td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .dc-issue .btn { margin-left: auto; }
 .open-static { padding-bottom: 4px; }
 
+/* Nội dung & căn cứ: tiến trình, bảng đối chiếu "Dự thảo ghi ↔ Trong kho ↔ vbpl.vn" */
+.cc-steps { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--muted); }
+.cc-step { display: inline-flex; align-items: center; gap: 6px; }
+.cc-step svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; }
+.cc-step.pass { color: var(--primary-700); }
+.cc-step.warn { color: var(--warning-ink); }
+.cc-step .spin, .dc-where .spin { width: 12px; height: 12px; border-width: 2px; }
+.cc-ref-body { display: grid; gap: 8px; padding: 0 0 10px; }
+.cc-snippet { display: flex; gap: 8px; padding: 0 12px; font-size: 12.5px; color: var(--ink-2); }
+.cc-wrap { padding: 0 12px; overflow-x: auto; }
+.cc-table { width: 100%; min-width: 520px; border-collapse: collapse; font-size: 12.5px; background: var(--surface-2); border-radius: 10px; overflow: hidden; }
+.cc-table th, .cc-table td { padding: 6px 9px; text-align: left; vertical-align: top; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.cc-table thead th { border-top: 0; color: var(--muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .02em; }
+.cc-table tbody th { color: var(--muted); font-weight: 600; width: 128px; white-space: nowrap; }
+.cc-table td { color: var(--ink-2); }
+.cc-table td.bad { color: var(--critical-ink); font-weight: 700; background: color-mix(in srgb, var(--critical-soft) 70%, transparent); }
+.cc-table td.warnc { color: var(--warning-ink); font-weight: 700; }
+.cc-table td.good { color: var(--primary-700); font-weight: 700; }
+.cc-links { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 6px; }
+.cc-link svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.cc-evidence { flex-basis: 100%; font-size: 12.5px; color: var(--ink-2); padding: 6px 8px; border-left: 3px solid var(--primary); background: var(--primary-soft); border-radius: 0 8px 8px 0; }
+.cc-evidence q { font-style: italic; }
+.cc-ai .dc-snippet { font-family: inherit; font-size: 12.5px; flex-basis: 100%; }
+.cc-ai .dc-msg { flex-basis: 100%; }
+.cc-related { display: grid; gap: 4px; }
+
 @media (max-width: 1180px) {
     .dc { grid-template-columns: minmax(0, 1fr); }
     .dc-main { order: -1; }   /* màn hình hẹp: ô tải tệp (thao tác chính) lên trước phần thiết lập */

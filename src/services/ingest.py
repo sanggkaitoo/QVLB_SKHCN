@@ -2,7 +2,8 @@
 
 extract từng tệp -> AI metadata (một lần, từ tệp chính) -> phát hiện tệp trùng nội dung
 -> chunk -> embed (dense+sparse, kèm ngữ cảnh văn bản) -> Qdrant + Postgres.
-GIỮ bản gốc (copy sang STORE_DIR); chống nạp trùng theo SHA-256; cách ly tệp lỗi.
+Chỉ giữ bản gốc (copy sang STORE_DIR) và cách ly tệp lỗi khi bật "lưu tệp gốc" trên trang quản trị
+(mặc định tắt: bản gốc xem trên QLVB); chống nạp trùng theo SHA-256.
 """
 from __future__ import annotations
 
@@ -24,6 +25,7 @@ from src.services.chunking import build_structured_chunks, stable_point_id
 from src.services.document_fields import (
     FILE_ROLE_LABELS, clean_placeholder, issued_day, normalize_agency, normalize_document_ref, reconcile_reference,
 )
+from src.services import source_store
 from src.services.relations import extract_relations
 from src.utils import extract, metadata
 from src.utils.extract import ExtractionError
@@ -44,6 +46,8 @@ class SourceFile:
     file_index: int = 0
     text: str | None = None          # văn bản đã trích (reindex tái sử dụng)
     method: str | None = None
+    name: str | None = None          # reindex khi không còn tệp gốc: tên và SHA-256 lấy từ database
+    digest: str | None = None
 
 
 @dataclass
@@ -160,15 +164,27 @@ def _truncate(text: str, limit: int, what: str) -> tuple[str, str | None]:
     return text[:cut] + f"\n\n[[ĐÃ CẮT BỚT: {note}. Xem tệp gốc để có đầy đủ nội dung.]]", note
 
 
+def _stored_path(source: SourceFile, digest: str, keep: bool) -> str:
+    """Đường dẫn bản gốc ghi vào database; rỗng khi không lưu tệp gốc."""
+    on_disk = bool(source.path) and os.path.isfile(source.path)
+    if keep and on_disk:
+        return _archive_source(source.path, digest)
+    return source.path if on_disk and source_store.is_stored(source.path) else ""
+
+
 def _prepare(files: list[SourceFile]) -> list[_PreparedFile]:
     prepared = []
-    for source in sorted(files, key=lambda item: (item.file_index, os.path.basename(item.path))):
-        name = os.path.basename(source.path)
-        digest = _sha256(source.path)
+    keep = source_store.keep_enabled()
+    for source in sorted(files, key=lambda item: (item.file_index, item.name or os.path.basename(item.path))):
+        name = source.name or os.path.basename(source.path)
+        on_disk = bool(source.path) and os.path.isfile(source.path)
+        digest = source.digest or _sha256(source.path)
         item = _PreparedFile(source=source, name=name, digest=digest,
-                             archived_path=_archive_source(source.path, digest))
+                             archived_path=_stored_path(source, digest, keep))
         if source.text:
             item.text, item.method = source.text.replace("\x00", ""), source.method
+        elif not on_disk:
+            item.error = "Không còn tệp gốc để trích xuất (xem bản gốc trên QLVB)"
         else:
             try:
                 text, method = extract.extract(source.path)
@@ -187,6 +203,8 @@ def _prepare(files: list[SourceFile]) -> list[_PreparedFile]:
 
 def _write_sidecar(item: _PreparedFile, raw_meta: dict, huong: str | None, source_url: str | None) -> None:
     """Metadata QLVB cạnh bản gốc lưu trữ, để có thể nạp lại độc lập với database."""
+    if not item.archived_path:  # không lưu tệp gốc
+        return
     sidecar = item.archived_path + ".meta.json"
     if os.path.exists(sidecar) or not raw_meta:
         return
@@ -483,10 +501,13 @@ def _quarantine_failed_file(file_info: dict, error) -> str:
 
 def _record_failure(result: dict, file_info: dict, error) -> None:
     failure = {"file": os.path.basename(file_info["path"]), "error": str(error)[:500]}
-    try:
-        failure["quarantined_file"] = _quarantine_failed_file(file_info, error)
-    except Exception as quarantine_error:
-        failure["quarantine_error"] = f"{type(quarantine_error).__name__}: {quarantine_error}"
+    if not source_store.keep_enabled():  # không lưu tệp gốc: tệp lỗi xem lại trên QLVB
+        _remove_download_pair(file_info["path"])
+    else:
+        try:
+            failure["quarantined_file"] = _quarantine_failed_file(file_info, error)
+        except Exception as quarantine_error:
+            failure["quarantine_error"] = f"{type(quarantine_error).__name__}: {quarantine_error}"
     logger.warning("Bỏ qua tệp lỗi %s: %s", failure["file"], failure["error"])
     result["failed_files"].append(failure)
 
@@ -538,7 +559,8 @@ def ingest_download_dir(download_dir: str | None = None) -> dict:
                 continue
             logger.info("Lọc tệp không hỗ trợ %s", os.path.basename(file_info["path"]))
             result["filtered_files"] += 1
-            _archive_source(file_info["path"], _sha256(file_info["path"]))
+            if source_store.keep_enabled():
+                _archive_source(file_info["path"], _sha256(file_info["path"]))
             _remove_download_pair(file_info["path"])
         if not supported:
             result["completed_documents"].append(files[0]["meta"])

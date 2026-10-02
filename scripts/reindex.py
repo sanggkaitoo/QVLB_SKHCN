@@ -60,18 +60,21 @@ def main():
         files = store.document_files(document["id"], include_text=True)
         sources, missing = [], []
         for item in files:
-            if not os.path.exists(item["file_path"]):
+            on_disk = bool(item["file_path"]) and os.path.isfile(item["file_path"])
+            has_text = bool(item["full_text"]) and item["ingest_status"] != "failed"
+            # Không còn tệp gốc (mặc định không lưu): dùng văn bản đã trích trong database, kể cả khi --re-extract.
+            reuse = has_text and (not args.re_extract or not on_disk)
+            if not on_disk:
                 missing.append(item["file_name"])
-                continue
-            reuse = not args.re_extract and item["full_text"] and item["ingest_status"] != "failed"
-            sources.append(SourceFile(item["file_path"], item["file_index"],
+            sources.append(SourceFile(item["file_path"] if on_disk else "", item["file_index"],
                                       text=item["full_text"] if reuse else None,
-                                      method=item["extract_method"] if reuse else None))
+                                      method=item["extract_method"] if reuse else None,
+                                      name=item["file_name"], digest=item["sha256"]))
         label = f"doc_id={document['id']} {document.get('so_ky_hieu') or ''} ({len(sources)} tệp)"
-        if missing:
-            print(f"[warn] {label}: thiếu tệp gốc {missing}")
+        if missing and args.re_extract:
+            print(f"[warn] {label}: không còn tệp gốc, giữ văn bản đã trích cho {missing}")
         if args.dry_run or not sources:
-            print(("[dry-run] " if args.dry_run else "[skip] không có tệp gốc ") + label)
+            print(("[dry-run] " if args.dry_run else "[skip] văn bản không có tệp ") + label)
             continue
         reuse_metadata = None if args.refresh_metadata else {key: document.get(key) for key in _METADATA_FIELDS}
         try:

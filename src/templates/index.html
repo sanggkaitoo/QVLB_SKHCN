@@ -16,7 +16,7 @@
     <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
     <link rel="stylesheet" href="/static/css/theme.css?v=7">
-    <link rel="stylesheet" href="/static/css/app.css?v=10">
+    <link rel="stylesheet" href="/static/css/app.css?v=12">
 </head>
 <body data-tab="overview">
 <a class="skip-link" href="#main-content">Bỏ qua điều hướng</a>
@@ -407,15 +407,32 @@
                 </div>
 
                 <!-- Nội dung & căn cứ (giữ nguyên) -->
-                <div id="check-content" hidden>
-                    <div class="drop glass" id="drop" tabindex="0" role="button" aria-label="Chọn tệp dự thảo">
-                        <span class="drop-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4m0 0 4 4m-4-4L8 8"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></span>
-                        <div class="t">Kéo thả hoặc bấm để chọn dự thảo (.docx, .doc, .pdf)</div>
-                        <div class="s" id="drop-sub">Đối chiếu căn cứ pháp lý với kho văn bản, rà soát tính logic của nội dung</div>
-                        <div class="file" id="drop-file"></div>
-                        <input type="file" id="file" accept=".docx,.doc,.pdf" hidden>
+                <div id="check-content" class="dc" hidden>
+                    <aside class="dc-side glass" aria-label="Thiết lập kiểm tra nội dung">
+                        <div class="dc-side-head">
+                            <h3>Nội dung &amp; căn cứ</h3>
+                            <p class="dc-desc">Nhận diện mọi văn bản được dẫn, đối chiếu với kho văn bản của Sở và CSDL quốc gia về pháp luật, kiểm tra logic ngày tháng, số liệu, dẫn chiếu nội bộ; AI thẩm định nội dung dựa trên nguyên văn văn bản được dẫn.</p>
+                        </div>
+                        <label class="check-row dc-ai-toggle"><span class="switch"><input type="checkbox" id="ccLegal" checked><span class="track"></span></span>
+                            <span>Đối chiếu CSDL quốc gia về pháp luật<small class="muted" id="ccLegalNote">Tra hiệu lực, ngày ban hành văn bản quy phạm trên vbpl.vn (chỉ gửi số ký hiệu).</small></span></label>
+                        <label class="check-row dc-ai-toggle"><span class="switch"><input type="checkbox" id="ccAi" checked><span class="track"></span></span>
+                            <span>Thẩm định nội dung bằng AI<small class="muted" id="ccAiNote">Gửi phần nội dung và trích đoạn văn bản được dẫn tới mô hình AI do quản trị viên chọn.</small></span></label>
+                        <details class="dc-more">
+                            <summary>Phạm vi kiểm tra</summary>
+                            <div id="ccCoverage" class="dc-coverage"></div>
+                        </details>
+                    </aside>
+
+                    <div class="dc-main">
+                        <div class="drop glass" id="ccDrop" tabindex="0" role="button" aria-label="Chọn tệp dự thảo cần kiểm tra nội dung">
+                            <span class="drop-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4m0 0 4 4m-4-4L8 8"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></span>
+                            <div class="t">Kéo thả hoặc bấm để chọn dự thảo (.docx, .doc, .pdf)</div>
+                            <div class="s">Kết quả kiểm tra bằng code hiện ngay; tra cứu vbpl.vn và thẩm định AI hiện dần. Tệp không bị sửa.</div>
+                            <div class="file" id="ccFileName"></div>
+                            <input type="file" id="ccFile" accept=".docx,.doc,.pdf" hidden>
+                        </div>
+                        <div id="ccOut" aria-live="polite"></div>
                     </div>
-                    <div id="check-out"></div>
                 </div>
             </section>
 
@@ -477,9 +494,10 @@
 <div class="viz-tip" id="vizTip" role="status" aria-live="polite"></div>
 
 <script src="/static/js/ui.js?v=6" defer></script>
-<script src="/static/js/app.js?v=7" defer></script>
+<script src="/static/js/app.js?v=8" defer></script>
 <script src="/static/js/overview.js?v=9" defer></script>
 <script src="/static/js/docx-check.js?v=2" defer></script>
+<script src="/static/js/content-check.js?v=2" defer></script>
 <script>
     if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => { navigator.serviceWorker.register("/sw.js").catch(() => {}); });

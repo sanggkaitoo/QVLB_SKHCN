@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Uplo
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from src.check import content_check, docx_check, docx_rules, format_check
-from src.core import app_settings, config, runtime, security
+from src.check import content_check, content_review, docx_check, docx_rules, format_check, legal_registry
+from src.core import app_settings, config, llm, runtime, security
 from src.core.security import User
 from src.utils.uploads import remove_quietly, save_upload
 
@@ -30,6 +30,27 @@ async def api_check_content(file: UploadFile = File(...)):
         return await runtime.run_blocking(content_check.check_content, path, file.filename, slots=runtime.UPLOAD_SLOTS)
     finally:
         remove_quietly(path)
+
+
+@router.get("/content_info")
+async def api_content_info():
+    """Phạm vi kiểm tra nội dung & căn cứ, mô hình AI đang dùng, tình trạng danh mục vbpl.vn."""
+    return {"coverage": content_review.COVERAGE, "model": llm.resolve(llm.CHECK),
+            "legal": {"enabled": config.LEGAL_REGISTRY_ENABLED, **legal_registry.status()}}
+
+
+@router.post("/content_stream")
+async def api_check_content_stream(file: UploadFile = File(...), ai: bool = Form(True), legal: bool = Form(True)):
+    """SSE: report (dẫn chiếu, đối chiếu kho, logic bằng code) → legal (vbpl.vn) → related → ai."""
+    path = await save_upload(file, {".docx", ".doc", ".pdf"}, config.UPLOAD_MAX_MB)
+    try:
+        events = runtime.open_event_stream(content_review.events, path, file.filename, ai, legal,
+                                           slots=runtime.UPLOAD_SLOTS)
+    except BaseException:
+        remove_quietly(path)
+        raise
+    return StreamingResponse(runtime.sse_stream(events), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 # ------------------------------------------------------------------ thể thức & chính tả (.docx)

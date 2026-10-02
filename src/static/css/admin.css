@@ -264,3 +264,9 @@ table.inv td.bad { color: var(--critical-ink); font-weight: 600; }
 @media (max-width: 420px) {
     .stats-grid, .grid-2 { grid-template-columns: 1fr; }
 }
+
+/* danh mục vbpl.vn (kiểm tra căn cứ) */
+.legal-status { font-size: 13px; color: var(--ink-2); line-height: 1.6; padding: 2px 2px 0; }
+.legal-status .bad { color: var(--critical-ink); font-weight: 600; }
+.legal-status .warn { color: var(--warning-ink); font-weight: 600; }
+.legal-status .spin { width: 12px; height: 12px; border-width: 2px; margin-right: 6px; vertical-align: -2px; }

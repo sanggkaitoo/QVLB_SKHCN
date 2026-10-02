@@ -33,6 +33,7 @@ DEFAULTS: dict[str, object] = {
     "ai.models": [],                  # mô hình admin đã bật: [{spec, name, featured, selectable, prices...}]
     "ai.default_model": None,         # mô hình mặc định cho người dùng khi tra cứu
     "ai.keys": {},                    # {"openrouter"|"openai"|"anthropic": token Fernet}
+    "storage.keep_source_files": False,  # lưu bản gốc tệp khi crawl (STORE_DIR); mặc định không
 }
 
 

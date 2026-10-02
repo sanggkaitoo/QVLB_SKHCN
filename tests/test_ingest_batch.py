@@ -21,8 +21,9 @@ class IngestBatchTests(unittest.TestCase):
                       stream, ensure_ascii=False)
         return file_path
 
-    def _run(self, download_dir, store_dir, fake):
+    def _run(self, download_dir, store_dir, fake, keep=True):
         with patch.object(config, "STORE_DIR", store_dir), \
+             patch.object(ingest.source_store, "keep_enabled", return_value=keep), \
              patch.object(ingest.store, "ensure_collection"), \
              patch.object(ingest, "ingest_document", side_effect=fake) as call:
             return ingest.ingest_download_dir(download_dir), call
@@ -60,6 +61,22 @@ class IngestBatchTests(unittest.TestCase):
             self.assertEqual(1, len(result["failed_files"]))
             self.assertTrue(os.path.exists(os.path.join(store_dir, "failed_ingest", "01_TEST_02_bad.xls")))
             self.assertFalse(os.path.exists(good))
+
+    def test_failed_attachment_is_deleted_when_source_files_are_not_kept(self):
+        with tempfile.TemporaryDirectory() as directory:
+            download_dir, store_dir = os.path.join(directory, "downloads"), os.path.join(directory, "store")
+            os.makedirs(download_dir)
+            self._write_item(download_dir, "01_TEST_01_main.pdf", "01/TEST", 1)
+            bad = self._write_item(download_dir, "01_TEST_02_bad.xls", "01/TEST", 2)
+            self._write_item(download_dir, "01_TEST_03_note.zip", "01/TEST", 3)
+
+            def fake(files, **kwargs):
+                return {"document_id": 1, "skipped": False, "failed_files": [(bad, "broken xls")]}
+            result, _ = self._run(download_dir, store_dir, fake, keep=False)
+            self.assertEqual(1, len(result["failed_files"]))
+            self.assertNotIn("quarantined_file", result["failed_files"][0])
+            self.assertEqual([], os.listdir(download_dir))     # tải về đã dọn, kể cả tệp không hỗ trợ
+            self.assertFalse(os.path.exists(store_dir))         # không ghi gì vào kho tệp gốc
 
     def test_unreadable_document_quarantines_all_files(self):
         with tempfile.TemporaryDirectory() as directory:
